@@ -1,0 +1,36 @@
+name: MCP bootstrap smoke test
+
+# Doesn't test career-space's own logic (fitment scoring, rendering, ...) -- just answers "does
+# `node scripts/mcp_bootstrap.js`, the exact command every MCP config points at, actually reach a
+# running server on this OS/architecture?" No docker, no fake MCP protocol calls -- see
+# scripts/ci_smoke_test.js for what "success" means here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  bootstrap:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x64
+          - os: ubuntu-24.04-arm
+            label: linux-arm64
+          - os: macos-latest
+            label: macos-arm64
+          - os: macos-13
+            label: macos-x64
+          - os: windows-latest
+            label: windows-x64
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.label }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Bootstrap and launch the MCP server, confirm it comes up
+        run: node scripts/ci_smoke_test.js

@@ -1,0 +1,13 @@
+# Personal data -- never commit. See AGENTS.md's "Ground rules" for why: this repo is tracked
+# and shareable, data/ is not.
+data/
+
+# Node (scripts/*.ts's dependencies and build output -- npm install / npm run build,
+# done automatically by scripts/mcp_bootstrap.js on first connection)
+node_modules/
+scripts/dist/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

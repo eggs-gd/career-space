@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title }}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --text: #111827;
+      --muted: #4b5563;
+      --line: #d1d5db;
+      --accent: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+      line-height: 1.55;
+      background: white;
+    }
+    main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 28px 36px 36px;
+    }
+    h1, h2, h3 {
+      color: var(--accent);
+      line-height: 1.2;
+      margin: 1.2em 0 0.45em;
+      break-after: avoid-page;
+    }
+    h1 {
+      font-size: 28px;
+      margin-top: 0;
+      margin-bottom: 0.3em;
+    }
+    h2 {
+      font-size: 16px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 0.25em;
+    }
+    h3 {
+      font-size: 13px;
+    }
+    p, ul, ol, blockquote {
+      margin: 0.5em 0;
+    }
+    ul, ol {
+      padding-left: 1.25rem;
+    }
+    li + li {
+      margin-top: 0.18em;
+    }
+    li {
+      break-inside: avoid-page;
+    }
+    blockquote {
+      margin-left: 0;
+      padding-left: 0.9rem;
+      border-left: 3px solid var(--line);
+      color: var(--muted);
+      break-inside: avoid-page;
+      break-after: avoid-page;
+    }
+    hr {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 1rem 0;
+    }
+    code {
+      font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+    @page {
+      size: A4;
+      margin: 14mm;
+    }
+  </style>
+</head>
+<body class="resume-default">
+  <main>{{ body_html | safe }}</main>
+</body>
+</html>

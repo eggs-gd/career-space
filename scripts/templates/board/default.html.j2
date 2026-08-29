@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title }}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --bg: #ffffff;
+      --bg-alt: #f9fafb;
+      --accent: #1f2937;
+      --interview: #7c3aed;
+      --applied: #2563eb;
+      --tracked: #b45309;
+      --new: #9ca3af;
+      --rejected: #dc2626;
+      --offer: #059669;
+      --skipped: #9ca3af;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      background: var(--bg-alt);
+    }
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 28px 24px 60px;
+    }
+    h1 {
+      font-size: 22px;
+      margin: 0 0 4px;
+      color: var(--accent);
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0 0 20px;
+    }
+    /* Pure CSS, no navigation: every group is just always on the page (no anchor jump-nav --
+       a same-document fragment link is exactly the kind of "navigation" some sandboxed local
+       -file preview panes refuse to perform, found the hard way). The summary strip is a plain
+       legend, not links. */
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .summary .chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 14px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .summary .count { font-weight: 600; }
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex: none;
+      display: inline-block;
+    }
+    .dot.interview { background: var(--interview); }
+    .dot.applied { background: var(--applied); }
+    .dot.tracked { background: var(--tracked); }
+    .dot.new { background: var(--new); }
+    .dot.rejected { background: var(--rejected); }
+    .dot.offer { background: var(--offer); }
+    .dot.skipped { background: var(--skipped); }
+    section {
+      margin-bottom: 32px;
+    }
+    section h2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      margin: 0 0 12px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+    }
+    section h2 .n {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 13px;
+    }
+    .board {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .board-head {
+      display: flex;
+      gap: 12px;
+      padding: 7px 12px;
+      background: var(--bg-alt);
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      border-bottom: 1px solid var(--line);
+    }
+    .vrow {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .vrow:last-child { border-bottom: none; }
+    .vrow:hover { background: var(--bg-alt); }
+    .vrow-main {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      flex-wrap: wrap;
+    }
+    .col-fit { width: 24px; font-weight: 600; font-variant-numeric: tabular-nums; flex: none; }
+    .board-head .col-fit { font-weight: 500; }
+    .col-company { width: 150px; font-weight: 500; flex: none; }
+    .board-head .col-company { font-weight: 500; }
+    .col-role { flex: 1 1 220px; min-width: 160px; }
+    .col-track { width: 150px; color: var(--muted); font-size: 12.5px; flex: none; }
+    .col-updated { width: 46px; color: var(--muted); font-size: 12.5px; flex: none; }
+    .vrow-files {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    /* The interaction: <details>/<summary> is a native, script-free, navigation-free browser
+       widget -- click to open, click to close, no JS and no <a href> needed anywhere. This is
+       deliberate: a first version used a JS-driven modal and plain links, both silently did
+       nothing in a sandboxed local-file preview pane (scripts stripped, same-page anchor
+       navigation blocked outright). This can't have the same failure mode -- there's nothing
+       here for a sandbox to strip or block short of disabling <details> itself. */
+    details.file {
+      display: inline-block;
+    }
+    details.file > summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 2px 8px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      font-size: 11px;
+      color: var(--accent);
+      background: var(--bg);
+    }
+    details.file > summary::-webkit-details-marker { display: none; }
+    details.file > summary:hover { border-color: var(--accent); background: var(--bg-alt); }
+    details.file[open] > summary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    .vrow-files a.posting-link {
+      padding: 2px 8px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      font-size: 11px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .vrow-files a.posting-link:hover { border-color: var(--accent); background: var(--bg-alt); }
+    .file-content {
+      margin-top: 8px;
+      padding: 14px 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--bg-alt);
+      font-size: 13px;
+      max-width: 720px;
+    }
+    .file-content h1, .file-content h2, .file-content h3 { color: var(--accent); margin: 0.8em 0 0.35em; }
+    .file-content h1 { font-size: 17px; }
+    .file-content h2 { font-size: 15px; }
+    .file-content h3 { font-size: 13.5px; }
+    .file-content p, .file-content ul, .file-content ol { margin: 0.55em 0; }
+    .file-content table { border-collapse: collapse; font-size: 12px; }
+    .file-content td, .file-content th { border: 1px solid var(--line); padding: 4px 8px; }
+    .empty {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>{{ title }}</h1>
+    <p class="meta">{{ total }} vacancies &middot; generated {{ generated_at }} &middot; click a file badge to open it in place</p>
+
+    <div class="summary">
+      {% for group in groups %}
+      <span class="chip"><span class="dot {{ group.status }}"></span>{{ group.label }} <span class="count">{{ group.count }}</span></span>
+      {% endfor %}
+    </div>
+
+    {% for group in groups %}
+    <section>
+      <h2><span class="dot {{ group.status }}"></span>{{ group.label }} <span class="n">({{ group.count }})</span></h2>
+      {% if group.vacancies %}
+      <div class="board">
+        <div class="board-head">
+          <span class="col-fit">Fit</span>
+          <span class="col-company">Company</span>
+          <span class="col-role">Role</span>
+          <span class="col-track">Track</span>
+          <span class="col-updated">Updated</span>
+        </div>
+        {% for v in group.vacancies %}
+        <div class="vrow">
+          <div class="vrow-main">
+            <span class="col-fit">{{ v.fit_score if v.fit_score is not none else '&ndash;' }}</span>
+            <span class="col-company">{{ v.company }}</span>
+            <span class="col-role">{{ v.title }}</span>
+            <span class="col-track">{{ v.track_label or '' }}</span>
+            <span class="col-updated">{{ v.updated_short }}</span>
+          </div>
+          {% if v.file_buttons or v.url %}
+          <div class="vrow-files">
+            {% for f in v.file_buttons %}
+            <details class="file" name="panel-{{ v.slug }}">
+              <summary>{{ f.label }}</summary>
+              <div class="file-content">{{ f.content_html | safe }}</div>
+            </details>
+            {% endfor %}
+            {% if v.url %}<a class="posting-link" href="{{ v.url }}" target="_blank" rel="noopener">posting&nbsp;&#8599;</a>{% endif %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="empty">Nothing here.</p>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,93 @@
+# Playbook: scout
+
+Trigger: "пошукай вакансії" / "run the scout" / "find me matches" / "перевір нові вакансії" --
+the candidate wants public job boards checked against their own profile instead of pasting one
+posting at a time. Manually triggered every time (there's no background scheduler here); running
+it regularly is on the candidate, or on whatever their agent's own scheduling nicety offers on
+top of this playbook.
+
+Everything deterministic here is real code, reachable via the `scout_fetch`/`vacancy_*` MCP
+tools (or the equivalent CLI scripts if the server isn't connected) -- see AGENTS.md's "Scripts
+and the MCP server" section. Never fetch a job board, dedup, or hand-edit `data/vacancies/*`
+yourself; call the tool.
+
+## Step 0 -- one-time setup: `data/sources.yaml`
+
+If `data/sources.yaml` doesn't exist yet, this is the first scout run -- interview the candidate
+and write it before doing anything else (same "ask, don't guess" spirit as `playbooks/onboard.md`
+for `data/config.yaml`). Ask about:
+
+- **Tracks** -- named groups of title phrases worth searching for (e.g. "Engineering
+  Leadership": "engineering manager", "head of engineering"). Each track is `primary` (a title
+  match alone is enough to surface a posting) or `fallback` (needs a `strategic_signals` hit too
+  -- for roles the candidate would take but isn't chasing). Draw a first draft from
+  `data/config.yaml`'s `shared.professional_identity`/`commercial_directions`, then confirm.
+- **title_exclude** / **hard_exclude** -- phrases that should drop a posting outright (junior/
+  intern titles, "security clearance required," etc.).
+- **role_signals** -- mandate-shaped phrases ("founding engineer," "zero to one") that surface a
+  posting even if its title matches no track at all.
+- **strategic_signals** -- tech/domain proof phrases (a stack, a domain) that only matter for
+  gating a `fallback` track match; never a standalone pass.
+- **local_keywords** -- the candidate's own city/country phrases, so an explicitly local posting
+  passes the location gate even when it isn't tagged remote.
+- **companies** -- specific employers to watch directly, each `{name, ats, slug}` where `ats` is
+  `greenhouse`/`lever`/`ashby`/`recruitee` (find the slug from that company's own careers page
+  URL). Optional -- most candidates rely on `feeds` alone.
+- **feeds** -- which of `workable`, `smartrecruiters`, `remoteok`, `remotive`, `arbeitnow`,
+  `jobicy`, `himalayas`, `weworkremotely`, `hackernews`, `justjoin`, `nofluff` to pull from.
+  `justjoin`/`nofluff` are Poland/CEE-focused; skip them if that's not relevant.
+- **min_fit_score** (default 4) -- the floor from `score_fit.py`'s scale below which a judged
+  posting stays a `seen.jsonl` line, never gets its own `data/vacancies/<slug>/` folder.
+- **max_judgments_per_run** (default 25) -- caps how many candidates one scout run hands you to
+  judge, so a first run against a broad config doesn't turn into fifty judgment turns in one
+  sitting. Postings past the cap aren't lost -- they're simply not marked seen, so a later run
+  picks them up again.
+
+Write the file, show it back, confirm before running Step 1. All values get lowercased/trimmed
+by the loader, so casing in the yaml doesn't matter.
+
+## Step 1 -- fetch
+
+Call `scout_fetch` (MCP tool, or `node scripts/dist/scout_fetch.js` if the server isn't connected).
+It fetches every configured company board and feed, runs the prefilter (title/hard excludes,
+location gate, track/strategic-signal rule), collapses same-role reposts into one, and drops
+anything already in `data/vacancies/seen.jsonl`. Report `fetch_errors` to the candidate if
+non-empty (one dead company slug or flaky feed is never fatal to the rest), and mention the
+funnel briefly so the candidate has a sense of the noise being filtered before they see anything:
+`fetched_count` -> `survived_prefilter_count` -> (minus `collapsed_count` same-role reposts) ->
+`considered_count` (genuinely new, not already in seen.jsonl) -> `returned_count` handed back now
+(`capped_count` held back for a later run, not lost -- worth a one-line mention if non-zero, so
+the candidate knows more is waiting rather than assuming this run found everything).
+
+If `candidates` is empty, say so plainly and stop -- there's nothing to judge this run.
+
+## Step 2 -- judge each candidate
+
+For each posting in `candidates`, run the judgment phase from `playbooks/fitment.md` as a
+subroutine, but don't paste the rendered result to the candidate yet. `candidate["job_post_text"]`
+is already shaped like a pasted posting. Keep `fitment.md` as the only place that defines detailed
+scoring semantics; scout only batches judgments and routes outcomes.
+
+Keep `score_fit`'s full returned Markdown around for Step 3 (not just the score/category you
+pull out of it) -- the record step needs the full breakdown.
+
+Do this for every candidate before moving to Step 3 -- batching the judgments first, then the
+writes, keeps a partial failure (a tool error mid-run) from leaving some postings judged-but-
+unrecorded while others are recorded.
+
+## Step 3 -- record every outcome
+
+Run `playbooks/scout-record-outcomes.md` for the judged batch. It owns the
+`vacancy_mark_seen`/`vacancy_upsert` calls, the `min_fit_score` threshold, and writing full
+`fitment.md` artifacts for matches.
+
+## Step 4 -- summarize
+
+Tell the candidate, in one pass: how many were fetched/considered/judged, how many now have a new
+vacancy record (company/title/score, most promising first) versus were rejected (a one-line
+reason each is enough, not the full breakdown -- that's what the ledger is for). For each new
+record, offer the natural next step (`playbooks/fitment.md`'s deeper read, `playbooks/
+cover-letter.md`, or `playbooks/cv-targeted.md`) rather than assuming which one the candidate
+wants. If the candidate confirms one is worth pursuing (a plain "track this one" / "yes, go for
+it" is enough, no fixed phrase required), call `vacancy_set_status(slug, "tracked")` right then --
+nothing else in this playbook moves a record off `new` on its own.

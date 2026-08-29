@@ -1,0 +1,32 @@
+{
+  "name": "career-space",
+  "private": true,
+  "version": "1.0.0",
+  "license": "Apache-2.0",
+  "description": "Deterministic scripts backing the career-space MCP server -- rendering, fitment scoring, vacancy storage, scout fetch. See AGENTS.md.",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test scripts/dist/**/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@noble/hashes": "^1.5.0",
+    "he": "^1.2.0",
+    "js-yaml": "^5.4.1",
+    "markdown-it": "^15.0.1",
+    "markdown-it-footnote": "^4.0.0",
+    "puppeteer": "^25.9.0",
+    "zod": "^4.5.2"
+  },
+  "devDependencies": {
+    "@types/he": "^1.2.3",
+    "@types/js-yaml": "^4.0.9",
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^26.4.0",
+    "typescript": "^7.0.2"
+  }
+}

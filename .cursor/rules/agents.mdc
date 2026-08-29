@@ -1,0 +1,8 @@
+---
+description: Canonical instructions live in AGENTS.md
+alwaysApply: true
+---
+
+Read `AGENTS.md` at the repo root — it is the canonical instructions file for this repo, and
+applies to you exactly as written there. Don't add Cursor-specific rules here; if something
+needs to change, change it in `AGENTS.md`.

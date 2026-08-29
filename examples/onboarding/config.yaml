@@ -1,0 +1,100 @@
+# Candidate-specific positioning data. `shared:` = WHO/WHY (stable identity/strategy) plus stable
+# reference facts that are the same regardless of platform (contacts, certifications, education,
+# languages) -- concrete, not narrative, so they don't belong in
+# CV_GENERAL.md's prose either. `<platform>.pinned:` = committed exact wording, reproduced
+# verbatim, never re-derived; everything else per-platform = WHAT TO EMPHASIZE (category-level
+# strategy). CV_GENERAL.md's own content (achievements, evidence) never gets duplicated here --
+# this file only ever says WHERE TO POINT, never WHAT WAS FOUND last time. Full model + incident
+# history: policies/profiles-framework.md and policies/generation-rules.md.
+#
+# Fictional example candidate (Alex Morgan) -- ordinary, competent, nothing distinctive on
+# purpose. Shows the shape every field should have, not a positioning worth copying.
+
+shared:
+  full_name: "Alex Morgan"
+  professional_identity:
+    - Backend Developer
+    - Software Engineer
+  commercial_directions: []
+  differentiators:
+    - "Reliable delivery"
+    - "Backend/API work"
+    - "Comfortable in existing codebases"
+  # Opens every platform's narrative section, close to verbatim.
+  core_identity_line: >-
+    Most of what I do is take a backend ticket from vague to shipped, without needing much
+    hand-holding along the way.
+  # Broader/aspirational titles explicitly rejected unless the positioning strategy changes.
+  rejected_broader_titles:
+    - Engineering Manager
+  contacts:
+    location: "Berlin, Germany"
+    email: "alex.morgan@example.com"
+    linkedin: "https://www.linkedin.com/in/alexmorgan-example"
+    # No `phone` -- optional field, left out here to show that's a valid state, not something
+    # every candidate has to fill in.
+    # No `landing`/`portfolio` either, same reason.
+  contact_strategy:
+    targeted_cv:
+      remote_or_nonlocal:
+        location: "Remote"
+        include_phone: false
+      local:
+        use_config_location: true
+        include_phone: true
+    links: {}
+  certifications:
+    - "AWS Certified Developer -- Associate, 2021"
+  education:
+    - "State University -- Computer Science, 2013 - 2017"
+  languages:
+    german: native
+    english: professional
+
+linkedin:
+  sections: [Headline, About, Experience, Top Skills, Skills, Banner Note]  # produce in this order
+  out_of_scope: [Contact, Languages, Certifications, Education]  # leave untouched if already present
+  pinned:  # verbatim, never re-derived
+    current_headline: >-
+      Senior Backend Developer / Python & TypeScript / APIs, performance fixes, and shipping on
+      schedule
+    current_cta: >-
+      Open to Senior Backend Developer roles -- happy to talk about backend/API work in general.
+    top_skills:
+      - Python
+      - PostgreSQL
+      - Docker
+      - REST APIs
+      - TypeScript
+    banner_tagline: "Senior Backend Developer -- backend and API work, done reliably."
+    banner_visual_concept: "A plain, minimal background -- no imagery, no URL on the banner itself"
+    current_location_string: "Berlin, Germany"
+  open_items: []
+
+djinni:
+  sections: [Position, Summary, Accomplishments, Expectations]
+  # Already configured in Djinni's own UI -- leave untouched if already present.
+  out_of_scope: [Skills, Agentic Coding Experience, Additional Skills/Tags]
+  pinned:
+    current_target: "Senior Backend Developer / Python, PostgreSQL"
+
+upwork:
+  sections: [Title, Overview, Employment History, Other Experience, Skills]
+  out_of_scope: [Languages, Certifications, Education]
+  # Category-level, not achievement-level -- a new Master CV achievement is new evidence FOR one
+  # of these, never a reason to edit the list itself.
+  service_directions:
+    - Backend development
+    - API integration
+    - Bug fixes and performance tuning
+  # Current commercial-relevance ordering for the Employment History block.
+  role_emphasis_order:
+    - Most recent role
+    - Prior client-facing/outsourcing work
+    - Early-career role
+
+fiverr:
+  sections: [Seller Tagline, Seller Description, Gig Concepts, Work Experience, Skills]
+  out_of_scope: [Languages, Certifications, Education]
+  # No `pinned:` yet -- add one only once a specific Gig is actually published and stops
+  # regenerating.

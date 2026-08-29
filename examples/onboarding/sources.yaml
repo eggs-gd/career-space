@@ -1,0 +1,90 @@
+# Scout config -- what to search for, where to look, what to reject before spending a judgment
+# turn on it. See playbooks/scout.md and scripts/scout_domain.py's ScoutConfig. Edit by hand any
+# time, no code change needed.
+#
+# Fictional example candidate (Alex Morgan, Senior Backend Developer) -- shows the shape of a
+# tuned config, not a real search strategy to copy. A real candidate's own tracks/exclusions
+# should reflect their own targeting, not this file's specific values.
+
+tracks:
+  backend:
+    kind: primary
+    label: "Backend Development"
+    titles:
+      - backend developer
+      - backend engineer
+      - software engineer
+      - senior software engineer
+      - senior backend developer
+      - senior backend engineer
+  fullstack:
+    # `fallback`: worth judging only alongside a real strategic_signals hit, not on title match
+    # alone -- this candidate isn't chasing full-stack roles specifically, but wouldn't rule one
+    # out if the stack lines up.
+    kind: fallback
+    label: "Full-stack (adjacent)"
+    titles:
+      - full stack developer
+      - full-stack engineer
+
+title_exclude:
+  - intern
+  - internship
+  - junior
+  - jr
+  - jr.
+  - entry level
+  - working student
+  - sales representative
+  - account executive
+  - technical support
+  - support engineer
+  - qa engineer
+
+hard_exclude:
+  - security clearance
+  - polygraph
+  - must be a u.s. citizen
+
+# Mandate-shaped phrases -- the only thing that opens the recall lane for a title matching no
+# track at all.
+role_signals:
+  - backend heavy
+  - own the backend
+
+# Tech/domain proof phrases. Gates a `fallback` track match; only upgrades a `primary` match's
+# color, never gates it.
+strategic_signals:
+  - python
+  - postgresql
+  - django
+  - fastapi
+
+# How the location gate recognizes "local enough to consider even without remote language" --
+# see scout_prefilter.py's _passes_location_gate. Replace with wherever the real candidate is
+# actually based.
+local_keywords:
+  - germany
+  - berlin
+  - deutschland
+
+# Per-company boards -- empty to start. Find the slug in the careers page URL
+# (boards.greenhouse.io/SLUG -> greenhouse, jobs.lever.co/SLUG -> lever,
+# jobs.ashbyhq.com/SLUG -> ashby, SLUG.recruitee.com -> recruitee).
+companies: []
+
+feeds:
+  - workable
+  - smartrecruiters
+  - remoteok
+  - remotive
+  - arbeitnow
+  - jobicy
+  - himalayas
+  - weworkremotely
+  - hackernews
+  - justjoin
+  - nofluff
+
+min_fit_score: 4
+max_judgments_per_run: 15
