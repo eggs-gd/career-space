@@ -18,6 +18,9 @@ a posting, generate a CV tailored to it, update your LinkedIn/Djinni/Upwork/Five
 job boards automatically, or see your whole pipeline on one page. The agent explains what it can
 do and how, as you go — nothing here needs memorizing up front.
 
+The job-board/ATS scraping approach was inspired by
+[jobhunt-agent](https://github.com/teslavr/jobhunt-agent)
+
 ## Your data stays yours
 
 Everything you tell it lives under `data/`, which is gitignored — it never gets committed, even
