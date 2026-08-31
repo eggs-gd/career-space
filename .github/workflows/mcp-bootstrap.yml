@@ -24,8 +24,9 @@ jobs:
             label: linux-arm64
           - os: macos-latest
             label: macos-arm64
-          - os: macos-13
-            label: macos-x64
+          # No macos-x64 entry: macos-13 (the last free Intel macOS image) was retired
+          # 2025-12-04, and Intel macOS on macos-14/macos-15 is Team/Enterprise-only --
+          # there is no free-tier x64 macOS runner left to target.
           - os: windows-latest
             label: windows-x64
     runs-on: ${{ matrix.os }}
