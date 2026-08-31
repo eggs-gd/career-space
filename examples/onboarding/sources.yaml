@@ -93,6 +93,11 @@ feeds:
   - hackernews
   - justjoin
   - nofluff
+  # douua/djinni are Ukraine-focused, predominantly Ukrainian-language -- this fictional
+  # candidate is Germany-based (see local_keywords below), so they're commented out rather
+  # than included; uncomment for a real candidate targeting the Ukrainian market.
+  # - douua
+  # - djinni
 
 min_fit_score: 4
 max_judgments_per_run: 15
