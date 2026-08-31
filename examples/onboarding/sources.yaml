@@ -99,9 +99,12 @@ feeds:
   - hackernews
   - justjoin
   - nofluff
-  # douua/djinni are Ukraine-focused, predominantly Ukrainian-language -- this fictional
+  # jobico/douua/djinni are Ukraine-focused, predominantly Ukrainian-language -- this fictional
   # candidate is Germany-based (see local_keywords below), so they're commented out rather
-  # than included; uncomment for a real candidate targeting the Ukrainian market.
+  # than included; uncomment for a real candidate targeting the Ukrainian market. jobico needs
+  # no extra config (searches by this track's own titles, like workable/smartrecruiters above);
+  # douua/djinni need ua_categories (see the backend track's own commented example above).
+  # - jobico
   # - douua
   # - djinni
 

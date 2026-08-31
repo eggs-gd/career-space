@@ -39,11 +39,14 @@ for `data/config.yaml`). Ask about:
 - **companies** -- specific employers to watch directly, each `{name, ats, slug}` where `ats` is
   `greenhouse`/`lever`/`ashby`/`recruitee` (find the slug from that company's own careers page
   URL). Optional -- most candidates rely on `feeds` alone.
-- **feeds** -- which of `workable`, `smartrecruiters`, `remoteok`, `remotive`, `arbeitnow`,
-  `jobicy`, `himalayas`, `weworkremotely`, `hackernews`, `justjoin`, `nofluff`, `douua`, `djinni`
-  to pull from. `justjoin`/`nofluff` are Poland/CEE-focused, `douua`/`djinni` are Ukraine-focused
-  (predominantly Ukrainian-language postings) -- skip whichever region isn't relevant. If either
-  is included, also ask for **`ua_categories`** below -- without it, that source fetches nothing.
+- **feeds** -- which of `workable`, `smartrecruiters`, `jobico`, `remoteok`, `remotive`,
+  `arbeitnow`, `jobicy`, `himalayas`, `weworkremotely`, `hackernews`, `justjoin`, `nofluff`,
+  `douua`, `djinni` to pull from. `justjoin`/`nofluff` are Poland/CEE-focused; `jobico`/`douua`/
+  `djinni` are Ukraine-focused (predominantly Ukrainian-language postings) -- skip whichever
+  region isn't relevant. `jobico` searches by the track's own `titles` directly, same as
+  `workable`/`smartrecruiters` -- no extra config needed. If `douua`/`djinni` is included, also
+  ask for **`ua_categories`** below -- without it, those two fetch nothing (`jobico` isn't
+  affected, its own search is genuine free text, not a fixed category list).
 - **`ua_categories`** (per track, only needed for `douua`/`djinni`) -- dou.ua and Djinni each
   filter their feeds by an exact match against their own small, fixed category list, not by free
   title text. Open `reference/ua-scout-categories.md`, show the candidate the real list (or the

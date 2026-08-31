@@ -16,7 +16,7 @@ narrated history of how each one was found.
       slices, likely interview questions) for the Master CV or any generated CV.
 - [x] Pitch -- explain/position career-space itself, audience- and length-aware.
 - [x] Platform profile updates -- LinkedIn / Djinni / Upwork / Fiverr.
-- [x] Scout -- auto-fetch/filter/dedup postings from 13 job boards/aggregators (plus 4 supported
+- [x] Scout -- auto-fetch/filter/dedup postings from 14 job boards/aggregators (plus 4 supported
       per-company ATS types -- greenhouse/lever/ashby/recruitee, opt-in per company in
       `sources.yaml`), judged the same way
       as a pasted posting.
@@ -55,6 +55,22 @@ location field) even though it hadn't been observed yet. Fixed both: dropped bar
 with `"work anywhere"`/`"from anywhere"` in both lists -- still catches genuine phrasing ("work
 from anywhere") without matching either false-positive shape. Covered by
 `scout_prefilter.test.ts` (new file).
+
+**Built 2026-08-31 -- third Ukrainian scout source, jobico.io.** Surfaced as "we added an MCP
+server, just give the agent a link" -- verified live rather than taken at face value: jobico.io's
+own site shows no MCP anywhere (easy to confuse with the similarly-named, unrelated `jobicy.com`,
+which genuinely does have an official MCP server); the real MCP is documented at `jobico.io/
+developers`. Confirmed live via a raw JSON-RPC POST (no MCP SDK, no session/handshake needed) --
+`search_jobs` (genuine free-text server-side search, confirmed by diffing a real query against a
+nonsense one: 0 results for the latter, unlike Djinni's `primary_keyword` leak above) and `get_job`
+(full JD text, a second call per slug). Concluded "MCP" isn't the right integration path here
+either way -- same reasoning as never adding Jobicy's own MCP on top of its existing REST fetcher:
+a connected MCP server suits ad-hoc chat search, not this repo's own deterministic pipeline. Added
+as `fetchJobico` (`scripts/scout_sources.ts`, `QUERY_DRIVEN_FETCHERS`) instead -- query-driven by
+track `titles` directly, like `fetchWorkable`/`fetchSmartrecruiters`, no `ua_categories` needed
+(unlike dou.ua/Djinni, this platform's search is real free text). `locationType` is a clean,
+always-present structured field, used directly rather than inferred from text. Not added to the
+real `data/sources.yaml` -- mechanism + `examples/onboarding/sources.yaml` only.
 
 **Built 2026-08-30, fixed 2026-08-31 -- two Ukrainian scout sources, dou.ua + Djinni.** Both
 sources returned ~0 results in real use despite postings existing. Root cause, confirmed live: the

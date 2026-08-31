@@ -380,9 +380,98 @@ async function fetchSmartrecruiters({ trackTitles, roleSignals }: FeedFetchOpts)
   return [postings, error];
 }
 
+/** POST helper for jobico.io's endpoint, technically an "MCP server" (`/api/mcp`) but really just
+ * JSON-RPC 2.0 over plain HTTP -- confirmed live that `tools/call` works standalone with no prior
+ * `initialize` handshake or session, so this needs nothing beyond one POST with `fetch`, the same
+ * as every other fetcher here. Scoped to `fetchJobico` below rather than folded into `getJson`
+ * above -- every other source is a plain GET, this is the only POST. */
+async function postJobicoTool(toolName: string, args: Record<string, unknown>): Promise<any> {
+  const response = await fetch("https://jobico.io/api/mcp", {
+    method: "POST",
+    headers: { ...HEADERS, "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: toolName, arguments: args } }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText} for jobico ${toolName}`);
+  const data: any = await response.json();
+  if (data.error) throw new Error(`jobico ${toolName}: ${data.error.message ?? JSON.stringify(data.error)}`);
+  return data.result?.structuredContent;
+}
+
+/** jobico.io -- Ukrainian IT job platform. Its own docs call `/api/mcp` an "MCP server," but
+ * confirmed live it's a plain JSON-RPC-over-HTTP endpoint (see `postJobicoTool` above) -- no MCP
+ * SDK, no session, no reason to wire this in as an actual connected MCP server the way its own
+ * marketing suggests ("just give the agent a link"). That framing fits an ad-hoc chat search,
+ * not this repo's own deterministic fetch/prefilter/dedup/score pipeline, and would just be a
+ * second, disconnected way to reach the same data this fetcher already reaches directly --
+ * exactly the reasoning that already ruled out adding Djinni's own official MCP server on top of
+ * its existing REST fetcher here.
+ *
+ * `search_jobs`'s `query` param is genuine free-text server-side search -- confirmed by diffing a
+ * real query against a nonsense one and getting 0 results back for the latter (unlike Djinni's
+ * `primary_keyword`, which silently fell back to an unfiltered feed for anything that wasn't an
+ * exact taxonomy match; see that fetcher's own docstring). So this is query-driven by track
+ * titles like `fetchWorkable`/`fetchSmartrecruiters`, not category-driven like `fetchDouUa`/
+ * `fetchDjinni` -- no `ua_categories` needed, no fixed taxonomy to pick from.
+ *
+ * `search_jobs` only returns metadata (no description) -- `get_job(slug)` is a second call for
+ * the real JD text, gated by `worthDetailFetch` like `fetchJustjoin`/`fetchSmartrecruiters`
+ * above, plus a budget cap for the same reason. `locationType` (`"remote"|"hybrid"|"office"`) is
+ * a clean, always-present structured field -- used directly as `remoteOverride` in both
+ * directions rather than inferred from text, unlike most other sources here. */
+async function fetchJobico({ trackTitles, roleSignals }: FeedFetchOpts): Promise<FetchResult> {
+  const queries = trackQueries(trackTitles);
+  if (queries.length === 0) return [[], "Jobico: no track titles to search with"];
+  const postings: Posting[] = [];
+  let error: string | null = null;
+  let detailBudget = 60;
+  for (const query of queries) {
+    let list: any;
+    try {
+      list = await postJobicoTool("search_jobs", { query, limit: 20 });
+    } catch (fetchError) {
+      error = `Jobico (${query}): ${errorMessage(fetchError)}`;
+      continue;
+    }
+    for (const job of list.jobs ?? []) {
+      const title = job.title ?? "";
+      const techStack = (job.techStack ?? []).join(" ");
+      let description = techStack;
+      if (detailBudget > 0 && worthDetailFetch(title, trackTitles, roleSignals)) {
+        detailBudget -= 1;
+        try {
+          const detail = await postJobicoTool("get_job", { slug: job.slug });
+          description = [detail.description, detail.requirements, detail.niceToHave, detail.responsibilities, techStack]
+            .filter((x) => x)
+            .join("\n\n");
+        } catch (detailError) {
+          error = `Jobico detail (${title}): ${errorMessage(detailError)}`;
+        }
+      }
+      const locParts = [job.city, job.country].filter((x: any) => x);
+      let location = locParts.join(", ");
+      if (job.locationType === "remote") location = location ? `Remote, ${location}` : "Remote";
+      postings.push(
+        makePosting({
+          source: "jobico",
+          company: (job.company ?? {}).name ?? "?",
+          title,
+          location,
+          url: job.url ?? "",
+          description,
+          postedAt: job.postedAt ?? "",
+          remoteOverride: job.locationType === "remote",
+        })
+      );
+    }
+  }
+  return [postings, error];
+}
+
 export const QUERY_DRIVEN_FETCHERS: Record<string, FeedFetcher> = {
   workable: fetchWorkable,
   smartrecruiters: fetchSmartrecruiters,
+  jobico: fetchJobico,
 };
 
 // ------------------------------------------------------------------------ aggregator boards

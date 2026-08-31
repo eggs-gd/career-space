@@ -9,6 +9,10 @@ scout_sources.ts`'s `fetchDouUa`/`fetchDjinni` docstrings for how that was confi
 `_sb/roadmap.md` for the bug this replaced (the original cut queried both platforms with track
 titles, which never actually filtered anything on either one).
 
+Not relevant to `jobico` (career-space's third Ukraine-focused scout source) -- that one searches
+by a track's own `titles` directly, genuine free text, same as `workable`/`smartrecruiters`; no
+fixed category list to pick from, nothing to look up in this file for it.
+
 **Never guess or invent a value for a candidate -- read the real list below and let them pick from
 it.** The two vocabularies overlap for common single-word disciplines (`Python`, `Java`, `DevOps`)
 but aren't identical in form for anything else -- if a track should show up on both platforms, add
