@@ -146,6 +146,21 @@ export interface TrackConfig {
    * is omitted for a track with no `hiringTitles` rather than falling back to `titles` (that
    * fallback is the exact bug this field exists to fix -- it searched for peers, not hirers). */
   readonly hiringTitles: readonly string[];
+
+  /** Exact category values on dou.ua (`?category=`) and/or Djinni (`?primary_keyword=`) --
+   * `scout_sources.ts`'s `fetchDouUa`/`fetchDjinni` filter server-side on these, since neither
+   * platform accepts arbitrary title text: dou.ua and Djinni each expose only a small, fixed
+   * taxonomy (~59 and ~123 values respectively -- see `docs/reference/ua-scout-categories.md`,
+   * both lists verified live, not guessed), and a value outside it is either ignored outright
+   * (Djinni silently falls back to its unfiltered "latest" feed for anything that isn't an exact
+   * match) or matches nothing (dou.ua). This repo used to derive dou.ua/Djinni queries from a
+   * track's own `titles` the same way Workable/SmartRecruiters do -- that never actually
+   * filtered anything on either platform (a real, previously-shipped bug; see `_sb/roadmap.md`).
+   * Same spirit as `hiringTitles` above: the candidate picks from the real, stored list during
+   * `playbooks/scout.md`'s Step 0, never invented by whoever's filling in `sources.yaml`. Empty
+   * when not configured -- `fetchDouUa`/`fetchDjinni` then fetch nothing for that candidate
+   * rather than falling back to an unfiltered pull. */
+  readonly uaCategories: readonly string[];
 }
 
 /** One per-company board entry. `ats` must be one of `scout_sources.ts`'s
@@ -238,6 +253,29 @@ export class ScoutConfig {
     return out;
   }
 
+  /** Flattened, de-duplicated `ua_categories` across every track -- `fetchDouUa`/`fetchDjinni`
+   * aren't per-track fetches (unlike Workable/SmartRecruiters, dou.ua's and Djinni's own APIs
+   * have no per-request budget worth rationing per track), so like `allTrackTitles` above, every
+   * track's configured categories go into one shared query list; case is preserved (not
+   * lowercased the way `allTrackTitles` normalizes titles) because Djinni's `primary_keyword`
+   * match is case-sensitive for anything that isn't already lowercase -- see
+   * `docs/reference/ua-scout-categories.md`. */
+  allUaCategories(): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const track of this.tracks.values()) {
+      for (const category of track.uaCategories) {
+        const trimmed = category.trim();
+        const key = trimmed.toLowerCase();
+        if (trimmed && !seen.has(key)) {
+          seen.add(key);
+          out.push(trimmed);
+        }
+      }
+    }
+    return out;
+  }
+
   /** The track whose own title phrases match `titleLower` first, primary tracks checked
    * before fallback ones. Primary-first means a title phrase that happens to appear in both
    * a primary and a fallback track resolves to the more generous (primary) classification.
@@ -259,6 +297,16 @@ export class ScoutConfig {
 function asStringTuple(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item).trim().toLowerCase());
+}
+
+/** Same as `asStringTuple` but keeps original casing -- only for `ua_categories`, whose values
+ * get sent verbatim as dou.ua/Djinni query params rather than compared as free text. Lowercasing
+ * is harmless for dou.ua (confirmed case-insensitive) but breaks Djinni's `primary_keyword`
+ * match for anything that isn't already all-lowercase -- see `docs/reference/
+ * ua-scout-categories.md`. */
+function asStringTuplePreserveCase(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => String(item).trim());
 }
 
 /** Reads `data/sources.yaml`. See `playbooks/scout.md` for the exact shape and how a
@@ -284,6 +332,7 @@ export function loadScoutConfig(path: string): ScoutConfig {
       kind: String(spec.kind ?? TRACK_KIND_PRIMARY),
       titles: asStringTuple(spec.titles),
       hiringTitles: asStringTuple(spec.hiring_titles),
+      uaCategories: asStringTuplePreserveCase(spec.ua_categories),
     });
   }
 

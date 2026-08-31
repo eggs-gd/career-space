@@ -5,7 +5,7 @@ any candidate-facing playbook, never read during normal execution; see `AGENTS.m
 split. Keep this current and terse -- facts and decisions that matter for future work, not a
 narrated history of how each one was found.
 
-## Status as of 2026-08-30
+## Status as of 2026-08-31
 
 **Built** (see `_sb/architecture.md` for how any of this actually works):
 - [x] Onboarding -- Master CV, config, and role profiles from a conversation.
@@ -35,21 +35,30 @@ new, optional `hiring_titles:` field, domain judgment left to the candidate -- s
 simply omitted (not silently wrong) for a track that hasn't set it, with a note in the generated
 file explaining why and how to fix it. Covered by `linkedin_searches.test.ts`.
 
-**Built 2026-08-30 -- two Ukrainian scout sources, dou.ua + Djinni.** Both verified live before
-implementing (not assumed): **dou.ua** at `https://jobs.dou.ua/vacancies/feeds/` (note: `/feeds/`,
-plural -- `/feed/` 404s), a flat aggregator fetcher (`AGGREGATOR_FETCHERS`, regex item extraction
-like `fetchWeworkremotely()`), with its own title-splitting logic for the packed
-"<Role> в <Company>, від $X, <City>" string and a double `decodeHtmlEntities()` pass (the feed
-itself double-encodes `&nbsp;` as `&amp;nbsp;`). **Djinni** at `https://djinni.co/jobs/rss/`, a
-query-driven fetcher (`REGIONAL_FETCHERS`, `?primary_keyword=` server-side filtering, same
-loop-over-track-titles shape as `fetchWorkable`/`fetchSmartrecruiters`); no structured
-company/location field, so company defaults to `"?"` and location falls back to description-text
-inference, same as other fetchers already do. `REMOTE_WORDS` extended with "віддалено"/
-"дистанційно" since both sources are Ukrainian-language. Not added to the real `data/
-sources.yaml` -- only the mechanism and `examples/onboarding/sources.yaml` were touched; opting
-in is the candidate's own call. Ruled out, both confirmed via a real fetch attempt: **robota.ua**
-(no public API, 403s automated fetches) and **work.ua** (RSS exists but sits behind Cloudflare
-bot protection -- `cf-mitigated: challenge` on a plain fetch with a real User-Agent).
+**Built 2026-08-30, fixed 2026-08-31 -- two Ukrainian scout sources, dou.ua + Djinni.** Both
+sources returned ~0 results in real use despite postings existing. Root cause, confirmed live: the
+2026-08-30 cut queried both platforms using a track's own free-text `titles` (dou.ua as a flat
+unfiltered pull, Djinni via `?primary_keyword=<track title>`) -- neither platform filters on free
+text at all. dou.ua's `?category=` and Djinni's `?primary_keyword=` both genuinely filter
+server-side, but only for an exact match against each platform's own small, fixed category
+taxonomy; a track title like "senior backend developer" matches neither, so dou.ua fell back to
+its ~50-most-recent-postings-sitewide pull (diluted across every discipline) and Djinni silently
+served its unfiltered "latest vacancies" feed instead of erroring (confirmed by diffing its
+response for a real category against a nonsense one -- byte-identical). Neither is a
+Ukrainian-vs-English title problem, despite looking like one from a candidate's chair.
+
+Fixed by making both genuinely category-driven: new per-track `TrackConfig.uaCategories` (from
+`sources.yaml`'s `ua_categories:`, same "candidate picks, never inferred" spirit as
+`hiringTitles`), sourced only from each platform's own real, live-verified list -- see
+`reference/ua-scout-categories.md` (dou.ua's 59 values from its own `<select>`, Djinni's 123 from
+its sitemap's `/jobs/keyword-<slug>` URLs). `fetchDouUa` moved out of `AGGREGATOR_FETCHERS` into
+`REGIONAL_FETCHERS` alongside `fetchDjinni`, both now one fetch per configured category. Not added
+to the real `data/sources.yaml` -- only the mechanism, `examples/onboarding/sources.yaml`, and the
+reference file were touched; opting in (and picking real categories) is the candidate's own call.
+
+Ruled out for a third UA source, confirmed via a real fetch attempt: **robota.ua** (no public API,
+403s automated fetches) and **work.ua** (RSS exists but sits behind Cloudflare bot protection --
+`cf-mitigated: challenge` on a plain fetch with a real User-Agent).
 
 ## Next steps, in order
 

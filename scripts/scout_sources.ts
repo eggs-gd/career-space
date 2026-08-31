@@ -227,6 +227,10 @@ export const PER_COMPANY_FETCHERS: Record<string, (company: CompanyConfig) => Pr
 export interface FeedFetchOpts {
   trackTitles: string[];
   roleSignals: string[];
+  /** `ScoutConfig.allUaCategories()` -- exact dou.ua/Djinni category values, case preserved. See
+   * `fetchDouUa`/`fetchDjinni` and `docs/reference/ua-scout-categories.md`. Defaults to `[]` for
+   * every other fetcher, which simply ignores it. */
+  uaCategories: string[];
 }
 type FeedFetcher = (opts: FeedFetchOpts) => Promise<FetchResult>;
 
@@ -532,68 +536,84 @@ async function fetchWeworkremotely(): Promise<FetchResult> {
 }
 
 /** dou.ua -- Ukraine's largest programmer community job board. RSS confirmed live at
- * `/vacancies/feeds/` (note: plural -- `/feed/` 404s). Same regex-item-extraction shape as
- * `fetchWeworkremotely`, but the title packs role + company + a variable-length, comma-separated
- * tail (salary and/or one or more cities and/or "remote"/"abroad") into one string, not a fixed
- * two-field split -- e.g. "Backend Engineer в WinWin.Travel, за кордоном, віддалено" or "Junior
- * Workplace Specialist в Ubisoft, Київ" (no salary shown at all -- optional, not every posting
- * has one). Splits on the first " в " (role vs. everything else) then the first "," inside that
- * (company vs. the free-form tail) rather than trying to parse the tail's own field count --
- * `Posting` has no salary field anyway, so the tail is kept whole as `location`, and the existing
- * remote-word scan (now Ukrainian-aware, see `REMOTE_WORDS`) picks "віддалено" out of it the same
- * way it already does for any other source's location text. */
-async function fetchDouUa(): Promise<FetchResult> {
-  let xml: string;
-  try {
-    xml = await getText("https://jobs.dou.ua/vacancies/feeds/");
-  } catch (error) {
-    return [[], `dou.ua: ${errorMessage(error)}`];
-  }
+ * `/vacancies/feeds/` (note: plural -- `/feed/` 404s), and confirmed to honour `?category=<exact
+ * value>` server-side (25 items per category, consistently, across five different categories
+ * tested; case-insensitive). Query-driven by `uaCategories`, one fetch per configured category --
+ * NOT a flat aggregator pull. That's a correction, not the original design: this used to pull the
+ * unfiltered flat feed (the site's ~50 most recent postings across every discipline) and rely on
+ * the shared title prefilter afterwards, which meant a specific track's postings almost never
+ * showed up at all -- pure volume dilution across a site with dozens of categories, nothing to do
+ * with title language. See `docs/reference/ua-scout-categories.md` for dou.ua's full, real
+ * category list (there is no generic "Backend" value -- it's split by language: Java/PHP/Python/
+ * Golang/etc.) and `_sb/roadmap.md` for when this was found and fixed.
+ *
+ * The title packs role + company + a variable-length, comma-separated tail (salary and/or one or
+ * more cities and/or "remote"/"abroad") into one string, not a fixed two-field split -- e.g.
+ * "Backend Engineer в WinWin.Travel, за кордоном, віддалено" or "Junior Workplace Specialist в
+ * Ubisoft, Київ" (no salary shown at all -- optional, not every posting has one). Splits on the
+ * first " в " (role vs. everything else) then the first "," inside that (company vs. the
+ * free-form tail) rather than trying to parse the tail's own field count -- `Posting` has no
+ * salary field anyway, so the tail is kept whole as `location`, and the existing remote-word scan
+ * (Ukrainian-aware, see `REMOTE_WORDS`) picks "віддалено" out of it the same way it already does
+ * for any other source's location text. */
+async function fetchDouUa({ uaCategories }: FeedFetchOpts): Promise<FetchResult> {
+  if (uaCategories.length === 0) return [[], "dou.ua: no ua_categories configured for this candidate"];
   const postings: Posting[] = [];
-  for (const match of xml.matchAll(ITEM_RE)) {
-    const chunk = match[1] ?? "";
-    const field = (name: (typeof RSS_FIELD_NAMES)[number]): string => {
-      const m = FIELD_RE[name].exec(chunk);
-      // Double-decode, not single -- dou.ua's own feed double-encodes entities in the title
-      // specifically (confirmed live: literal "&amp;nbsp;" in the raw XML, not just "&nbsp;"),
-      // so a single pass leaves a raw "&nbsp;" sitting in the text. Idempotent/harmless for
-      // anything that was only single-encoded to begin with.
-      return m ? decodeHtmlEntities(decodeHtmlEntities(m[1]!.trim())) : "";
-    };
-    const rawTitle = field("title");
-    const sepIndex = rawTitle.indexOf(" в ");
-    let title: string;
-    let company: string;
-    let location: string;
-    if (sepIndex >= 0) {
-      title = rawTitle.slice(0, sepIndex).trim();
-      const rest = rawTitle.slice(sepIndex + 3);
-      const commaIndex = rest.indexOf(",");
-      if (commaIndex >= 0) {
-        company = rest.slice(0, commaIndex).trim();
-        location = rest.slice(commaIndex + 1).trim();
+  let error: string | null = null;
+  for (const category of uaCategories) {
+    const url = "https://jobs.dou.ua/vacancies/feeds/?category=" + encodeURIComponent(category);
+    let xml: string;
+    try {
+      xml = await getText(url);
+    } catch (fetchError) {
+      error = `dou.ua (${category}): ${errorMessage(fetchError)}`;
+      continue;
+    }
+    for (const match of xml.matchAll(ITEM_RE)) {
+      const chunk = match[1] ?? "";
+      const field = (name: (typeof RSS_FIELD_NAMES)[number]): string => {
+        const m = FIELD_RE[name].exec(chunk);
+        // Double-decode, not single -- dou.ua's own feed double-encodes entities in the title
+        // specifically (confirmed live: literal "&amp;nbsp;" in the raw XML, not just "&nbsp;"),
+        // so a single pass leaves a raw "&nbsp;" sitting in the text. Idempotent/harmless for
+        // anything that was only single-encoded to begin with.
+        return m ? decodeHtmlEntities(decodeHtmlEntities(m[1]!.trim())) : "";
+      };
+      const rawTitle = field("title");
+      const sepIndex = rawTitle.indexOf(" в ");
+      let title: string;
+      let company: string;
+      let location: string;
+      if (sepIndex >= 0) {
+        title = rawTitle.slice(0, sepIndex).trim();
+        const rest = rawTitle.slice(sepIndex + 3);
+        const commaIndex = rest.indexOf(",");
+        if (commaIndex >= 0) {
+          company = rest.slice(0, commaIndex).trim();
+          location = rest.slice(commaIndex + 1).trim();
+        } else {
+          company = rest.trim();
+          location = "";
+        }
       } else {
-        company = rest.trim();
+        title = rawTitle;
+        company = "?";
         location = "";
       }
-    } else {
-      title = rawTitle;
-      company = "?";
-      location = "";
+      postings.push(
+        makePosting({
+          source: "douua",
+          company,
+          title,
+          location,
+          url: field("link"),
+          description: stripHtml(field("description")),
+          postedAt: field("pubDate"),
+        })
+      );
     }
-    postings.push(
-      makePosting({
-        source: "douua",
-        company,
-        title,
-        location,
-        url: field("link"),
-        description: stripHtml(field("description")),
-        postedAt: field("pubDate"),
-      })
-    );
   }
-  return [postings, null];
+  return [postings, error];
 }
 
 /** The monthly 'Ask HN: Who is hiring?' thread via the Algolia API -- each top-level comment is
@@ -643,7 +663,6 @@ export const AGGREGATOR_FETCHERS: Record<string, FeedFetcher> = {
   himalayas: fetchHimalayas,
   weworkremotely: fetchWeworkremotely,
   hackernews: fetchHackernews,
-  douua: fetchDouUa,
 };
 
 // ---------------------------------------------------------------------- regional boards
@@ -741,25 +760,34 @@ async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promis
 }
 
 /** djinni.co -- Ukraine's largest tech job board. RSS confirmed live at `/jobs/rss/`, and
- * confirmed to honour `?primary_keyword=<term>` server-side filtering -- query-driven like
- * `fetchWorkable`/`fetchSmartrecruiters` (one fetch per track title, top 8 longest via
- * `trackQueries`), not a flat aggregator pull. An item has no structured company/location field
- * at all (`title`, `link`, `description`, `category` [the matched keyword, not useful as a real
- * category], `pubDate`, `guid` only, confirmed live) -- company defaults to `"?"` like several
- * other fetchers already do when it's genuinely unavailable, and remote/location relies entirely
- * on the existing description-text fallback (Ukrainian-aware, see `REMOTE_WORDS`). */
-async function fetchDjinni({ trackTitles }: FeedFetchOpts): Promise<FetchResult> {
-  const queries = trackQueries(trackTitles);
-  if (queries.length === 0) return [[], "Djinni: no track titles to search with"];
+ * `?primary_keyword=<exact category>` confirmed to genuinely filter server-side -- but ONLY for
+ * an exact match against Djinni's own fixed category taxonomy (~123 values, one per
+ * `/jobs/keyword-<slug>` page in its sitemap -- see `docs/reference/ua-scout-categories.md`).
+ * Anything else -- a free-text track title, a typo, garbage -- is silently ignored server-side
+ * and Djinni returns its unfiltered "latest vacancies" feed instead of an error or empty result;
+ * confirmed by diffing the response for a real query against a nonsense one and finding them
+ * byte-identical. Query-driven by `uaCategories`, one fetch per configured category (like
+ * `fetchDouUa` above), NOT by track titles the way this used to work -- that never filtered
+ * anything, on either platform (see `_sb/roadmap.md`). Also case-sensitive for anything that
+ * isn't already lowercase, unlike dou.ua -- `"Engineering Manager"` filters correctly,
+ * `"engineering manager"` silently falls back to the unfiltered feed same as garbage input; the
+ * slug form (`"engineering_manager"`) is safest since it's already all-lowercase and is exactly
+ * what `docs/reference/ua-scout-categories.md` lists. An item has no structured company/location
+ * field at all (`title`, `link`, `description`, `category` [the matched keyword, not useful as a
+ * real category], `pubDate`, `guid` only, confirmed live) -- company defaults to `"?"` like
+ * several other fetchers already do when it's genuinely unavailable, and remote/location relies
+ * entirely on the existing description-text fallback (Ukrainian-aware, see `REMOTE_WORDS`). */
+async function fetchDjinni({ uaCategories }: FeedFetchOpts): Promise<FetchResult> {
+  if (uaCategories.length === 0) return [[], "Djinni: no ua_categories configured for this candidate"];
   const postings: Posting[] = [];
   let error: string | null = null;
-  for (const query of queries) {
-    const url = "https://djinni.co/jobs/rss/?primary_keyword=" + encodeURIComponent(query);
+  for (const category of uaCategories) {
+    const url = "https://djinni.co/jobs/rss/?primary_keyword=" + encodeURIComponent(category);
     let xml: string;
     try {
       xml = await getText(url);
     } catch (fetchError) {
-      error = `Djinni (${query}): ${errorMessage(fetchError)}`;
+      error = `Djinni (${category}): ${errorMessage(fetchError)}`;
       continue;
     }
     for (const match of xml.matchAll(ITEM_RE)) {
@@ -787,6 +815,7 @@ async function fetchDjinni({ trackTitles }: FeedFetchOpts): Promise<FetchResult>
 export const REGIONAL_FETCHERS: Record<string, FeedFetcher> = {
   justjoin: (opts) => fetchJustjoin(opts),
   nofluff: fetchNofluff,
+  douua: fetchDouUa,
   djinni: fetchDjinni,
 };
 
@@ -832,9 +861,11 @@ export async function fetchAll(opts: {
   feeds: string[];
   trackTitles: string[];
   roleSignals?: string[];
+  uaCategories?: string[];
   maxWorkers?: number;
 }): Promise<FetchResult> {
   const roleSignals = opts.roleSignals ?? [];
+  const uaCategories = opts.uaCategories ?? [];
   const jobs: Array<{ label: string; run: () => Promise<FetchResult> }> = [];
 
   for (const company of opts.companies) {
@@ -851,7 +882,7 @@ export async function fetchAll(opts: {
     if (fetcher === undefined) {
       jobs.push({ label: feedKey, run: async () => [[], `${feedKey}: no fetcher for this feed key`] });
     } else {
-      jobs.push({ label: feedKey, run: () => fetcher({ trackTitles: opts.trackTitles, roleSignals }) });
+      jobs.push({ label: feedKey, run: () => fetcher({ trackTitles: opts.trackTitles, roleSignals, uaCategories }) });
     }
   }
 

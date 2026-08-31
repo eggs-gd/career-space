@@ -42,7 +42,17 @@ for `data/config.yaml`). Ask about:
 - **feeds** -- which of `workable`, `smartrecruiters`, `remoteok`, `remotive`, `arbeitnow`,
   `jobicy`, `himalayas`, `weworkremotely`, `hackernews`, `justjoin`, `nofluff`, `douua`, `djinni`
   to pull from. `justjoin`/`nofluff` are Poland/CEE-focused, `douua`/`djinni` are Ukraine-focused
-  (predominantly Ukrainian-language postings) -- skip whichever region isn't relevant.
+  (predominantly Ukrainian-language postings) -- skip whichever region isn't relevant. If either
+  is included, also ask for **`ua_categories`** below -- without it, that source fetches nothing.
+- **`ua_categories`** (per track, only needed for `douua`/`djinni`) -- dou.ua and Djinni each
+  filter their feeds by an exact match against their own small, fixed category list, not by free
+  title text. Open `reference/ua-scout-categories.md`, show the candidate the real list (or the
+  slice of it that plausibly fits this track), and let them pick -- never invent or guess a
+  category name yourself, and never fall back to reusing the track's own `titles` (that's the
+  exact bug this field exists to fix; see the file's own header for what went wrong before). The
+  two platforms don't spell the same category the same way, so a track wanting both may need two
+  entries (e.g. `DevOps` for dou.ua, `dev_ops` for Djinni). Optional, easy to skip -- a track
+  without it simply gets no dou.ua/Djinni postings, nothing else breaks.
 - **min_fit_score** (default 4) -- the floor from `score_fit.ts`'s scale below which a judged
   posting stays a `seen.jsonl` line, never gets its own `data/vacancies/<slug>/` folder.
 - **max_judgments_per_run** (default 25) -- caps how many candidates one scout run hands you to

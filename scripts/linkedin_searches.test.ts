@@ -26,6 +26,7 @@ test("People-search link uses hiringTitles, never the track's own job-search tit
       kind: "primary",
       titles: ["engineering manager"],
       hiringTitles: ["vp engineering", "director of engineering", "cto"],
+      uaCategories: [],
     },
   });
   const md = buildMarkdown(config);
@@ -47,6 +48,7 @@ test("no People-search link when hiringTitles isn't configured -- omitted, not a
       kind: "primary",
       titles: ["engineering manager"],
       hiringTitles: [],
+      uaCategories: [],
     },
   });
   const md = buildMarkdown(config);

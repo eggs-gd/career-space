@@ -30,6 +30,7 @@ export async function runScout(sourcesPath?: string): Promise<Record<string, unk
     feeds: [...config.feeds],
     trackTitles: config.allTrackTitles(),
     roleSignals: [...config.roleSignals],
+    uaCategories: config.allUaCategories(),
   });
 
   const survivors = filterPostings(postings, config);

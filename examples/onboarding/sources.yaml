@@ -25,6 +25,12 @@ tracks:
       - engineering manager
       - head of engineering
       - cto
+    # Powers douua/djinni below -- both filter by an exact category match, not free title text.
+    # See reference/ua-scout-categories.md for the real lists; commented out here since this
+    # fictional candidate is Germany-based (see local_keywords below), not targeting Ukraine.
+    # ua_categories:
+    #   - DevOps          # dou.ua's spelling
+    #   - dev_ops         # Djinni's spelling -- not the same string, both needed for both sources
   fullstack:
     # `fallback`: worth judging only alongside a real strategic_signals hit, not on title match
     # alone -- this candidate isn't chasing full-stack roles specifically, but wouldn't rule one

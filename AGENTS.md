@@ -16,7 +16,10 @@ Runtime person-specific data lives under `data/`, which is gitignored (see `.git
 commit anything under it, never paste its contents anywhere public, never treat this repo's own
 git history as a backup for it. `playbooks/`, `policies/`, and `scripts/` are reusable technique.
 `examples/` contains onboarding seed examples: useful for shape and quality, never runtime
-candidate data and not something a playbook should read except during onboarding.
+candidate data and not something a playbook should read except during onboarding. `reference/`
+holds static reference data a playbook consults but never invents or guesses on its own — e.g. a
+third-party site's fixed category taxonomy; a playbook that names one of these files means read
+the real values in it and offer them to the candidate, not approximate from memory.
 
 **Everything in this repo except `_sb/` and `agent-contract/` is for execution — what you read and
 act on to run a playbook. `_sb/` is for development**: this repo's own roadmap, status, and design
