@@ -31,6 +31,11 @@ many `applied` with no movement in a while, anything that jumps out) rather than
 the file and stopping -- the page is for browsing/clicking through, the chat reply is for the
 one-sentence "here's what's going on."
 
+If the board's grown large enough that "what's tracked" stops answering "what's actually worth
+pursuing," mention `playbooks/prioritize.md` as the next step rather than assuming the candidate
+wants it -- that's a judgment call against `data/strategy.md`, a genuinely different question this
+playbook doesn't answer on its own.
+
 ## Archiving
 
 The candidate can ask to archive a vacancy at any point ("заархівуй цю вакансію" / "archive this

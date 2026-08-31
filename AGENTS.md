@@ -181,6 +181,7 @@ ask riding along with an operator one) before you act on it.
 | "пошукай вакансії" / "run the scout" / "find me matches" | `playbooks/scout.md` |
 | "згенеруй лінки для LinkedIn" / "linkedin search links" | `playbooks/linkedin-search.md` |
 | "покажи дошку" / "show me the board" / "what's the status of everything" | `playbooks/board.md` |
+| "що з дошки викинути" / "дай топ 10" / "what should I actually pursue" | `playbooks/prioritize.md` |
 
 Some playbooks are internal capabilities, not direct candidate triggers. Orchestrator playbooks
 call these to avoid copying the same procedure into every workflow:
@@ -233,6 +234,8 @@ data/                           # gitignored, personal
                                  # vacancy's own folder instead, see vacancies/ below
   sources.yaml                  # scout config: tracks, exclusions, companies/feeds -- see
                                  # playbooks/scout.md's Step 0; doesn't exist until scouting is set up
+  strategy.md                   # candidate-side wants/blockers/exceptions, plain prose -- see
+                                 # playbooks/prioritize.md's Step 0; doesn't exist until that's run
   vacancies/
     seen.jsonl                  # every posting the scout actually judged, matched or rejected --
                                  # dedup ledger + audit trail, see scripts/vacancy_store.ts's docstring
@@ -255,10 +258,11 @@ poke at it speculatively.
 ## Example material
 
 `examples/onboarding/` holds a complete onboarding example for a fictional candidate
-(`CV_GENERAL.md`, `config.yaml`, `sources.yaml`, plus `examples/role-profiles/`'s three lanes --
-management, technical, individual contributor). Use examples only when designing or running
-onboarding, to understand the expected shape, level of specificity, and file boundaries. Do not
-treat example facts as facts about the current candidate; runtime workflows read `data/`.
+(`CV_GENERAL.md`, `config.yaml`, `sources.yaml`, `strategy.md`, plus `examples/role-profiles/`'s
+three lanes -- management, technical, individual contributor). Use examples only when designing or
+running onboarding (or `playbooks/prioritize.md`'s own Step 0, for `strategy.md`'s shape), to
+understand the expected shape, level of specificity, and file boundaries. Do not treat example
+facts as facts about the current candidate; runtime workflows read `data/`.
 
 ## Scripts and the MCP server
 

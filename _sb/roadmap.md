@@ -31,6 +31,22 @@ narrated history of how each one was found.
       worth seeing at a glance, not just a fetch-time gate). A vacancy can be archived (`vacancy_
       set_archived`, added 2026-08-31) -- orthogonal to `status`, excluded from the board/
       `vacancy_list` by default, nothing deleted, `include_archived` brings it back.
+- [x] Prioritize -- `playbooks/prioritize.md`, added 2026-08-31. Candidate-side "do I actually
+      want this," a judgment deliberately kept separate from fitment's employer-side "can I clear
+      their bar" -- confirmed by reading `fitment.md`'s own instructions that candidate preference
+      is checked exactly once, `config.yaml`'s `rejected_broader_titles`/`commercial_directions`,
+      nowhere else. `fitment.md` itself stays untouched -- its semantics didn't actually change by
+      this playbook existing, so it has no reason to know about `prioritize.md`; the dependency is
+      one-directional (`prioritize.md` reads a `fitment.md` artifact when one exists, never the
+      reverse). Reasons over `data/strategy.md` (new, plain prose, not YAML --
+      blockers/preferences/strategic-alignment/exceptions, written via this playbook's own Step 0
+      interview) against the existing board + fitments -- and works fine with no fitment at all,
+      recommending off suitability alone rather than waiting on or inventing an employer-side
+      score. Deliberately no code, no new score, and nothing persisted yet -- a live judgment made
+      fresh each time, not cached, until real repeated use shows a stable enough pattern to be
+      worth formalizing (see the playbook's own closing note). `score_fit.ts`/`scout.md` untouched
+      on purpose -- premature filtering
+      earlier in the pipeline would just discard outliers before this judgment ever sees them.
 - [x] Rendered CV/cover-letter output -- PDF/HTML with recruiter-facing filenames.
 
 **Fixed 2026-08-30 -- LinkedIn people-search searched for peers, not hirers.**
@@ -137,13 +153,6 @@ Ruled out for a third UA source, confirmed via a real fetch attempt: **robota.ua
   signal actually needs it. Vacancy slug sorting (folder names don't sort by recency) folds in
   here rather than being its own item -- `render_board` already removes the need to eyeball raw
   folder order, so it's a machine/collision concern only, worth solving alongside this if at all.
-- **Fitment only judges "do I clear the bar," never "does this actually suit me."**
-  `score_fit.ts`'s risk/appeal is one-directional -- what would make a hiring team hesitate or
-  get interested, never what would make the candidate hesitate or get interested (remote-only,
-  no people-management, a comp floor, and similar preferences aren't checked against a posting at
-  all right now). Working hypothesis is this is probably partially covered already since fitment
-  goes through LLM judgment on the whole posting rather than blind keyword matching: not confirmed
-  either way.
 - **Dashboard, expensive path** -- only if the cheap board proves insufficient. SvelteKit +
   static adapter. Not started, not clearly needed yet.
 - **Offload narrow, mechanical LLM sub-steps to a cheaper-model subagent, host-capability-gated.**
