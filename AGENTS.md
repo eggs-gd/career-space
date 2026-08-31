@@ -239,7 +239,7 @@ data/                           # gitignored, personal
     <slug>/                     # one folder per vacancy worth attention -- scout-found (status
                                  # starts "new") or candidate-pasted via cover-letter.md/cv-targeted.md
                                  # (status starts "tracked" -- already past "found it, not reviewed").
-                                 # record.yaml (status/status_history/fit/track_label/metadata) + posting.md
+                                 # record.yaml (status/status_history/fit/track_label/archived/metadata) + posting.md
                                  # always; cv.md / cover-letter.md / fitment.md / targeting-plan.md live
                                  # here too once generated -- never in cv/ above or a separate
                                  # cover-letters/ (that folder is retired)

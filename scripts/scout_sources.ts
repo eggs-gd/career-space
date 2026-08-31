@@ -18,7 +18,19 @@ const WS_RE = /[ \t]+/g;
 // "віддалено"/"дистанційно" (Ukrainian for "remotely") added alongside the English words once
 // dou.ua/Djinni -- both predominantly Ukrainian-language -- were added as sources; every English
 // fetcher's text just never contains these, so no collision risk from keeping the list shared.
-const REMOTE_WORDS = ["remote", "anywhere", "distributed", "work from home", "wfh", "віддалено", "дистанційно"];
+//
+// Deliberately NOT a bare "distributed" or "anywhere" -- a real, observed false positive from a
+// live scout run: an on-site London role (`location` field said so) got mislabeled remote
+// because its description happened to say "distributed systems" (plain engineering-architecture
+// phrasing, present in most backend JDs regardless of work arrangement) and, separately, "sell
+// anywhere" (product marketing copy, describing the product's reach, not the candidate's own
+// location). `"work anywhere"`/`"from anywhere"` cover the genuine phrasings ("work from
+// anywhere", "we hire from anywhere") without matching either false-positive shape. This mirrors
+// `scout_prefilter.ts`'s `REMOTE_SIGNAL_WORDS`, which already excluded bare "distributed" for the
+// same reason -- keep the two lists in sync; the same false-positive class can leak through
+// either one independently (see that file's own comment for why passesLocationGate checks BOTH
+// `Posting.remote`, decided here, and its own separate re-scan of the full text).
+const REMOTE_WORDS = ["remote", "work anywhere", "from anywhere", "work from home", "wfh", "віддалено", "дистанційно"];
 
 // Identify honestly.
 const HEADERS: Record<string, string> = { "User-Agent": "Mozilla/5.0 (career-space scout; personal job-search tool)" };

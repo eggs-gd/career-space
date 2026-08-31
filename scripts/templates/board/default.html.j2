@@ -20,6 +20,8 @@
       --rejected: #dc2626;
       --offer: #059669;
       --skipped: #9ca3af;
+      --local: #0e7490;
+      --local-tint: #ecfeff;
     }
     * { box-sizing: border-box; }
     body {
@@ -118,9 +120,49 @@
     .vrow {
       padding: 8px 12px;
       border-bottom: 1px solid var(--line);
+      border-left: 3px solid transparent;
     }
     .vrow:last-child { border-bottom: none; }
     .vrow:hover { background: var(--bg-alt); }
+    /* "Local" = matches data/sources.yaml's local_keywords -- see scout_prefilter's
+       matchesLocalKeywords, checked against this vacancy's stored location + posting.md. Left
+       border for at-a-glance scanning down the list, badge for anyone relying on text over
+       color (colorblind-safe, and still legible with print/no-CSS). */
+    .vrow.local {
+      border-left-color: var(--local);
+      background: var(--local-tint);
+    }
+    .vrow.local:hover { background: var(--local-tint); filter: brightness(0.97); }
+    .local-badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--local);
+      background: var(--bg);
+      border: 1px solid var(--local);
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    /* Only ever appears on a render explicitly asked to include archived vacancies -- the
+       default excludes them entirely (see vacancy_store.listVacancies's includeArchived). Muted
+       on purpose: this view is the exception, not the everyday one. */
+    .vrow.archived { opacity: 0.6; }
+    .archived-badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      background: var(--bg-alt);
+      border: 1px solid var(--line);
+      white-space: nowrap;
+      vertical-align: middle;
+    }
     .vrow-main {
       display: flex;
       gap: 12px;

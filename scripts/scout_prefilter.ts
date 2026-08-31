@@ -49,13 +49,35 @@ function wordBoundaryMatch(haystack: string, phrases: readonly string[]): boolea
 // engineering-architecture phrasing ("distributed systems", "distributed squads") on postings
 // that are strictly on-site, so against a multi-thousand-char description it's too generic to be
 // a reliable location signal.
-const REMOTE_SIGNAL_WORDS = ["remote", "anywhere", "work from home", "wfh"];
+//
+// Also NOT a bare "anywhere" -- a real, observed bug from a live scout run: an on-site London
+// role (location field said so) passed this gate anyway because its description said "sell
+// anywhere" (product marketing copy, about the product's reach, nothing to do with where the
+// candidate can be based). `"work anywhere"`/`"from anywhere"` still catch the genuine phrasing
+// this whole check exists for (the "work from anywhere" example right above) without matching
+// that shape of false positive. Keep in sync with `scout_sources.ts`'s `REMOTE_WORDS` -- same
+// false-positive risk, checked independently by each.
+const REMOTE_SIGNAL_WORDS = ["remote", "work anywhere", "from anywhere", "work from home", "wfh"];
 
 // A bare "hybrid" mention with no remote language elsewhere is treated as a reject, not a soft
 // pass -- "hybrid" alone is at least as likely to mean a specific non-local city (no value to a
 // candidate who isn't there) as it is to mean "hybrid, but remote candidates considered." The
 // second case is already caught by REMOTE_SIGNAL_WORDS above regardless of whether "hybrid"
 // appears at all, so a separate hybrid-only pass lane would only add false positives.
+
+/** Plain (non-word-boundary) substring match against `localKeywords` -- the candidate's own
+ * city/country phrases, checked case-insensitively against whatever text is passed in. Shared by
+ * `passesLocationGate` below (against the full title+location+description text, at fetch time)
+ * and `render_board.ts` (against a tracked vacancy's stored `location` + `posting.md`, to decide
+ * whether to highlight it -- see `rendering.ts`'s `renderBoardHtml`). Deliberately NOT
+ * `wordBoundaryMatch`: a city name is specific enough on its own that requiring exact word
+ * boundaries would only risk false negatives (a location field's own punctuation/formatting
+ * varies more than a job title's does), not false positives worth guarding against. */
+export function matchesLocalKeywords(text: string, localKeywords: readonly string[]): boolean {
+  if (localKeywords.length === 0) return false;
+  const textL = text.toLowerCase();
+  return localKeywords.some((phrase) => textL.includes(phrase));
+}
 
 /** Cheap, deterministic remote/location check -- runs before the agent ever reads a posting
  * that's strictly on-site somewhere the candidate isn't. No-op (passes everything) when
@@ -70,7 +92,7 @@ function passesLocationGate(posting: Posting, config: ScoutConfig): boolean {
   if (config.localKeywords.length === 0) return true;
   const combinedL = `${posting.title} ${posting.location} ${posting.description}`.toLowerCase();
   if (posting.remote || REMOTE_SIGNAL_WORDS.some((word) => combinedL.includes(word))) return true;
-  if (config.localKeywords.some((phrase) => combinedL.includes(phrase))) return true;
+  if (matchesLocalKeywords(combinedL, config.localKeywords)) return true;
   return false;
 }
 

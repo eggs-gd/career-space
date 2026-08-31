@@ -51,14 +51,15 @@ interface over it or over `score_fit.ts`'s scoring formula:
 shell-escaping a JSON blob, no constructing a `node ...` invocation by hand. `scripts/
 mcp_server.ts` wraps the exact same functions (`render_resume`, `render_cover_letter`,
 `score_fit`, `scout_fetch`, `vacancy_mark_seen`, `vacancy_upsert`, `vacancy_set_status`,
-`vacancy_attach_artifact`, `vacancy_list`, `linkedin_searches`, `render_board`); nothing behaves
-differently between the two interfaces. If the server isn't connected (not set up yet, or an
-agent without MCP support), fall back to the CLI form documented in each script's own docstring
-(`node scripts/dist/render_resume.js <file>.md`, `node scripts/dist/render_cover_letter.js
-<file>.md`, `node scripts/dist/score_fit.js <file>.json`, `node scripts/dist/scout_fetch.js`,
-`node scripts/dist/vacancy_store.js <mark-seen|upsert|set-status|attach-artifact|list> ...`,
-`node scripts/dist/linkedin_searches.js`, `node scripts/dist/render_board.js`) -- run `npm run
-build` first if `scripts/dist/` doesn't exist yet.
+`vacancy_set_archived`, `vacancy_attach_artifact`, `vacancy_list`, `linkedin_searches`,
+`render_board`); nothing behaves differently between the two interfaces. If the server isn't
+connected (not set up yet, or an agent without MCP support), fall back to the CLI form documented
+in each script's own docstring (`node scripts/dist/render_resume.js <file>.md`, `node scripts/
+dist/render_cover_letter.js <file>.md`, `node scripts/dist/score_fit.js <file>.json`, `node
+scripts/dist/scout_fetch.js`, `node scripts/dist/vacancy_store.js <mark-seen|upsert|set-status|
+set-archived|attach-artifact|list> ...`, `node scripts/dist/linkedin_searches.js`, `node
+scripts/dist/render_board.js [--include-archived]`) -- run `npm run build` first if `scripts/
+dist/` doesn't exist yet.
 
 ## How the automatic setup works
 

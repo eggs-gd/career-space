@@ -24,6 +24,7 @@ import markdownItFootnote from "markdown-it-footnote";
 import { REPO_ROOT } from "./repo_paths";
 import { formatCvMarkdown } from "./markdown_normalize";
 import { vacancyDir as defaultVacancyDir } from "./vacancy_store";
+import { matchesLocalKeywords } from "./scout_prefilter";
 
 const TEMPLATE_DIR = path.join(__dirname, "..", "templates");
 const CONFIG_PATH = path.join(REPO_ROOT, "data", "config.yaml");
@@ -253,13 +254,21 @@ type Rec = Record<string, any>;
  * `vacancies` is `vacancy_store.listVacancies()`'s own output (unfiltered -- this renders every
  * status in one page). `vacancyDirFn` resolves a slug to its folder path -- injected rather than
  * imported directly so this stays a pure "data (+ a lookup) -> HTML" function; defaults to
- * `vacancy_store.vacancyDir` if not given. */
+ * `vacancy_store.vacancyDir` if not given.
+ *
+ * `localKeywords` (from `data/sources.yaml`, see `render_board.ts`) highlights a vacancy whose
+ * stored `location` or `posting.md` text matches one of the candidate's own local phrases --
+ * checked with the exact same `matchesLocalKeywords` helper the scout's own prefilter uses, so
+ * "local" means the same thing here as it does at fetch time. `[]` (the default) highlights
+ * nothing rather than erroring -- a candidate who hasn't set up scouting, or never configured
+ * `local_keywords`, still gets a usable board. */
 export function renderBoardHtml(
   vacancies: Rec[],
-  opts: { title?: string; vacancyDirFn?: (slug: string) => string } = {}
+  opts: { title?: string; vacancyDirFn?: (slug: string) => string; localKeywords?: readonly string[] } = {}
 ): string {
   const title = opts.title ?? "Vacancy board";
   const vacancyDirFn = opts.vacancyDirFn ?? defaultVacancyDir;
+  const localKeywords = opts.localKeywords ?? [];
 
   const byStatus = new Map<string, Rec[]>();
   for (const v of vacancies) {
@@ -288,6 +297,7 @@ export function renderBoardHtml(
       const files: string[] = v.files ?? [];
       const vdir = vacancyDirFn(slug);
       const fileButtons: Array<{ label: string; contentHtml: string }> = [];
+      let postingRaw = "";
       for (const fname of BOARD_FILE_ORDER) {
         if (!files.includes(fname)) continue;
         const fpath = path.join(vdir, fname);
@@ -297,6 +307,7 @@ export function renderBoardHtml(
         } catch {
           continue;
         }
+        if (fname === "posting.md") postingRaw = raw;
         let contentHtml: string;
         if (raw.trim()) {
           // markdown-it (like python-markdown) passes raw HTML in its source straight through
@@ -316,7 +327,8 @@ export function renderBoardHtml(
         }
         fileButtons.push({ label: BOARD_FILE_LABELS[fname] ?? fname, contentHtml });
       }
-      const result: Rec = { ...v, slug, fileButtons, updatedShort: boardUpdatedShort(v.updated_at ?? "") };
+      const isLocal = matchesLocalKeywords(`${v.location ?? ""} ${postingRaw}`, localKeywords);
+      const result: Rec = { ...v, slug, fileButtons, updatedShort: boardUpdatedShort(v.updated_at ?? ""), isLocal };
       return result;
     });
 
@@ -337,11 +349,16 @@ export function renderBoardHtml(
         const postingLinkHtml = v.url
           ? `<a class="posting-link" href="${escapeHtml(String(v.url))}" target="_blank" rel="noopener">posting&nbsp;&#8599;</a>`
           : "";
-        return `        <div class="vrow">
+        const localBadgeHtml = v.isLocal ? `<span class="local-badge" title="Matches your local_keywords">📍 Local</span>` : "";
+        // Only ever rendered when a caller explicitly asked to include archived vacancies
+        // (see renderBoardHtml's default, which excludes them before this loop even runs) --
+        // still worth marking here so that view doesn't read as identical to the active list.
+        const archivedBadgeHtml = v.archived ? `<span class="archived-badge">Archived</span>` : "";
+        return `        <div class="vrow${v.isLocal ? " local" : ""}${v.archived ? " archived" : ""}">
           <div class="vrow-main">
             <span class="col-fit">${fitDisplay}</span>
             <span class="col-company">${escapeHtml(String(v.company ?? ""))}</span>
-            <span class="col-role">${escapeHtml(String(v.title ?? ""))}</span>
+            <span class="col-role">${escapeHtml(String(v.title ?? ""))}${localBadgeHtml}${archivedBadgeHtml}</span>
             <span class="col-track">${escapeHtml(String(v.track_label || ""))}</span>
             <span class="col-updated">${escapeHtml(v.updatedShort)}</span>
           </div>${

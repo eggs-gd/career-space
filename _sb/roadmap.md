@@ -23,7 +23,12 @@ narrated history of how each one was found.
 - [x] LinkedIn search links -- ready-to-click Boolean search deep-links. People-search now needs
       a track's own `hiring_titles:` to appear at all (fixed 2026-08-30 -- see "Built" note below
       for what was actually wrong).
-- [x] Dashboard/board -- every vacancy on one page, grouped by status, sorted by fit.
+- [x] Dashboard/board -- every vacancy on one page, grouped by status, sorted by fit. A local
+      vacancy (matches `local_keywords`, same check the scout's own prefilter uses) gets a
+      colored highlight (added 2026-08-31, prompted by dou.ua/Djinni making "local" a real signal
+      worth seeing at a glance, not just a fetch-time gate). A vacancy can be archived (`vacancy_
+      set_archived`, added 2026-08-31) -- orthogonal to `status`, excluded from the board/
+      `vacancy_list` by default, nothing deleted, `include_archived` brings it back.
 - [x] Rendered CV/cover-letter output -- PDF/HTML with recruiter-facing filenames.
 
 **Fixed 2026-08-30 -- LinkedIn people-search searched for peers, not hirers.**
@@ -34,6 +39,22 @@ new, optional `hiring_titles:` field, domain judgment left to the candidate -- s
 `playbooks/scout.md`'s Step 0); the people-search link is now built from that instead, and is
 simply omitted (not silently wrong) for a track that hasn't set it, with a note in the generated
 file explaining why and how to fix it. Covered by `linkedin_searches.test.ts`.
+
+**Fixed 2026-08-31 -- an on-site posting could pass the location gate on incidental word
+matches.** Found by analyzing a real `skipped` batch: a London on-site role's description said
+"distributed systems" (routine architecture phrasing) and "sell anywhere" (product marketing
+copy) -- neither about where the candidate could be based, but bare `"distributed"`/`"anywhere"`
+entries in `scout_prefilter.ts`'s `REMOTE_SIGNAL_WORDS` and `scout_sources.ts`'s `REMOTE_WORDS`
+matched them as remote signals anyway. The actual leak for this specific case was
+`REMOTE_SIGNAL_WORDS` (`scout_prefilter.ts`) -- `scout_sources.ts`'s location-first `isRemote()`
+had already correctly recorded `remote: false` from the real "London, UK" location field; the
+gate's own *separate* re-check of the full combined text overrode that. `scout_sources.ts`'s copy
+already had the same latent bug for any posting relying on its description-fallback path (empty
+location field) even though it hadn't been observed yet. Fixed both: dropped bare `"distributed"`
+(`REMOTE_SIGNAL_WORDS` already excluded it; `REMOTE_WORDS` didn't) and replaced bare `"anywhere"`
+with `"work anywhere"`/`"from anywhere"` in both lists -- still catches genuine phrasing ("work
+from anywhere") without matching either false-positive shape. Covered by
+`scout_prefilter.test.ts` (new file).
 
 **Built 2026-08-30, fixed 2026-08-31 -- two Ukrainian scout sources, dou.ua + Djinni.** Both
 sources returned ~0 results in real use despite postings existing. Root cause, confirmed live: the
@@ -79,6 +100,14 @@ Ruled out for a third UA source, confirmed via a real fetch attempt: **robota.ua
 
 ## Later / maybe
 
+- **Per-company cap on how many postings one scout run surfaces.** Found via a real `skipped`
+  batch analysis 2026-08-31: one company (Canonical) posting 10+ near-identical EM roles in one
+  run burned that many judgment turns on what was really one decision ("this company's own
+  application process doesn't fit," not "10 separate roles don't fit"). Worked around for now via
+  a `hard_exclude` entry in the candidate's own `data/sources.yaml` (company-specific, reversible,
+  not a code change) -- the real fix would be a `max_postings_per_company_per_run`-shaped config
+  in `scout_domain.ts`/`scout_prefilter.ts`'s dedup step, not started. Not urgent while the
+  workaround holds; worth doing if a second company does the same thing.
 - **Lead-gen / outreach extension** -- extend scout's vacancy -> company -> fit chain one hop
   further: contact discovery + drafted outreach for top-fit vacancies. Not started. Principles
   agreed in advance for when it's picked up: (a) LinkedIn contact lookup/browser control stays an

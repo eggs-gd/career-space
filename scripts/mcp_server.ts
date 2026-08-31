@@ -312,6 +312,24 @@ server.registerTool(
 );
 
 server.registerTool(
+  "vacancy_set_archived",
+  {
+    description:
+      "Archive or unarchive a vacancy -- orthogonal to status, not a new pipeline stage. An " +
+      "archived vacancy is excluded from vacancy_list and render_board by default (nothing is " +
+      "deleted; pass include_archived to vacancy_list, or archived: false here, to bring it back). " +
+      "Use when the candidate wants stale/no-longer-relevant vacancies off the board without " +
+      "losing their history -- a rejected or skipped vacancy from months ago is the common case, " +
+      "but any status can be archived.",
+    inputSchema: {
+      slug: z.string(),
+      archived: z.boolean(),
+    },
+  },
+  async ({ slug, archived }): Promise<CallToolResult> => respond(vacancyStore.setArchived(slug, archived))
+);
+
+server.registerTool(
   "vacancy_attach_artifact",
   {
     description:
@@ -355,16 +373,20 @@ server.registerTool(
   {
     description:
       "List tracked vacancies (slug/status/company/title/fit_score/track_label/url/updated_at/" +
-      "files -- `files` is every filename actually present in that vacancy's folder), optionally " +
-      "filtered to one status. Doesn't include seen.jsonl's rejected-and-not-tracked entries -- use " +
-      "this for \"what am I actually pursuing,\" not a full history of everything the scout judged. " +
-      "For a human-readable overview, prefer `render_board` over hand-summarizing this list into a " +
-      "table yourself -- same data, real clickable links to every vacancy's files, no token cost.",
+      "location/archived/files -- `files` is every filename actually present in that vacancy's " +
+      "folder), optionally filtered to one status. Excludes an archived vacancy (see " +
+      "vacancy_set_archived) unless include_archived is true. Doesn't include seen.jsonl's " +
+      "rejected-and-not-tracked entries -- use this for \"what am I actually pursuing,\" not a full " +
+      "history of everything the scout judged. For a human-readable overview, prefer `render_board` " +
+      "over hand-summarizing this list into a table yourself -- same data, real clickable links to " +
+      "every vacancy's files, no token cost.",
     inputSchema: {
       status: z.enum(vacancyStore.VALID_STATUSES).optional(),
+      include_archived: z.boolean().optional(),
     },
   },
-  async ({ status }): Promise<CallToolResult> => respond(vacancyStore.listVacancies(status))
+  async ({ status, include_archived }): Promise<CallToolResult> =>
+    respond(vacancyStore.listVacancies(status, { includeArchived: include_archived }))
 );
 
 server.registerTool(
@@ -373,18 +395,21 @@ server.registerTool(
     description:
       "Renders data/vacancies/'s current state as one static HTML dashboard -- grouped by status, " +
       "sorted by fit score, with a clickable link to every file actually present in each vacancy's " +
-      "folder (fitment, posting, CV, cover letter, targeting plan) plus the original posting URL. No " +
-      "server -- the candidate opens the written file directly in a browser. Prefer this over " +
-      "reading every record.yaml yourself and hand-building a summary table: same underlying data as " +
-      "vacancy_list, but deterministic formatting and real navigable links, for free. Returns the " +
-      "path written (data/board.html by default).",
+      "folder (fitment, posting, CV, cover letter, targeting plan) plus the original posting URL. An " +
+      "archived vacancy (see vacancy_set_archived) is left off the board by default -- pass " +
+      "include_archived to show everything anyway. No server -- the candidate opens the written " +
+      "file directly in a browser. Prefer this over reading every record.yaml yourself and " +
+      "hand-building a summary table: same underlying data as vacancy_list, but deterministic " +
+      "formatting and real navigable links, for free. Returns the path written (data/board.html by " +
+      "default).",
     inputSchema: {
       output_path: z.string().optional(),
+      include_archived: z.boolean().optional(),
     },
   },
-  async ({ output_path }): Promise<CallToolResult> => {
+  async ({ output_path, include_archived }): Promise<CallToolResult> => {
     const resolved = output_path ? resolvePath(output_path) : undefined;
-    return respond({ output_path: renderBoard(resolved) });
+    return respond({ output_path: renderBoard(resolved, include_archived) });
   }
 );
 

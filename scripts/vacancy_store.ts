@@ -173,6 +173,17 @@ export interface VacancySummary {
   trackLabel: string | null;
   url: string;
   updatedAt: string;
+  /** Free-text location as the scout's own fetcher (or the candidate, for a hand-pasted vacancy)
+   * recorded it -- e.g. "Berlin, Germany", "Remote", "за кордоном, віддалено". Empty when never
+   * set. Used by `render_board.ts`/`rendering.renderBoardHtml` to highlight a candidate's local
+   * vacancies (via `scout_prefilter.matchesLocalKeywords` against `data/sources.yaml`'s
+   * `local_keywords`) -- not shown as its own column, since most vacancies leave it empty and a
+   * mostly-blank column would just be noise. */
+  location: string;
+  /** See `setArchived`. `listVacancies` already excludes an archived vacancy by default (its
+   * `includeArchived` option), so this is mainly here for a caller that explicitly asked to see
+   * archived ones too and still needs to tell them apart from active ones in the result. */
+  archived: boolean;
   /** every file actually present in the vacancy's folder, sorted -- lets a caller (a dashboard
    * renderer, an agent deciding what to offer) know exactly what's openable without a second
    * lookup or guessing from record fields alone. */
@@ -189,6 +200,8 @@ function summaryToDict(s: VacancySummary): Rec {
     track_label: s.trackLabel,
     url: s.url,
     updated_at: s.updatedAt,
+    location: s.location,
+    archived: s.archived,
     files: [...s.files],
   };
 }
@@ -433,6 +446,13 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   }
   setdefault(record, "status", "new");
   setdefault(record, "status_history", [{ status: record.status, at: nowStr }]);
+  // Never set from `opts` here, unlike the enrichment fields above -- "archived" isn't
+  // something a scout/candidate re-discovery call should ever have an opinion on, only
+  // `setArchived` (a deliberate candidate action) does. Defaulting false only at creation means
+  // a repost of an already-archived vacancy reconciling onto this same record (see the
+  // company+title fallback above) leaves the archive decision exactly as the candidate left it,
+  // never silently un-archiving it just because the posting resurfaced.
+  setdefault(record, "archived", false);
 
   fs.mkdirSync(vdir, { recursive: true });
   if (opts.postingText) fs.writeFileSync(postingPath(slug), opts.postingText, "utf-8");
@@ -455,6 +475,28 @@ export function setStatus(slug: string, status: VacancyStatus): Rec {
     setdefault(record, "status_history", []);
     record.status_history.push({ status, at: nowStr });
     record.updated_at = nowStr;
+    writeYamlRecord(rpath, record);
+  }
+  return record;
+}
+
+/** Archives (or unarchives) a vacancy -- orthogonal to `status`, not a new pipeline stage.
+ * `status` records where a vacancy is in the hiring process (several of which -- `rejected`,
+ * `skipped`, an old `offer` -- are legitimately terminal but still worth keeping on record);
+ * `archived` only controls whether it's still worth seeing on the board day to day. No
+ * `status_history`-style log kept for this -- it's a visibility toggle, not a pipeline event.
+ * `render_board.ts`/`vacancy_list` exclude an archived vacancy by default (see
+ * `listVacancies`'s `includeArchived` option) but never delete anything; unarchiving (`archived:
+ * false`) brings it straight back with its full history intact. */
+export function setArchived(slug: string, archived: boolean): Rec {
+  const rpath = recordPath(slug);
+  if (!fs.existsSync(rpath)) {
+    throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)} at ${rpath}`);
+  }
+  const record = readYamlRecord(rpath);
+  if (record.archived !== archived) {
+    record.archived = archived;
+    record.updated_at = now();
     writeYamlRecord(rpath, record);
   }
   return record;
@@ -483,15 +525,21 @@ export function attachArtifact(slug: string, kind: string, sourcePathStr: string
   return { path: dest };
 }
 
-export function listVacancies(status?: string): Rec[] {
+/** `includeArchived` defaults to false -- an archived vacancy (see `setArchived`) is left out of
+ * every normal listing/board render unless a caller explicitly asks to see it too. This is the
+ * one place that default lives; `render_board.ts` relies on it rather than filtering again
+ * itself. */
+export function listVacancies(status?: string, opts: { includeArchived?: boolean } = {}): Rec[] {
   if (status !== undefined && !isValidStatus(status)) {
     throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(status)}`);
   }
+  const includeArchived = opts.includeArchived ?? false;
   if (!fs.existsSync(DATA_DIR)) return [];
   const summaries: VacancySummary[] = [];
   for (const rpath of listRecordPaths().sort()) {
     const record = readYamlRecord(rpath);
     if (status !== undefined && record.status !== status) continue;
+    if (!includeArchived && record.archived) continue;
     const fit = record.fit ?? {};
     const dir = path.dirname(rpath);
     const files = fs
@@ -508,6 +556,8 @@ export function listVacancies(status?: string): Rec[] {
       trackLabel: record.track_label ?? null,
       url: record.url ?? "",
       updatedAt: record.updated_at ?? "",
+      location: record.location ?? "",
+      archived: record.archived ?? false,
       files,
     });
   }
@@ -542,6 +592,10 @@ function cli(): void {
       slug: { type: "string" },
       kind: { type: "string" },
       path: { type: "string" },
+      // string, not boolean -- parseArgs's boolean type is presence-only (no way to pass
+      // `false` explicitly), and un-archiving needs that just as much as archiving does.
+      archived: { type: "string" },
+      "include-archived": { type: "boolean" },
     },
   });
 
@@ -592,16 +646,21 @@ function cli(): void {
       throw new VacancyStoreError(`set-status requires --slug and --status (one of ${VALID_STATUSES.join(", ")})`);
     }
     result = setStatus(values.slug, values.status);
+  } else if (command === "set-archived") {
+    if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
+      throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
+    }
+    result = setArchived(values.slug, values.archived === "true");
   } else if (command === "attach-artifact") {
     if (!values.slug || !values.kind || !values.path) {
       throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
     }
     result = attachArtifact(values.slug, values.kind, values.path);
   } else if (command === "list") {
-    result = listVacancies(values.status);
+    result = listVacancies(values.status, { includeArchived: values["include-archived"] });
   } else {
     throw new VacancyStoreError(
-      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, attach-artifact, list`
+      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, attach-artifact, list`
     );
   }
 
