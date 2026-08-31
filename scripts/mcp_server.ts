@@ -177,14 +177,19 @@ server.registerTool(
       "the role_signals-only recall lane -- pass this straight through to vacancy_upsert, don't drop " +
       "it) -- plus counts at each stage (fetched/survived_prefilter/collapsed/considered/returned/" +
       "capped) and any per-source fetch errors. Does no judgment and writes nothing; call " +
-      "vacancy_mark_seen/vacancy_upsert per candidate after judging it.",
+      "vacancy_mark_seen/vacancy_upsert per candidate after judging it. `feeds`, if given, restricts " +
+      "this run to that subset of data/sources.yaml's own `feeds:` list (e.g. the candidate asking " +
+      "for just the Ukrainian boards this time) -- an intersection, never a way to run a feed that " +
+      "isn't actually configured there; anything requested but not configured comes back in " +
+      "`ignored_feeds` instead of silently doing nothing. Omit to run every configured feed.",
     inputSchema: {
       sources_path: z.string().optional(),
+      feeds: z.array(z.string()).optional(),
     },
   },
-  async ({ sources_path }): Promise<CallToolResult> => {
+  async ({ sources_path, feeds }): Promise<CallToolResult> => {
     const resolved = sources_path ? resolvePath(sources_path) : undefined;
-    return respond(await runScout(resolved));
+    return respond(await runScout(resolved, { feeds }));
   }
 );
 

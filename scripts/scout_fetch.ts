@@ -7,9 +7,11 @@
  * records the outcome via `vacancy_store`'s functions (`markSeen` always, `upsertVacancy` only
  * for a posting worth tracking).
  *
- * CLI: `node scripts/dist/scout_fetch.js [--sources data/sources.yaml]` prints a JSON object to
- * stdout. Prefer the `scout_fetch` MCP tool when the server is connected -- same function, typed
- * return, no shell-escaping a JSON blob.
+ * CLI: `node scripts/dist/scout_fetch.js [--sources data/sources.yaml] [--feeds jobico,douua]`
+ * prints a JSON object to stdout -- `--feeds` restricts the run to that subset of the configured
+ * `feeds:` list (see `runScout`'s own docstring for why it's an intersection, never a bypass).
+ * Prefer the `scout_fetch` MCP tool when the server is connected -- same function, typed return,
+ * no shell-escaping a JSON blob.
  */
 
 import * as path from "path";
@@ -22,12 +24,29 @@ import { REPO_ROOT } from "./repo_paths";
 
 const DEFAULT_SOURCES_PATH = path.join(REPO_ROOT, "data", "sources.yaml");
 
-export async function runScout(sourcesPath?: string): Promise<Record<string, unknown>> {
+/** `feeds`, when given, restricts this run to that subset of `data/sources.yaml`'s own `feeds:`
+ * list -- e.g. the candidate saying "just check the Ukrainian boards this time" (`["jobico",
+ * "douua", "djinni"]`). Deliberately an INTERSECTION with the configured list, never a way to
+ * enable a feed that isn't in `sources.yaml` at all: a feed the candidate never opted into (and,
+ * for `douua`/`djinni`, never set `ua_categories` for) has no business running just because one
+ * message asked for it by name. Anything requested but not actually configured comes back in
+ * `ignored_feeds` rather than silently vanishing, so the caller can tell the candidate why. `[]`/
+ * omitted runs every configured feed, same as before this existed. */
+export async function runScout(sourcesPath?: string, opts: { feeds?: string[] } = {}): Promise<Record<string, unknown>> {
   const config = loadScoutConfig(sourcesPath ?? DEFAULT_SOURCES_PATH);
+
+  let feeds = [...config.feeds];
+  let ignoredFeeds: string[] = [];
+  if (opts.feeds && opts.feeds.length > 0) {
+    const requested = opts.feeds.map((f) => f.trim().toLowerCase());
+    const configuredSet = new Set(config.feeds);
+    feeds = requested.filter((f) => configuredSet.has(f));
+    ignoredFeeds = requested.filter((f) => !configuredSet.has(f));
+  }
 
   const [postings, fetchErrors] = await fetchAll({
     companies: [...config.companies],
-    feeds: [...config.feeds],
+    feeds,
     trackTitles: config.allTrackTitles(),
     roleSignals: [...config.roleSignals],
     uaCategories: config.allUaCategories(),
@@ -74,14 +93,18 @@ export async function runScout(sourcesPath?: string): Promise<Record<string, unk
     returned_count: toJudge.length,
     capped_count: cappedCount,
     fetch_errors: fetchErrors,
+    feeds_run: feeds,
+    ignored_feeds: ignoredFeeds,
   };
 }
 
 async function main(): Promise<void> {
-  const { values } = parseArgs({ options: { sources: { type: "string" } } });
+  const { values } = parseArgs({ options: { sources: { type: "string" }, feeds: { type: "string" } } });
   let result: Record<string, unknown>;
   try {
-    result = await runScout(values.sources ? path.resolve(values.sources) : undefined);
+    result = await runScout(values.sources ? path.resolve(values.sources) : undefined, {
+      feeds: values.feeds ? values.feeds.split(",").map((f) => f.trim()) : undefined,
+    });
   } catch (error) {
     if (error instanceof ScoutConfigError) {
       console.error(`error: ${error.message}`);

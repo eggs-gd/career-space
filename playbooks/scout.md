@@ -69,15 +69,24 @@ by the loader, so casing in the yaml doesn't matter.
 ## Step 1 -- fetch
 
 Call `scout_fetch` (MCP tool, or `node scripts/dist/scout_fetch.js` if the server isn't connected).
-It fetches every configured company board and feed, runs the prefilter (title/hard excludes,
-location gate, track/strategic-signal rule), collapses same-role reposts into one, and drops
-anything already in `data/vacancies/seen.jsonl`. Report `fetch_errors` to the candidate if
-non-empty (one dead company slug or flaky feed is never fatal to the rest), and mention the
-funnel briefly so the candidate has a sense of the noise being filtered before they see anything:
-`fetched_count` -> `survived_prefilter_count` -> (minus `collapsed_count` same-role reposts) ->
-`considered_count` (genuinely new, not already in seen.jsonl) -> `returned_count` handed back now
-(`capped_count` held back for a later run, not lost -- worth a one-line mention if non-zero, so
-the candidate knows more is waiting rather than assuming this run found everything).
+By default it fetches every configured company board and feed; a candidate asking to run only
+some of them this time ("just the Ukrainian boards," "skip LinkedIn-adjacent stuff, only X") --
+pass their own `feeds:` list's relevant subset as `feeds` (CLI: `--feeds jobico,douua,djinni`).
+This is an intersection with what's actually configured, never a way to run something outside
+it -- a feed the candidate asks for by name but never added to `sources.yaml` (typo, or genuinely
+not set up) comes back in `ignored_feeds`; mention that plainly rather than silently running fewer
+sources than they asked for. Per-company boards (`companies:`) aren't affected by this and always
+run regardless -- there's no per-run override for those yet.
+
+It runs the prefilter (title/hard excludes, location gate, track/strategic-signal rule), collapses
+same-role reposts into one, and drops anything already in `data/vacancies/seen.jsonl`. Report
+`fetch_errors` to the candidate if non-empty (one dead company slug or flaky feed is never fatal
+to the rest), and mention the funnel briefly so the candidate has a sense of the noise being
+filtered before they see anything: `fetched_count` -> `survived_prefilter_count` -> (minus
+`collapsed_count` same-role reposts) -> `considered_count` (genuinely new, not already in
+seen.jsonl) -> `returned_count` handed back now (`capped_count` held back for a later run, not
+lost -- worth a one-line mention if non-zero, so the candidate knows more is waiting rather than
+assuming this run found everything).
 
 If `candidates` is empty, say so plainly and stop -- there's nothing to judge this run.
 

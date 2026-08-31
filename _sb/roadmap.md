@@ -18,8 +18,10 @@ narrated history of how each one was found.
 - [x] Platform profile updates -- LinkedIn / Djinni / Upwork / Fiverr.
 - [x] Scout -- auto-fetch/filter/dedup postings from 14 job boards/aggregators (plus 4 supported
       per-company ATS types -- greenhouse/lever/ashby/recruitee, opt-in per company in
-      `sources.yaml`), judged the same way
-      as a pasted posting.
+      `sources.yaml`), judged the same way as a pasted posting. A run can be restricted to a
+      subset of the configured `feeds:` (`scout_fetch`'s `feeds` param, added 2026-08-31 -- e.g.
+      "just the Ukrainian boards this time") -- an intersection with what's configured, never a
+      bypass; per-company boards aren't covered by this yet.
 - [x] LinkedIn search links -- ready-to-click Boolean search deep-links. People-search now needs
       a track's own `hiring_titles:` to appear at all (fixed 2026-08-30 -- see "Built" note below
       for what was actually wrong).
