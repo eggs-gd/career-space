@@ -1,5 +1,5 @@
 # Scout config -- what to search for, where to look, what to reject before spending a judgment
-# turn on it. See playbooks/scout.md and scripts/scout_domain.py's ScoutConfig. Edit by hand any
+# turn on it. See playbooks/scout.md and scripts/scout_domain.ts's ScoutConfig. Edit by hand any
 # time, no code change needed.
 #
 # Fictional example candidate (Alex Morgan, Senior Backend Developer) -- shows the shape of a
@@ -17,6 +17,14 @@ tracks:
       - senior software engineer
       - senior backend developer
       - senior backend engineer
+    # Who actually HIRES a backend developer, not other backend developers -- powers
+    # playbooks/linkedin-search.md's People-search link (find the hiring manager, not a peer).
+    # Domain judgment about this role's own reporting line; optional -- omitted, that one link
+    # just doesn't get built, nothing else breaks.
+    hiring_titles:
+      - engineering manager
+      - head of engineering
+      - cto
   fullstack:
     # `fallback`: worth judging only alongside a real strategic_signals hit, not on title match
     # alone -- this candidate isn't chasing full-stack roles specifically, but wouldn't rule one
@@ -61,7 +69,7 @@ strategic_signals:
   - fastapi
 
 # How the location gate recognizes "local enough to consider even without remote language" --
-# see scout_prefilter.py's _passes_location_gate. Replace with wherever the real candidate is
+# see scout_prefilter.ts's passesLocationGate. Replace with wherever the real candidate is
 # actually based.
 local_keywords:
   - germany

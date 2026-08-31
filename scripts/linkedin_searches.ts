@@ -61,7 +61,12 @@ function contentUrl(query: string): string {
   return "https://www.linkedin.com/search/results/content/?" + urlencode({ keywords: query });
 }
 
-/** Finds the hiring managers/founders themselves -- the warm-intro path. */
+/** Finds the hiring managers/founders themselves -- the warm-intro path. Deliberately takes a
+ * `hiringTitles`-built query, never a track's own job-search `titles` -- searching by the track's
+ * own titles finds peers/competitors for that role (other Engineering Managers), not the people
+ * who hire for it (VP Engineering, Director of Engineering, CTO). A real, previously-shipped bug,
+ * not a hypothetical: the link used to say "find the hiring managers" while actually searching
+ * for the candidate's own peers. */
 function peopleUrl(query: string): string {
   return "https://www.linkedin.com/search/results/people/?" + urlencode({ keywords: query });
 }
@@ -87,6 +92,7 @@ export function buildMarkdown(config: ScoutConfig): string {
     "",
   ];
   let anyTrack = false;
+  let anyMissingHiringTitles = false;
   for (const track of config.tracks.values() as IterableIterator<TrackConfig>) {
     if (track.titles.length === 0) continue;
     anyTrack = true;
@@ -105,7 +111,14 @@ export function buildMarkdown(config: ScoutConfig): string {
       // needs; the label shouldn't double them up ("intent ""looking for""" reads badly)
       lines.push(`- Feed posts — intent "${label}": ${contentUrl(`${grp} ${word}`)}`);
     }
-    lines.push(`- People (find the hiring managers to reach out to): ${peopleUrl(titlesGrp)}`);
+    // Omitted, not falling back to `titles`, when `hiringTitles` isn't configured -- see
+    // `peopleUrl`'s own docstring for why that fallback was the bug in the first place.
+    if (track.hiringTitles.length > 0) {
+      const hiringGrp = orGroup([...track.hiringTitles]);
+      lines.push(`- People (find the hiring managers to reach out to): ${peopleUrl(hiringGrp)}`);
+    } else {
+      anyMissingHiringTitles = true;
+    }
     lines.push("");
   }
 
@@ -115,6 +128,16 @@ export function buildMarkdown(config: ScoutConfig): string {
   }
 
   lines.push("---");
+  if (anyMissingHiringTitles) {
+    lines.push(
+      "_One or more tracks above have no People-search link -- add `hiring_titles:` to that " +
+        "track in `data/sources.yaml` (who actually hires for this role -- e.g. an Engineering " +
+        "Manager track's hiring titles are VP Engineering/Director of Engineering/CTO, never " +
+        '"Engineering Manager" itself) and regenerate. Deliberately not falling back to the ' +
+        "track's own job-search titles for this -- that used to search for peers, not hirers._"
+    );
+    lines.push("");
+  }
   lines.push(
     '_Tip: LinkedIn search supports OR and "quotes" -- edit a link\'s `keywords` param by ' +
       "hand to add `NOT intern` or similar and trim noise. If a feed-posts link for a track " +

@@ -20,7 +20,7 @@ demonstrates — don't invent gaps or strengths in either direction. For the man
 check specifically, use `data/config.yaml`'s `shared.languages` — don't infer proficiency from the
 Master CV's prose or guess from absence of a mention.
 
-**Remote/local check — same rule as the scout's own location gate (`scout_prefilter.py`'s
+**Remote/local check — same rule as the scout's own location gate (`scout_prefilter.ts`'s
 `_passes_location_gate`), applied here by hand, plus one thing the cheap prefilter structurally
 can't do.** Candidate-specific location scope lives in `data/sources.yaml`'s `local_keywords`;
 don't hard-code a country or city in this playbook. A posting the scout found already passed the

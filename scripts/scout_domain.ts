@@ -137,6 +137,15 @@ export interface TrackConfig {
   readonly label: string;
   readonly kind: string;
   readonly titles: readonly string[];
+  /** Titles of the people who actually HIRE for this track, not people who already hold it --
+   * e.g. for an "Engineering Manager" track, the hiring titles are VP Engineering/Director of
+   * Engineering/CTO, never "Engineering Manager" itself. Domain judgment about that role's own
+   * reporting hierarchy, deliberately left for the candidate to fill in (`hiring_titles:` in
+   * `sources.yaml`) rather than inferred generically -- there's no reliable rule from a track's
+   * own `titles` alone. Empty when not configured; `linkedin_searches.ts`'s People-search link
+   * is omitted for a track with no `hiringTitles` rather than falling back to `titles` (that
+   * fallback is the exact bug this field exists to fix -- it searched for peers, not hirers). */
+  readonly hiringTitles: readonly string[];
 }
 
 /** One per-company board entry. `ats` must be one of `scout_sources.ts`'s
@@ -274,6 +283,7 @@ export function loadScoutConfig(path: string): ScoutConfig {
       label: String(spec.label ?? key),
       kind: String(spec.kind ?? TRACK_KIND_PRIMARY),
       titles: asStringTuple(spec.titles),
+      hiringTitles: asStringTuple(spec.hiring_titles),
     });
   }
 

@@ -13,9 +13,13 @@ volume, full stop, and this repo doesn't do it anywhere.
 
 So this playbook does something different in kind, not just in source: it generates deep-link
 URLs into LinkedIn's own search (job board, feed posts, people search), pre-built from `data/
-sources.yaml`'s `tracks` -- the same tracks the scout already uses, so there's nothing new to
-configure. No network call happens here at all. The candidate opens the resulting links
-themselves, in their own logged-in browser, at their own pace.
+sources.yaml`'s `tracks` -- the same tracks the scout already uses. Job board and feed-post links
+need nothing new; the people-search link additionally needs each track's own `hiring_titles:` --
+who actually hires for that role (e.g. an Engineering Manager track's hiring titles are VP
+Engineering/Director of Engineering/CTO, never "Engineering Manager" itself -- that would just
+find peers, a real bug this repo used to ship). Optional: a track without it simply gets no
+people-search link, everything else still works. No network call happens here at all. The
+candidate opens the resulting links themselves, in their own logged-in browser, at their own pace.
 
 If `data/sources.yaml` doesn't exist yet, say so and point at `playbooks/scout.md`'s Step 0 --
 tracks live there, not duplicated into a separate LinkedIn-only config.
@@ -24,7 +28,10 @@ tracks live there, not duplicated into a separate LinkedIn-only config.
 
 Call `linkedin_searches` (MCP tool, or `node scripts/dist/linkedin_searches.js` if the server
 isn't connected). It writes `data/linkedin-searches.md`: one section per track, each with a Jobs
-board link, three feed-post links (different search intents), and a people-search link.
+board link and three feed-post links (different search intents) always, plus a people-search
+link only for a track that has `hiring_titles:` set. If any track is missing it, the file itself
+says so at the bottom with what to add -- mention that to the candidate rather than letting them
+wonder why a track has no people-search link.
 
 ## Step 2 -- hand it back, don't just say "done"
 

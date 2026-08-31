@@ -108,7 +108,7 @@ personal strategic fit / evidence interpretation / final judgment
 Evidence extraction from the Master CV is a candidate too, on one condition: its output can never
 become unverified truth downstream. A local model can surface candidate evidence; the expensive
 action still decides what's actually relevant and how strong it is. This is the same discipline
-`score_fit.py`'s whole design already depends on -- a deterministic formula over a judgment call
+`score_fit.ts`'s whole design already depends on -- a deterministic formula over a judgment call
 is only as good as that judgment, so whatever hands it structured input has to actually be
 reliable, not just cheap. A weak model mis-tagging seniority is a minor problem; a weak model
 mis-extracting requirement clusters that then get scored as if they were solid is a real one --
@@ -156,7 +156,7 @@ cheap, and the honest conclusion is that step wasn't a good cheap-tier candidate
 
 (Confirmed live, while writing this down, that this exact blind spot already exists in
 career-space's own current code, deterministic tier, no local model involved at all --
-`scout_prefilter.py`'s `_passes_location_gate` passes on the bare word "remote" with no scope
+`scout_prefilter.ts`'s `_passes_location_gate` passes on the bare word "remote" with no scope
 check. `fitment.md` picked up an explicit instruction to read the actual scope attached to
 "remote" instead of pattern-matching the word alone, precisely because of this case.)
 

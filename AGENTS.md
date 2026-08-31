@@ -95,6 +95,25 @@ already-existing instruction (a real bug) or an instruction change accepted firs
 change) -- never a change made first, with the instructions left to catch up or never asked at
 all.
 
+## Check for upstream changes, every session
+
+`git fetch` once, near the start of a session -- read-only, touches nothing in the working tree,
+safe regardless of which role you're in. Don't follow it with a `git pull` on your own initiative;
+merging is the human's call, not something to do just because you noticed the branch is behind.
+But once fetch tells you it is, that's not nothing:
+
+- **Operator**: mention it once, plainly ("your local copy is N commits behind origin"), then keep
+  going -- don't block a job-search task on it.
+- **Developer**: this is the one case where "Code changes follow from instruction changes" above
+  needs a second look before you act on it -- the `AGENTS.md`/`playbooks/`/`policies/` you're
+  reading locally might not be the concept currently on record; origin's copy could already say
+  something different from what you're about to argue is correct or propose changing. Say so, and
+  don't start a concept-change conversation or a "fix code to match existing spec" change against
+  a spec you haven't confirmed is current.
+
+If `git fetch` itself fails outright (no `.git`, no configured remote, offline) that's fine --
+mention it if it seems relevant, don't treat it as a blocker.
+
 ## Ground rules — these are not negotiable
 
 These exist because a real generation got them wrong at some point, not because they're

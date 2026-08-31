@@ -15,7 +15,10 @@ import { CompanyConfig, Posting } from "./scout_domain";
 
 const TAG_RE = /<[^>]+>/g;
 const WS_RE = /[ \t]+/g;
-const REMOTE_WORDS = ["remote", "anywhere", "distributed", "work from home", "wfh"];
+// "віддалено"/"дистанційно" (Ukrainian for "remotely") added alongside the English words once
+// dou.ua/Djinni -- both predominantly Ukrainian-language -- were added as sources; every English
+// fetcher's text just never contains these, so no collision risk from keeping the list shared.
+const REMOTE_WORDS = ["remote", "anywhere", "distributed", "work from home", "wfh", "віддалено", "дистанційно"];
 
 // Identify honestly.
 const HEADERS: Record<string, string> = { "User-Agent": "Mozilla/5.0 (career-space scout; personal job-search tool)" };
@@ -528,6 +531,71 @@ async function fetchWeworkremotely(): Promise<FetchResult> {
   return [postings, null];
 }
 
+/** dou.ua -- Ukraine's largest programmer community job board. RSS confirmed live at
+ * `/vacancies/feeds/` (note: plural -- `/feed/` 404s). Same regex-item-extraction shape as
+ * `fetchWeworkremotely`, but the title packs role + company + a variable-length, comma-separated
+ * tail (salary and/or one or more cities and/or "remote"/"abroad") into one string, not a fixed
+ * two-field split -- e.g. "Backend Engineer в WinWin.Travel, за кордоном, віддалено" or "Junior
+ * Workplace Specialist в Ubisoft, Київ" (no salary shown at all -- optional, not every posting
+ * has one). Splits on the first " в " (role vs. everything else) then the first "," inside that
+ * (company vs. the free-form tail) rather than trying to parse the tail's own field count --
+ * `Posting` has no salary field anyway, so the tail is kept whole as `location`, and the existing
+ * remote-word scan (now Ukrainian-aware, see `REMOTE_WORDS`) picks "віддалено" out of it the same
+ * way it already does for any other source's location text. */
+async function fetchDouUa(): Promise<FetchResult> {
+  let xml: string;
+  try {
+    xml = await getText("https://jobs.dou.ua/vacancies/feeds/");
+  } catch (error) {
+    return [[], `dou.ua: ${errorMessage(error)}`];
+  }
+  const postings: Posting[] = [];
+  for (const match of xml.matchAll(ITEM_RE)) {
+    const chunk = match[1] ?? "";
+    const field = (name: (typeof RSS_FIELD_NAMES)[number]): string => {
+      const m = FIELD_RE[name].exec(chunk);
+      // Double-decode, not single -- dou.ua's own feed double-encodes entities in the title
+      // specifically (confirmed live: literal "&amp;nbsp;" in the raw XML, not just "&nbsp;"),
+      // so a single pass leaves a raw "&nbsp;" sitting in the text. Idempotent/harmless for
+      // anything that was only single-encoded to begin with.
+      return m ? decodeHtmlEntities(decodeHtmlEntities(m[1]!.trim())) : "";
+    };
+    const rawTitle = field("title");
+    const sepIndex = rawTitle.indexOf(" в ");
+    let title: string;
+    let company: string;
+    let location: string;
+    if (sepIndex >= 0) {
+      title = rawTitle.slice(0, sepIndex).trim();
+      const rest = rawTitle.slice(sepIndex + 3);
+      const commaIndex = rest.indexOf(",");
+      if (commaIndex >= 0) {
+        company = rest.slice(0, commaIndex).trim();
+        location = rest.slice(commaIndex + 1).trim();
+      } else {
+        company = rest.trim();
+        location = "";
+      }
+    } else {
+      title = rawTitle;
+      company = "?";
+      location = "";
+    }
+    postings.push(
+      makePosting({
+        source: "douua",
+        company,
+        title,
+        location,
+        url: field("link"),
+        description: stripHtml(field("description")),
+        postedAt: field("pubDate"),
+      })
+    );
+  }
+  return [postings, null];
+}
+
 /** The monthly 'Ask HN: Who is hiring?' thread via the Algolia API -- each top-level comment is
  * one posting, early-stage startups on no job board at all. */
 async function fetchHackernews(): Promise<FetchResult> {
@@ -575,6 +643,7 @@ export const AGGREGATOR_FETCHERS: Record<string, FeedFetcher> = {
   himalayas: fetchHimalayas,
   weworkremotely: fetchWeworkremotely,
   hackernews: fetchHackernews,
+  douua: fetchDouUa,
 };
 
 // ---------------------------------------------------------------------- regional boards
@@ -671,9 +740,54 @@ async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promis
   return [postings, null];
 }
 
+/** djinni.co -- Ukraine's largest tech job board. RSS confirmed live at `/jobs/rss/`, and
+ * confirmed to honour `?primary_keyword=<term>` server-side filtering -- query-driven like
+ * `fetchWorkable`/`fetchSmartrecruiters` (one fetch per track title, top 8 longest via
+ * `trackQueries`), not a flat aggregator pull. An item has no structured company/location field
+ * at all (`title`, `link`, `description`, `category` [the matched keyword, not useful as a real
+ * category], `pubDate`, `guid` only, confirmed live) -- company defaults to `"?"` like several
+ * other fetchers already do when it's genuinely unavailable, and remote/location relies entirely
+ * on the existing description-text fallback (Ukrainian-aware, see `REMOTE_WORDS`). */
+async function fetchDjinni({ trackTitles }: FeedFetchOpts): Promise<FetchResult> {
+  const queries = trackQueries(trackTitles);
+  if (queries.length === 0) return [[], "Djinni: no track titles to search with"];
+  const postings: Posting[] = [];
+  let error: string | null = null;
+  for (const query of queries) {
+    const url = "https://djinni.co/jobs/rss/?primary_keyword=" + encodeURIComponent(query);
+    let xml: string;
+    try {
+      xml = await getText(url);
+    } catch (fetchError) {
+      error = `Djinni (${query}): ${errorMessage(fetchError)}`;
+      continue;
+    }
+    for (const match of xml.matchAll(ITEM_RE)) {
+      const chunk = match[1] ?? "";
+      const field = (name: (typeof RSS_FIELD_NAMES)[number]): string => {
+        const m = FIELD_RE[name].exec(chunk);
+        return m ? decodeHtmlEntities(m[1]!.trim()) : "";
+      };
+      postings.push(
+        makePosting({
+          source: "djinni",
+          company: "?",
+          title: field("title"),
+          location: "",
+          url: field("link"),
+          description: stripHtml(field("description")),
+          postedAt: field("pubDate"),
+        })
+      );
+    }
+  }
+  return [postings, error];
+}
+
 export const REGIONAL_FETCHERS: Record<string, FeedFetcher> = {
   justjoin: (opts) => fetchJustjoin(opts),
   nofluff: fetchNofluff,
+  djinni: fetchDjinni,
 };
 
 // ------------------------------------------------------------------------------- orchestration

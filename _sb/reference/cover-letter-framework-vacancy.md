@@ -115,8 +115,8 @@ boring.** A profile or portfolio can look good; a resume is a machine-readable d
 
 Not `resume_final_v7.pdf`, but `Alex_Morgan_Resume.pdf`, or for a targeted application,
 `Alex_Morgan_Resume_Engineering_Manager.pdf`. Not an ATS concern -- makes life easier for a
-recruiter who's downloaded 30 files with generic names. Enforced by `render_resume.py`/
-`render_cover_letter.py` today (see `rendering.resume_output_stem`/`cover_letter_output_stem`).
+recruiter who's downloaded 30 files with generic names. Enforced by `render_resume.ts`/
+`render_cover_letter.ts` today (see `rendering.resume_output_stem`/`cover_letter_output_stem`).
 
 ## 6. Cover letter != compressed resume
 

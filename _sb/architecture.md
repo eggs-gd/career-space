@@ -10,7 +10,7 @@ whoever is next changing that code (including a future instance of the agent doi
 
 Every posting -- scout-found or candidate-pasted -- gets a `posting_id` (per source+URL) and a
 `content_id` (per company+title+description, catches the same role reposted under different
-URLs). Both are blake2s hashes computed by `scripts/posting_ids.py`, shared between the scout's
+URLs). Both are blake2s hashes computed by `scripts/posting_ids.ts`, shared between the scout's
 own fetch pipeline (`scout_domain.Posting`) and the manual-paste path (`posting_ids.manual_ids`)
 so the same real-world posting hashes identically regardless of which path found it.
 
@@ -52,12 +52,12 @@ so the two interfaces can't drift the way they once did on this exact default.
 
 ## Scout pipeline
 
-`scout_fetch.py`: fetch (13 sources, `scout_sources.py`) -> prefilter (`scout_prefilter.py`:
+`scout_fetch.ts`: fetch (13 sources, `scout_sources.ts`) -> prefilter (`scout_prefilter.ts`:
 `title_exclude`/`hard_exclude` hard gates, a location gate against `sources.yaml`'s
 `local_keywords`, then a track/`role_signals`/`strategic_signals` match -- all word-boundary-safe
 substring checks, no LLM) -> same-role repost collapse -> drop anything already in `seen.jsonl`.
 Returns candidates for the agent to judge exactly like a pasted posting (`fitment.md` +
-`score_fit.py`), then `scout-record-outcomes.md` writes `seen.jsonl` + creates a vacancy folder
+`score_fit.ts`), then `scout-record-outcomes.md` writes `seen.jsonl` + creates a vacancy folder
 for anything that clears `min_fit_score`.
 
 `fitment.md`'s own remote/local check (for a candidate-pasted posting, which never went through
@@ -87,13 +87,13 @@ Markdown blockquotes (`> ...`, used by the CV template's aggregate-duration line
 `cover-letter`, identical across every vacancy folder). Name comes from `config.yaml`'s
 `shared.full_name`; role/company come from the sibling `record.yaml` in the same folder (falls
 back to parsing the filename itself for a universal, non-vacancy CV, which has no sibling
-record). Both `render_resume.py`/`render_cover_letter.py` (CLI) and `mcp_server.py`'s tool
+record). Both `render_resume.ts`/`render_cover_letter.ts` (CLI) and `mcp_server.ts`'s tool
 wrappers call these same two functions -- not each reimplementing the naming logic separately.
 
 ## MCP server
 
-`scripts/mcp_server.py` wraps `vacancy_store.py`, `rendering.py`, `score_fit.py`, and
-`scout_fetch.py` as 11 typed tools (`render_resume`, `render_cover_letter`, `score_fit`,
+`scripts/mcp_server.ts` wraps `vacancy_store.ts`, `rendering.ts`, `score_fit.ts`, and
+`scout_fetch.ts` as 11 typed tools (`render_resume`, `render_cover_letter`, `score_fit`,
 `scout_fetch`, `vacancy_mark_seen`, `vacancy_upsert`, `vacancy_set_status`,
 `vacancy_attach_artifact`, `vacancy_list`, `linkedin_searches`, `render_board`) registered for
 Claude Code / Codex / Gemini / Cursor. Every tool is a thin pass-through to the matching CLI

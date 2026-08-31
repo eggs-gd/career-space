@@ -21,7 +21,13 @@ for `data/config.yaml`). Ask about:
   Leadership": "engineering manager", "head of engineering"). Each track is `primary` (a title
   match alone is enough to surface a posting) or `fallback` (needs a `strategic_signals` hit too
   -- for roles the candidate would take but isn't chasing). Draw a first draft from
-  `data/config.yaml`'s `shared.professional_identity`/`commercial_directions`, then confirm.
+  `data/config.yaml`'s `shared.professional_identity`/`commercial_directions`, then confirm. Also
+  ask, per track, for **`hiring_titles`** -- who actually hires for this role, not who holds it
+  (Engineering Manager's hiring titles are VP Engineering/Director of Engineering/CTO, never
+  "Engineering Manager" itself). Optional and easy to skip on a first pass -- it only powers
+  `playbooks/linkedin-search.md`'s people-search link, everything else works without it -- but
+  don't guess it yourself if the candidate doesn't say; leave it out rather than inventing a
+  reporting hierarchy that might be wrong for their specific market/company size.
 - **title_exclude** / **hard_exclude** -- phrases that should drop a posting outright (junior/
   intern titles, "security clearance required," etc.).
 - **role_signals** -- mandate-shaped phrases ("founding engineer," "zero to one") that surface a
@@ -34,9 +40,10 @@ for `data/config.yaml`). Ask about:
   `greenhouse`/`lever`/`ashby`/`recruitee` (find the slug from that company's own careers page
   URL). Optional -- most candidates rely on `feeds` alone.
 - **feeds** -- which of `workable`, `smartrecruiters`, `remoteok`, `remotive`, `arbeitnow`,
-  `jobicy`, `himalayas`, `weworkremotely`, `hackernews`, `justjoin`, `nofluff` to pull from.
-  `justjoin`/`nofluff` are Poland/CEE-focused; skip them if that's not relevant.
-- **min_fit_score** (default 4) -- the floor from `score_fit.py`'s scale below which a judged
+  `jobicy`, `himalayas`, `weworkremotely`, `hackernews`, `justjoin`, `nofluff`, `douua`, `djinni`
+  to pull from. `justjoin`/`nofluff` are Poland/CEE-focused, `douua`/`djinni` are Ukraine-focused
+  (predominantly Ukrainian-language postings) -- skip whichever region isn't relevant.
+- **min_fit_score** (default 4) -- the floor from `score_fit.ts`'s scale below which a judged
   posting stays a `seen.jsonl` line, never gets its own `data/vacancies/<slug>/` folder.
 - **max_judgments_per_run** (default 25) -- caps how many candidates one scout run hands you to
   judge, so a first run against a broad config doesn't turn into fifty judgment turns in one

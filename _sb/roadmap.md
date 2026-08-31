@@ -5,7 +5,7 @@ any candidate-facing playbook, never read during normal execution; see `AGENTS.m
 split. Keep this current and terse -- facts and decisions that matter for future work, not a
 narrated history of how each one was found.
 
-## Status as of 2026-08-28
+## Status as of 2026-08-30
 
 **Built** (see `_sb/architecture.md` for how any of this actually works):
 - [x] Onboarding -- Master CV, config, and role profiles from a conversation.
@@ -16,28 +16,44 @@ narrated history of how each one was found.
       slices, likely interview questions) for the Master CV or any generated CV.
 - [x] Pitch -- explain/position career-space itself, audience- and length-aware.
 - [x] Platform profile updates -- LinkedIn / Djinni / Upwork / Fiverr.
-- [x] Scout -- auto-fetch/filter/dedup postings from 13 job boards/ATS feeds, judged the same way
+- [x] Scout -- auto-fetch/filter/dedup postings from 13 job boards/aggregators (plus 4 supported
+      per-company ATS types -- greenhouse/lever/ashby/recruitee, opt-in per company in
+      `sources.yaml`), judged the same way
       as a pasted posting.
-- [x] LinkedIn search links -- ready-to-click Boolean search deep-links.
+- [x] LinkedIn search links -- ready-to-click Boolean search deep-links. People-search now needs
+      a track's own `hiring_titles:` to appear at all (fixed 2026-08-30 -- see "Built" note below
+      for what was actually wrong).
 - [x] Dashboard/board -- every vacancy on one page, grouped by status, sorted by fit.
 - [x] Rendered CV/cover-letter output -- PDF/HTML with recruiter-facing filenames.
 
+**Fixed 2026-08-30 -- LinkedIn people-search searched for peers, not hirers.**
+`linkedin_searches.ts`'s people-search link built its query from a track's own job-search
+`titles` -- for an Engineering Manager track that searched LinkedIn for other Engineering
+Managers, not the people who hire them. Added `TrackConfig.hiringTitles` (from `sources.yaml`'s
+new, optional `hiring_titles:` field, domain judgment left to the candidate -- see
+`playbooks/scout.md`'s Step 0); the people-search link is now built from that instead, and is
+simply omitted (not silently wrong) for a track that hasn't set it, with a note in the generated
+file explaining why and how to fix it. Covered by `linkedin_searches.test.ts`.
+
+**Built 2026-08-30 -- two Ukrainian scout sources, dou.ua + Djinni.** Both verified live before
+implementing (not assumed): **dou.ua** at `https://jobs.dou.ua/vacancies/feeds/` (note: `/feeds/`,
+plural -- `/feed/` 404s), a flat aggregator fetcher (`AGGREGATOR_FETCHERS`, regex item extraction
+like `fetchWeworkremotely()`), with its own title-splitting logic for the packed
+"<Role> в <Company>, від $X, <City>" string and a double `decodeHtmlEntities()` pass (the feed
+itself double-encodes `&nbsp;` as `&amp;nbsp;`). **Djinni** at `https://djinni.co/jobs/rss/`, a
+query-driven fetcher (`REGIONAL_FETCHERS`, `?primary_keyword=` server-side filtering, same
+loop-over-track-titles shape as `fetchWorkable`/`fetchSmartrecruiters`); no structured
+company/location field, so company defaults to `"?"` and location falls back to description-text
+inference, same as other fetchers already do. `REMOTE_WORDS` extended with "віддалено"/
+"дистанційно" since both sources are Ukrainian-language. Not added to the real `data/
+sources.yaml` -- only the mechanism and `examples/onboarding/sources.yaml` were touched; opting
+in is the candidate's own call. Ruled out, both confirmed via a real fetch attempt: **robota.ua**
+(no public API, 403s automated fetches) and **work.ua** (RSS exists but sits behind Cloudflare
+bot protection -- `cf-mitigated: challenge` on a plain fetch with a real User-Agent).
+
 ## Next steps, in order
 
-1. **dou.ua integration** -- new fetcher in `scout_sources.py`, same RSS shape as
-   `fetch_weworkremotely()`; the feed itself is already confirmed live. (`robota.ua` ruled out --
-   no public API, 403s automated fetches.)
-2. **LinkedIn people-search links target the wrong person -- confirmed bug, not just a hunch.**
-   `linkedin_searches.py:103` labels the link "find the hiring managers to reach out to" but
-   builds the query from the same `track.titles` used for job search -- for the EM track it
-   searches LinkedIn for other Engineering Managers (peers/competitors), not the people who
-   actually hire EMs. Same wrong pattern on every track (technical-lead track finds technical
-   leads, fractional track finds other fractional people, instead of whoever hires each of
-   those). Needs a per-track "who hires this role" title list (e.g. EM -> VP Engineering/
-   Director of Engineering/CTO; fractional -> Founder/CEO/COO) -- likely a new `sources.yaml`
-   field per track (`hiring_titles:` or similar) the candidate fills in, since it's domain
-   judgment about that field's own hierarchy, not something to infer generically.
-3. **`cover-letter.md` structure decision** -- brainstorm-stage, product question not just an
+1. **`cover-letter.md` structure decision** -- brainstorm-stage, product question not just an
    engineering gap. `_sb/reference/cover-letter-framework-vacancy.md` has a genuinely different
    vacancy-application shape (Blocks 1-4: What/Why me/Why them/CTA, plus its own validator
    criteria) vs. the freelance-proposal shape (Problem/Differentiator/Evidence/Scope/Core Message)
@@ -66,7 +82,7 @@ narrated history of how each one was found.
   here rather than being its own item -- `render_board` already removes the need to eyeball raw
   folder order, so it's a machine/collision concern only, worth solving alongside this if at all.
 - **Fitment only judges "do I clear the bar," never "does this actually suit me."**
-  `score_fit.py`'s risk/appeal is one-directional -- what would make a hiring team hesitate or
+  `score_fit.ts`'s risk/appeal is one-directional -- what would make a hiring team hesitate or
   get interested, never what would make the candidate hesitate or get interested (remote-only,
   no people-management, a comp floor, and similar preferences aren't checked against a posting at
   all right now). Working hypothesis is this is probably partially covered already since fitment
