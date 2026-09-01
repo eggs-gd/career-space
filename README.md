@@ -14,9 +14,14 @@ explains itself and walks you through onboarding: point it at an existing resume
 export, answer a few questions a resume doesn't usually cover, and you're set up.
 
 From then on, just say what you want in your own words — write a cover letter, check your fit for
-a posting, generate a CV tailored to it, update your LinkedIn/Djinni/Upwork/Fiverr profile, search
-job boards automatically, or see your whole pipeline on one page. The agent explains what it can
-do and how, as you go — nothing here needs memorizing up front.
+a posting, generate a CV tailored to it, define or update how you show up on LinkedIn, a freelance
+marketplace, a portfolio or personal site, search job boards automatically, or see your whole
+pipeline on one page. The agent explains what it can do and how, as you go — nothing here needs
+memorizing up front.
+
+Career Space is not optimized for collecting the largest possible number of jobs. It helps you
+decide where you're going, how you want the market to understand you, and carries that positioning
+through profiles, portfolios, opportunities, applications, and market feedback.
 
 The job-board/ATS scraping approach was inspired by
 [jobhunt-agent](https://github.com/teslavr/jobhunt-agent)

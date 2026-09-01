@@ -19,7 +19,11 @@ and why each one was built lives in git history, not here.
 - [x] CV review -- blunt quality diagnostic (score, top fixes, strengths, risks, target role
       slices, likely interview questions) for the Master CV or any generated CV.
 - [x] Pitch -- explain/position career-space itself, audience- and length-aware.
-- [x] Platform profile updates -- LinkedIn / Djinni / Upwork / Fiverr.
+- [x] Public career surfaces -- one abstraction (`shared:` identity + per-surface `context.md`
+      intent + `reference/surfaces/<name>.md` platform facts -> `output.md`). Ships LinkedIn /
+      Djinni / Upwork / Fiverr as canonical references; `surface-define.md` handles free-form
+      surfaces (portfolio, personal site, GitHub README) and unknown platforms (agent researches
+      + defines per-candidate, no code change). `update-surface.md` regenerates from evidence.
 - [x] Scout -- auto-fetch/filter/dedup postings from 14 job boards/aggregators (plus 4 supported
       per-company ATS types -- greenhouse/lever/ashby/recruitee, opt-in per company in
       `sources.yaml`), judged the same way as a pasted posting. `scout_fetch`'s `feeds` param can

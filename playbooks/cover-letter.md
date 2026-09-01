@@ -35,8 +35,8 @@ language even when the posting never says "full-time." If it's genuinely ambiguo
 weighing both readings (rare — most postings aren't), ask the candidate rather than guessing.
 
 This mode sets the balance between "what you'll get" (task) and "who you are" (long-term) — the
-same distinction `policies/profiles-framework.md` draws between Upwork (client-driven, sells a
-specific solved problem) and LinkedIn (broad professional identity). Carry it through every step
+same distinction between Upwork (client-driven, sells a specific solved problem — see
+`reference/surfaces/upwork.md`) and LinkedIn (broad professional identity). Carry it through every step
 below, not just as a label: a task-mode letter should read closer to an Upwork Overview reframe
 ("if you have problem X, I've solved exactly that"); a long-term-mode letter should read closer to
 "here's the pattern I repeatedly bring to a role like this."
