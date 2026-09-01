@@ -45,9 +45,7 @@ interface over it or over `score_fit.ts`'s scoring formula:
   deep-links built from `data/sources.yaml`'s `tracks`. No fetching, no network call at all --
   see `playbooks/linkedin-search.md` for why this is deliberately not part of the scout.
 - `scripts/render_board.ts` — writes `data/board.html`: every vacancy grouped by status, sorted
-  by fit score, with local and location-exception flags, every `.md` file present in its folder embedded inline behind a
-  click-to-expand badge, a rendered CV/cover-letter PDF (or its `.html` fallback) as a direct
-  download link instead, plus a real link to the original posting URL. No server, static file,
+  by fit score, with real clickable links into each vacancy's folder. Static file, no server,
   open it directly in a browser. Don't hand-summarize `data/vacancies/` into a table yourself
   instead of calling this -- see `playbooks/board.md`.
 

@@ -98,6 +98,24 @@ already-existing instruction (a real bug) or an instruction change accepted firs
 change) -- never a change made first, with the instructions left to catch up or never asked at
 all.
 
+**Write only the current state.** Every file here -- `AGENTS.md`, playbooks, policies, docstrings,
+code comments, `_sb/` -- is read by an agent that has the whole repo in context and trusts it
+as-is. Write for that reader:
+
+- **No history.** Not what it used to do, not what changed, not which bug caused it, not "the
+  Python original". That's `git log`. Openers like "previously", "used to", "now also", "this
+  fixes" don't belong in a tracked file.
+- **Don't narrate deterministic output.** The agent calls `scripts/` via MCP and believes the
+  result -- it never needs the board's HTML layout, a PDF's styling, or a tool's internal steps
+  spelled out in prose. Only what a tool writes, where, and when to call it.
+- **A comment longer than the code it explains is a smell** -- the naming or the logic is
+  unclear, fix that. A one-line "why" for a non-obvious choice is fine; a paragraph narrating
+  "what" is not.
+- **`_sb/roadmap.md` is a feature list plus the next track.** Bullets: what exists, what's next.
+  No dates, no "added X because Y, confirmed Z".
+- **A constraint learned the hard way** goes in `_sb/reference/gotchas.md`, one line -- the trap
+  and the rule, nothing else.
+
 ## Check for upstream changes, every session
 
 `git fetch` once, near the start of a session -- read-only, touches nothing in the working tree,

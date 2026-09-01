@@ -328,47 +328,18 @@ export function renderBoardHtml(
         }
         fileButtons.push({ label: BOARD_FILE_LABELS[fname] ?? fname, contentHtml });
       }
-      // Rendered CV/cover-letter output (render_resume.ts/render_cover_letter.ts) -- deliberately
-      // NOT a fixed name like cv.md/cover-letter.md above: the filename itself is recruiter-facing
-      // (`<Full Name>_Resume_<Role>.pdf`, `<Full Name>_Cover_Letter_<Company>.pdf`, see those
-      // scripts' own docstrings) specifically so it's ready to attach to an application without
-      // renaming first -- so this scans `files` for whatever's actually there instead of looking
-      // for one exact name. A direct link, not an inline-embedded badge like the Markdown files
-      // above: a PDF is the thing to attach somewhere else, not something to read inline here.
-      // Groups by stem so a successful render (.pdf + its source .html sitting together) shows
-      // one link, not two -- the .html is only ever linked on its own when the PDF step failed
-      // (render_resume.ts's/render_cover_letter.ts's own documented fallback).
+      // A "📁 Folder" panel with a `file://` link per file in the vacancy dir (first entry the dir
+      // itself), not a link per rendered PDF: a browser-opened PDF can't be dragged into an
+      // application form anyway, so the only job here is reaching the file to upload.
       //
-      // A real `file://` URI (absolute path, built here while `vdir` is still known), not a
-      // relative `vacancies/<slug>/<file>` string -- a relative link only resolves correctly when
-      // this page is opened as a plain local file. Confirmed live: a candidate viewing this
-      // through a Claude client's own local-file preview instead of a real browser tab had every
-      // relative link silently rewritten against that client's own hosted-content domain
-      // (`claudeusercontent.com`), pointing nowhere real. An absolute `file://` URI has no base to
-      // resolve against, so it survives that -- worse case is a preview that can't follow
-      // `file://` at all and the candidate copies the path instead, never a link to nothing.
-      const docLinks: Array<{ fileUrl: string; label: string }> = [];
-      {
-        const linkedStems = new Set<string>();
-        for (const fname of files) {
-          const ext = path.extname(fname).toLowerCase();
-          if (ext !== ".pdf" && ext !== ".html") continue;
-          const stem = fname.slice(0, -ext.length);
-          if (linkedStems.has(stem)) continue;
-          if (ext === ".html" && files.includes(`${stem}.pdf`)) continue; // pdf takes priority
-          linkedStems.add(stem);
-          // Short semantic label, not the filename -- the candidate's own name/role is already
-          // visible elsewhere on this row, repeating it here is just noise. `resumeOutputStem`/
-          // `coverLetterOutputStem` (rendering.ts, same file) always fold "_Resume"/
-          // "_Cover_Letter" into the stem, which is the only signal available here to tell the
-          // two apart -- anything that doesn't match either is a fallback, not the expected case.
-          const kind = stem.includes("_Cover_Letter") ? "Cover" : stem.includes("_Resume") ? "CV" : stem.replace(/_/g, " ");
-          docLinks.push({
-            fileUrl: pathToFileURL(path.join(vdir, fname)).href,
-            label: `${kind} (${ext.slice(1).toUpperCase()})`,
-          });
-        }
-      }
+      // Absolute `file://` URIs, not relative `vacancies/<slug>/…`: a Claude client's local-file
+      // preview rewrites relative links against its own hosted-content domain, pointing nowhere;
+      // an absolute URI has no base to rewrite. Trailing separator on the dir URL so it reads as a
+      // directory. `fs.existsSync` guard so a test fixture with no real dir just omits the panel.
+      const folderUrl = fs.existsSync(vdir) ? pathToFileURL(vdir + path.sep).href : "";
+      const folderFiles = folderUrl
+        ? files.map((name) => ({ name, url: pathToFileURL(path.join(vdir, name)).href }))
+        : [];
       const isLocal = matchesLocalKeywords(`${v.location ?? ""} ${postingRaw}`, localKeywords);
       const locationEligibility = v.eligibility?.location ?? null;
       const requiresLocationException = locationEligibility?.status === "location_exception_candidate";
@@ -387,7 +358,7 @@ export function renderBoardHtml(
         `Fitment: ${v.fit_score !== null && v.fit_score !== undefined ? `${v.fit_score}/10` : "not yet assessed"}`,
         `Vacancy ID: ${slug}`,
       ].join("\n");
-      const result: Rec = { ...v, slug, fileButtons, docLinks, copyPayload, updatedShort: boardUpdatedShort(v.updated_at ?? ""), isLocal };
+      const result: Rec = { ...v, slug, fileButtons, folderUrl, folderFiles, copyPayload, updatedShort: boardUpdatedShort(v.updated_at ?? ""), isLocal };
       result.requiresLocationException = requiresLocationException;
       result.locationExceptionReason = requiresLocationException ? locationEligibility.reason ?? "" : "";
       return result;
@@ -405,7 +376,8 @@ export function renderBoardHtml(
     const rowsHtml = prepared
       .map((v) => {
         const fitDisplay = v.fit_score !== null && v.fit_score !== undefined ? String(v.fit_score) : "–";
-        const docLinks: Array<{ fileUrl: string; label: string }> = v.docLinks ?? [];
+        const folderUrl: string = v.folderUrl ?? "";
+        const folderFiles: Array<{ name: string; url: string }> = v.folderFiles ?? [];
         const fileButtonsHtml = (v.fileButtons as Array<{ label: string; contentHtml: string }>)
           .map(
             (f) =>
@@ -415,13 +387,17 @@ export function renderBoardHtml(
         const postingLinkHtml = v.url
           ? `<a class="posting-link" href="${escapeHtml(String(v.url))}" target="_blank" rel="noopener">posting&nbsp;&#8599;</a>`
           : "";
-        // An absolute file:// URI (built above, while the real vacancy folder path is still
-        // known) -- see docLinks' own construction comment for why not a relative link. No
-        // `download` attribute: that only ever works for a same-origin/blob URL, not a `file://`
-        // one, so it'd be dead weight here rather than the useful save-prompt it is elsewhere.
-        const docLinksHtml = docLinks
-          .map((d) => `<a class="doc-link" href="${escapeHtml(d.fileUrl)}">📄&nbsp;${escapeHtml(d.label)}</a>`)
-          .join("\n            ");
+        // Same `<details class="file">` widget and per-row accordion group (`name="panel-<slug>"`)
+        // as the Markdown badges. Links open in a new tab. See folderUrl's comment for the rest.
+        const folderLinksHtml = folderUrl
+          ? `<details class="file" name="panel-${escapeHtml(String(v.slug))}"><summary>📁&nbsp;Folder</summary>` +
+            `<div class="file-content folder-list">` +
+            `<a href="${escapeHtml(folderUrl)}" target="_blank" rel="noopener">📂&nbsp;open folder&nbsp;&#8599;</a>` +
+            folderFiles
+              .map((f) => `<a href="${escapeHtml(f.url)}" target="_blank" rel="noopener">${escapeHtml(f.name)}</a>`)
+              .join("") +
+            `</div></details>`
+          : "";
         const localBadgeHtml = v.isLocal ? `<span class="local-badge" title="Matches your local_keywords">📍 Local</span>` : "";
         const locationExceptionBadgeHtml = v.requiresLocationException
           ? `<span class="location-exception-badge" title="${escapeHtml(
@@ -448,7 +424,7 @@ export function renderBoardHtml(
           </div>
           <div class="vrow-files">
             ${fileButtonsHtml}
-            ${docLinksHtml}
+            ${folderLinksHtml}
             ${postingLinkHtml}
             ${copyButtonHtml}
           </div>

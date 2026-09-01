@@ -9,13 +9,15 @@ Call `render_board` (MCP tool, or `node scripts/dist/render_board.js` if the ser
 connected). It writes `data/board.html` -- every non-archived vacancy (see "Archiving" below),
 grouped by status, sorted by fit score. Each row shows: whatever files actually exist in that
 vacancy's folder (`fitment.md`, `posting.md`, `cv.md`, `cover-letter.md`, `targeting-plan.md`)
-behind a click-to-expand badge; a direct download link for a rendered CV/cover-letter PDF, if one
-exists; a link to the original posting URL; and a "📍 Local" badge when it matches `data/
-sources.yaml`'s `local_keywords`.
+behind a click-to-expand badge; a `📁 Folder` panel with `file://` links to every file in that
+vacancy's directory (for grabbing the CV/cover-letter files to attach to an application); a link
+to the original posting URL; and a "📍 Local" badge when it matches `data/sources.yaml`'s
+`local_keywords`.
 
-If a candidate says a PDF link goes nowhere, the likely cause is viewing `data/board.html`
+If a candidate says a `📁 Folder` link goes nowhere, the likely cause is viewing `data/board.html`
 through some client's own in-app file preview rather than a real browser tab -- suggest that
-first. Same caveat for the status buttons (jump to that section) and each row's "Copy" button
+first. Same caveat for the status buttons
+(jump to that section) and each row's "Copy" button
 (copies just enough to name the vacancy unambiguously -- title/company/URL/status/fit/slug, not
 the posting text -- meant for pasting into a new chat so an agent can resolve the rest itself)
 -- both need a real browser tab with JavaScript; they're absent without it, everything else on

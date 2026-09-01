@@ -41,7 +41,8 @@ and why each one was built lives in git history, not here.
 - [x] Dashboard/board -- every vacancy on one page, grouped by status, sorted by fit; fully usable
       with no JavaScript. A vacancy matching `local_keywords` gets a colored highlight. A vacancy
       can be archived (`vacancy_set_archived`, orthogonal to `status`, `include_archived` brings
-      it back). A rendered CV/cover-letter PDF gets a direct download link. Each row has a "Copy"
+      it back). Each row has a `📁 Folder` panel with `file://` links to every file in the vacancy's
+      directory, for grabbing the CV/cover-letter files to attach to an application. Each row has a "Copy"
       button -- header only (title/company/URL/status/fit/slug), not the posting text, meant for
       pasting into a new chat so an agent can resolve the rest itself. Status chips double as
       jump-to-section nav when JavaScript runs.
