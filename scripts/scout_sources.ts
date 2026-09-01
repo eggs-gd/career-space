@@ -4,10 +4,9 @@
  * swallowed and reported, never fatal to the rest of the run -- one dead company slug or one
  * flaky aggregator should never blank out every other source's results.
  *
- * `Promise.allSettled` across every fetcher in `fetchAll`, using Node's built-in `fetch` --
- * the thread-pool-for-blocking-`urllib` concern the Python original had doesn't exist here at
- * all (no GIL, no blocking I/O to work around), a straightforward simplification, not a porting
- * obstacle.
+ * `fetchAll` runs every configured company board and feed through a bounded worker pool (see
+ * `runWithConcurrency`), using Node's built-in `fetch` -- a bad source (dead slug, flaky
+ * endpoint) is caught and reported per-task, never stopping the rest.
  */
 
 import { decode as decodeHtmlEntities } from "he";
@@ -240,7 +239,7 @@ export interface FeedFetchOpts {
   trackTitles: string[];
   roleSignals: string[];
   /** `ScoutConfig.allUaCategories()` -- exact dou.ua/Djinni category values, case preserved. See
-   * `fetchDouUa`/`fetchDjinni` and `docs/reference/ua-scout-categories.md`. Defaults to `[]` for
+   * `fetchDouUa`/`fetchDjinni` and `reference/ua-scout-categories.md`. Defaults to `[]` for
    * every other fetcher, which simply ignores it. */
   uaCategories: string[];
 }
@@ -640,13 +639,12 @@ async function fetchWeworkremotely(): Promise<FetchResult> {
  * `/vacancies/feeds/` (note: plural -- `/feed/` 404s), and confirmed to honour `?category=<exact
  * value>` server-side (25 items per category, consistently, across five different categories
  * tested; case-insensitive). Query-driven by `uaCategories`, one fetch per configured category --
- * NOT a flat aggregator pull. That's a correction, not the original design: this used to pull the
- * unfiltered flat feed (the site's ~50 most recent postings across every discipline) and rely on
- * the shared title prefilter afterwards, which meant a specific track's postings almost never
- * showed up at all -- pure volume dilution across a site with dozens of categories, nothing to do
- * with title language. See `docs/reference/ua-scout-categories.md` for dou.ua's full, real
- * category list (there is no generic "Backend" value -- it's split by language: Java/PHP/Python/
- * Golang/etc.) and `_sb/roadmap.md` for when this was found and fixed.
+ * deliberately NOT a flat aggregator pull of the site's ~50 most recent postings across every
+ * discipline: relying on the shared title prefilter to find a specific track's postings in that
+ * pool would mean pure volume dilution across a site with dozens of categories, nothing to do
+ * with title language. See `reference/ua-scout-categories.md` for dou.ua's full, real category
+ * list (there is no generic "Backend" value -- it's split by language: Java/PHP/Python/Golang/
+ * etc.).
  *
  * The title packs role + company + a variable-length, comma-separated tail (salary and/or one or
  * more cities and/or "remote"/"abroad") into one string, not a fixed two-field split -- e.g.
@@ -863,17 +861,17 @@ async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promis
 /** djinni.co -- Ukraine's largest tech job board. RSS confirmed live at `/jobs/rss/`, and
  * `?primary_keyword=<exact category>` confirmed to genuinely filter server-side -- but ONLY for
  * an exact match against Djinni's own fixed category taxonomy (~123 values, one per
- * `/jobs/keyword-<slug>` page in its sitemap -- see `docs/reference/ua-scout-categories.md`).
+ * `/jobs/keyword-<slug>` page in its sitemap -- see `reference/ua-scout-categories.md`).
  * Anything else -- a free-text track title, a typo, garbage -- is silently ignored server-side
  * and Djinni returns its unfiltered "latest vacancies" feed instead of an error or empty result;
  * confirmed by diffing the response for a real query against a nonsense one and finding them
  * byte-identical. Query-driven by `uaCategories`, one fetch per configured category (like
- * `fetchDouUa` above), NOT by track titles the way this used to work -- that never filtered
- * anything, on either platform (see `_sb/roadmap.md`). Also case-sensitive for anything that
- * isn't already lowercase, unlike dou.ua -- `"Engineering Manager"` filters correctly,
+ * `fetchDouUa` above) -- track titles wouldn't work here, since they're free text and this only
+ * ever matches an exact category. Also case-sensitive for anything that isn't already lowercase,
+ * unlike dou.ua -- `"Engineering Manager"` filters correctly,
  * `"engineering manager"` silently falls back to the unfiltered feed same as garbage input; the
  * slug form (`"engineering_manager"`) is safest since it's already all-lowercase and is exactly
- * what `docs/reference/ua-scout-categories.md` lists. An item has no structured company/location
+ * what `reference/ua-scout-categories.md` lists. An item has no structured company/location
  * field at all (`title`, `link`, `description`, `category` [the matched keyword, not useful as a
  * real category], `pubDate`, `guid` only, confirmed live) -- company defaults to `"?"` like
  * several other fetchers already do when it's genuinely unavailable, and remote/location relies
@@ -928,12 +926,10 @@ export const FEED_FETCHERS: Record<string, FeedFetcher> = {
   ...REGIONAL_FETCHERS,
 };
 
-/** Runs a bounded number of `tasks` at a time -- mirrors Python's
- * `ThreadPoolExecutor(max_workers=...)` semantics (a fixed-size worker pool pulling from a
- * shared queue), which the naive `Promise.allSettled(tasks.map(t => t()))` this replaced doesn't:
- * that fires every task immediately with no cap at all. Hand-rolled rather than a new dependency
- * (`p-limit` and friends) for something this small -- a worker pulls the next unstarted task by
- * index until none remain, same fixed concurrency ceiling Python had. */
+/** Runs a bounded number of `tasks` at a time -- a fixed-size worker pool pulling the next
+ * unstarted task by index until none remain, unlike a naive `Promise.allSettled(tasks.map(t =>
+ * t()))`, which fires every task immediately with no cap at all. Hand-rolled rather than a new
+ * dependency (`p-limit` and friends) for something this small. */
 async function runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit: number): Promise<PromiseSettledResult<T>[]> {
   const results: PromiseSettledResult<T>[] = new Array(tasks.length);
   let nextIndex = 0;
@@ -953,10 +949,9 @@ async function runWithConcurrency<T>(tasks: Array<() => Promise<T>>, limit: numb
 }
 
 /** Runs every configured per-company board and every enabled feed through a bounded worker pool
- * (see `runWithConcurrency` -- `maxWorkers` defaults to 8, same as the Python original's
- * `ThreadPoolExecutor(max_workers=8)`), since these are all independent network calls. One bad
- * source (dead slug, flaky endpoint) is reported in the returned error list and never stops the
- * rest. */
+ * (see `runWithConcurrency` -- `maxWorkers` defaults to 8), since these are all independent
+ * network calls. One bad source (dead slug, flaky endpoint) is reported in the returned error
+ * list and never stops the rest. */
 export async function fetchAll(opts: {
   companies: CompanyConfig[];
   feeds: string[];

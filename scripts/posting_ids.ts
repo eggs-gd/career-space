@@ -11,22 +11,21 @@
  * storage layer -- storage depending on fetch, or vice versa, would be backwards either way), and
  * this is the one thing both genuinely need to agree on bit-for-bit.
  *
- * Ported from Python's `hashlib.blake2s(..., digest_size=8)`. This exact digest algorithm and
- * 8-byte length is load-bearing: every id already persisted in `data/vacancies/<slug>/record.yaml`
- * and `seen.jsonl` was computed this way, and a mismatch would silently make every previously-seen
- * posting look new again. See `posting_ids.test.ts` for the fixture check against real on-disk
- * ids, run before this ever replaces the Python original.
+ * `blake2s` with an 8-byte digest (`dkLen: 8` below) -- exact algorithm and length are
+ * load-bearing: every id already persisted in `data/vacancies/<slug>/record.yaml` and
+ * `seen.jsonl` was computed this way, and a mismatch would silently make every already-seen
+ * posting look new again. Never change either without re-verifying against real on-disk ids --
+ * see `posting_ids.test.ts`'s fixture check.
  */
 
 // Pinned to @noble/hashes v1 (not the current v2) deliberately: v2 dropped CommonJS entirely
 // (ESM-only exports), which this CommonJS project can't `require()`. Making it work would mean
 // migrating the whole project to ESM -- among other things, `__dirname` (repo_paths.ts) would
-// need `import.meta.dirname`, which needs Node 20.11+, silently raising the minimum Node version
-// this bootstrap chain promises to work on ("assume nothing about the target machine" was the
-// whole point of the earlier bootstrap-hardening work). Not worth that tradeoff for a minor-
-// version dependency bump; v1's blake2s output is what's verified byte-identical against the
-// real on-disk ids anyway (see posting_ids.test.ts) -- v2's hash algorithm itself didn't change,
-// only its module format, so there's no correctness reason to move off v1 here.
+// need `import.meta.dirname`, which needs Node 20.11+, raising the minimum Node version this
+// bootstrap chain promises to run on. Not worth that tradeoff for a minor-version dependency
+// bump; v1's blake2s output is what's verified byte-identical against the real on-disk ids anyway
+// (see posting_ids.test.ts) -- v2's hash algorithm itself didn't change, only its module format,
+// so there's no correctness reason to move off v1 here.
 // "/blake2s" itself is deprecated within v1 (re-exports from "/blake2", the consolidated
 // blake2b+blake2s module its own d.ts tells you to use instead) -- importing from "/blake2"
 // directly silences that without changing anything about the actual algorithm/output.

@@ -27,10 +27,9 @@ const WHITESPACE_PATTERN = /\s+/g;
 /** True if any of `phrases` appears in `haystack` as a complete, space-bounded unit -- never a
  * plain substring containment test, which lets a short phrase match inside an unrelated word
  * (bare "sdr" matching inside "absurdity") or an unrelated number range (bare "0 to 1" matching
- * inside "10 to 15 engineers", a real collision this exact fix already closed for
- * role_signals/strategic_signals before this function existed as a shared helper). Punctuation
- * is normalized to spaces and whitespace runs are collapsed first, so a phrase still matches
- * across a sentence-ending period, a parenthetical, or an odd line wrap in the source text. */
+ * inside "10 to 15 engineers") for both role_signals and strategic_signals. Punctuation is
+ * normalized to spaces and whitespace runs are collapsed first, so a phrase still matches across
+ * a sentence-ending period, a parenthetical, or an odd line wrap in the source text. */
 function wordBoundaryMatch(haystack: string, phrases: readonly string[]): boolean {
   const normalized = ` ${haystack} `
     .toLowerCase()

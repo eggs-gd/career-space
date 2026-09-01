@@ -41,17 +41,16 @@ import { generate as generateLinkedinSearches } from "./linkedin_searches";
 import { renderBoard } from "./render_board";
 import { runScout } from "./scout_fetch";
 
-/** Mirrors Python's `Path(x).expanduser().resolve()`. */
+/** Expands a leading `~` to the home directory, then resolves to an absolute path. */
 function resolvePath(input: string): string {
   const expanded = input.startsWith("~") ? path.join(os.homedir(), input.slice(1)) : input;
   return path.resolve(expanded);
 }
 
-/** Every tool below returns a plain value the way the Python original's `@server.tool()`
- * functions did (a dict/list/str, auto-wrapped by that framework); the TS SDK's `registerTool`
- * callback must return a `CallToolResult` explicitly instead, so this does that one wrapping
- * step uniformly -- a string passes through as-is (matches `score_fit`'s Markdown return),
- * anything else is pretty-printed JSON text. */
+/** Every tool below returns a plain value (a dict/list/str) from its own handler logic, but the
+ * MCP SDK's `registerTool` callback must return a `CallToolResult` explicitly -- this does that
+ * one wrapping step uniformly, so no individual tool has to -- a string passes through as-is
+ * (matches `score_fit`'s Markdown return), anything else is pretty-printed JSON text. */
 function respond(value: unknown): CallToolResult {
   const text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
   return { content: [{ type: "text", text }] };
@@ -237,8 +236,8 @@ server.registerTool(
       "the vacancy's current status exactly as it was (only defaults to \"new\" when creating a " +
       "brand new record). Pass it explicitly whenever this call is actually meant to set/change " +
       "status; a metadata-only refresh (attaching a document, updating fit) should leave it out " +
-      "entirely, never pass it \"just to be safe\" -- that's exactly the mistake that used to " +
-      "silently regress tracked/applied/interview vacancies back to new.\n\n" +
+      "entirely, never pass it \"just to be safe\" -- doing so would silently regress a " +
+      "tracked/applied/interview vacancy back to new.\n\n" +
       "For a posting the SCOUT found: pass `posting_id`/`content_id` through exactly as scout_fetch " +
       "returned them, `status=\"new\"`, and `track_label` too if scout_fetch's candidate had one " +
       "(which track it matched in data/sources.yaml -- null is a valid answer, not an error, for a " +

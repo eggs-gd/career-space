@@ -51,8 +51,8 @@ for `data/config.yaml`). Ask about:
   filter their feeds by an exact match against their own small, fixed category list, not by free
   title text. Open `reference/ua-scout-categories.md`, show the candidate the real list (or the
   slice of it that plausibly fits this track), and let them pick -- never invent or guess a
-  category name yourself, and never fall back to reusing the track's own `titles` (that's the
-  exact bug this field exists to fix; see the file's own header for what went wrong before). The
+  category name yourself, and never fall back to reusing the track's own `titles` (neither
+  platform accepts free title text -- see `reference/ua-scout-categories.md`'s own header). The
   two platforms don't spell the same category the same way, so a track wanting both may need two
   entries (e.g. `DevOps` for dou.ua, `dev_ops` for Djinni). Optional, easy to skip -- a track
   without it simply gets no dou.ua/Djinni postings, nothing else breaks.

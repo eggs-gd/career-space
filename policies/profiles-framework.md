@@ -2,11 +2,9 @@
 
 For `playbooks/update-profile.md`. Technique/format only — *how* to derive a positioning,
 headline, CTA, or skills list for each platform, not *what the current ones are*. The candidate's
-actual current
-titles, differentiators, headline, CTA, skills, and other current-state facts live in
-`data/config.yaml` — every section below that used to state a current fact points there
-instead. See `policies/generation-rules.md` first for the writing discipline this all sits on
-top of.
+actual current titles, differentiators, headline, CTA, skills, and other current-state facts live
+in `data/config.yaml` -- every section below points there rather than stating one itself. See
+`policies/generation-rules.md` first for the writing discipline this all sits on top of.
 
 ## Shared principles (all platforms)
 
@@ -219,21 +217,21 @@ WHO/WHY every other platform projects. A Gig is a specific, narrowly-scoped, pur
 underneath that identity. One seller, several Gigs — never a seller whose whole identity collapses
 into their single most detailed Gig.
 
-**Real incident this rule exists because of:** a live generation with no `fiverr:` positioning
-data produced both the seller identity and Gig ideas from one undifferentiated pass over the
-Master CV. It picked the densest technology cluster in the evidence (Unity/CI-CD/Burst/ECS) and
-let that become the Seller Tagline itself ("I will set up a production-grade Unity CI/CD
+**The concrete failure mode this guards against:** generating both the seller identity and Gig
+ideas from one undifferentiated pass over the Master CV, with no `fiverr:` positioning data to
+anchor it, tends to pick the densest technology cluster in the evidence (say, Unity/CI-CD/Burst/
+ECS) and let that become the Seller Tagline itself ("I will set up a production-grade Unity CI/CD
 pipeline..."), collapsing an Engineering-Manager/Technical-Lead identity into "Unity freelancer" —
 the same keyword-matching mistake a junior recruiter skimming for the densest tech cluster would
-make. The Gig ideas it found in that run were individually good; the bug was letting one of them
-promote itself to seller identity.
+make. Individually good Gig ideas are fine; letting one of them promote itself to seller identity
+isn't.
 
 **Gig Concepts: derived fresh, never cached as a category list.** Upwork and Fiverr share nearly
 the same underlying mapping (`capability + evidence -> client problem -> service proposition`),
-differing mainly in discovery direction. A second attempt tried to exploit that literally — a
-fixed, pre-generated category list stored in `config.yaml` — which turned out to be the same
-"cache masquerading as input" mistake LinkedIn's proof points and skills had. Instead: for each of
-`shared.commercial_directions` and `shared.differentiators`, check whether the Master CV has
+differing mainly in discovery direction -- tempting to store as a fixed, pre-generated category
+list in `config.yaml`, but that's the same "cache masquerading as input" mistake LinkedIn's proof
+points and skills selection avoids (see "Selection fields are not a cache" above). Instead: for
+each of `shared.commercial_directions` and `shared.differentiators`, check whether the Master CV has
 strong enough evidence to support a genuinely bounded, purchasable client outcome. Where it does,
 propose one or two concrete Gigs, framed as "I will ...", grounded in that specific evidence. Where
 evidence is too thin, skip it and say so rather than forcing a weak Gig into existence. Favor a

@@ -60,6 +60,15 @@ Required shape (Markdown, English, no code fences):
    `data/config.yaml`'s `shared.contacts` and allowed by that candidate's contact strategy —
    omit anything not available, never invent contact info.
 
+   **Title, for a per-vacancy CV (`cv-targeted.md`) only** — match the vacancy's own posted job
+   title as closely as the Master CV honestly supports, not the lens's own default title: an ATS
+   scanning for that exact phrase is a real, practical reason to echo it, and `cv-universal.md`
+   has no such posting to match in the first place. This is still bounded by "no aspirational
+   titles" above — if the posting's title claims materially more scope or seniority than the
+   Master CV backs up, keep the lens's own honest title instead of borrowing an unsupported one;
+   matching the posting's phrasing is never a license to override what the evidence actually
+   shows.
+
    **Location/phone, for a per-vacancy CV (`cv-targeted.md`) only** — `cv-universal.md` always
    uses `shared.contacts` as written, no vacancy to check against. For targeted CVs, follow the
    candidate's contact strategy in `data/config.yaml` for whether to show local location, remote

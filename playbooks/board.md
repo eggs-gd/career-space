@@ -6,16 +6,20 @@ everything" -- the candidate wants an overview of every tracked vacancy, not one
 ## Step 1 -- render
 
 Call `render_board` (MCP tool, or `node scripts/dist/render_board.js` if the server isn't
-connected). It reads every vacancy in `data/vacancies/` and writes one static HTML page
-(`data/board.html` by default) -- grouped by status, sorted by fit score, with every file
-actually present in each vacancy's folder (`fitment.md`, `posting.md`, `cv.md`,
-`cover-letter.md`, `targeting-plan.md`) embedded inline behind a click-to-expand badge, plus a
-real link to the original posting URL. A vacancy whose location matches `data/sources.yaml`'s
-`local_keywords` gets a colored left border and a "📍 Local" badge -- the same "local" `scout_
-prefilter.ts` already uses to pass a posting through the location gate, just surfaced visually
-here rather than only affecting whether a posting was ever fetched in the first place. No
-highlighting at all (not an error) when scouting isn't set up or `local_keywords` was never
-configured. An archived vacancy (see below) is left off this render entirely by default.
+connected). It writes `data/board.html` -- every non-archived vacancy (see "Archiving" below),
+grouped by status, sorted by fit score. Each row shows: whatever files actually exist in that
+vacancy's folder (`fitment.md`, `posting.md`, `cv.md`, `cover-letter.md`, `targeting-plan.md`)
+behind a click-to-expand badge; a direct download link for a rendered CV/cover-letter PDF, if one
+exists; a link to the original posting URL; and a "📍 Local" badge when it matches `data/
+sources.yaml`'s `local_keywords`.
+
+If a candidate says a PDF link goes nowhere, the likely cause is viewing `data/board.html`
+through some client's own in-app file preview rather than a real browser tab -- suggest that
+first. Same caveat for the status buttons (jump to that section) and each row's "Copy" button
+(copies just enough to name the vacancy unambiguously -- title/company/URL/status/fit/slug, not
+the posting text -- meant for pasting into a new chat so an agent can resolve the rest itself)
+-- both need a real browser tab with JavaScript; they're absent without it, everything else on
+the page still works.
 
 Don't hand-summarize `data/vacancies/` into a table yourself instead of calling this -- that
 means re-reading every `record.yaml` to reproduce, in plain text with no working links, what

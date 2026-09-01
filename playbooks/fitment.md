@@ -33,10 +33,10 @@ yet, ask for the candidate's location scope rather than guessing.
 **The word "remote" alone is not enough — actively look for a scope attached to it, don't just
 pattern-match the word and stop.** The prefilter's own check is a cheap keyword match with no
 room to catch this; that's fine there (its job is "worth a judgment turn," not a final verdict),
-but here it's a real, previously-observed failure mode, not a hypothetical one: "Remote (US
-only)," "must be authorized to work in [country] without sponsorship," "remote — must reside in
-[region]," and similar phrasing all contain the word "remote" while meaning the opposite of open
-scope for a candidate outside that region. Read the actual sentence the word "remote" sits in,
+but here it's a real failure mode, not a hypothetical one: "Remote (US only)," "must be authorized
+to work in [country] without sponsorship," "remote — must reside in [region]," and similar
+phrasing all contain the word "remote" while meaning the opposite of open scope for a candidate
+outside that region. Read the actual sentence the word "remote" sits in,
 not just its presence — if it's scoped to somewhere the candidate isn't and isn't covered by
 `local_keywords`, that's the same `blocking: true`/`evidence: none` outcome as no remote language
 at all, not a pass. If the scope is genuinely ambiguous even after reading closely, say so as an

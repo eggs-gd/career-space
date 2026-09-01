@@ -1,5 +1,12 @@
-<!doctype html>
-<html lang="en">
+<!--
+  This is the head for data/board.html, and only the head -- renderBoardHtml (rendering.ts)
+  builds the rest of the document itself (html/body tags, every vacancy row) as a TS template
+  literal. Loaded verbatim with one placeholder substitution below (plain string .replace(),
+  same convention as the resume/cover-letter templates). Don't write that placeholder's own
+  literal token anywhere else in this file above where it's actually used below -- .replace()
+  only touches the first match, so an earlier copy of it (even inside a comment) silently steals
+  the substitution meant for the real tag further down.
+-->
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -22,6 +29,7 @@
       --skipped: #9ca3af;
       --local: #0e7490;
       --local-tint: #ecfeff;
+      --doc: #4338ca;
     }
     * { box-sizing: border-box; }
     body {
@@ -33,7 +41,7 @@
       background: var(--bg-alt);
     }
     main {
-      max-width: 1000px;
+      max-width: 1400px;
       margin: 0 auto;
       padding: 28px 24px 60px;
     }
@@ -47,10 +55,12 @@
       font-size: 13px;
       margin: 0 0 20px;
     }
-    /* Pure CSS, no navigation: every group is just always on the page (no anchor jump-nav --
-       a same-document fragment link is exactly the kind of "navigation" some sandboxed local
-       -file preview panes refuse to perform, found the hard way). The summary strip is a plain
-       legend, not links. */
+    /* Every group is always on the page regardless of JS -- scrolling to one never depends on
+       script running. The chip itself is a real <button>, wired to scrollIntoView by the script
+       at the end of body when it runs; NOT an `<a href="#...">` fragment link -- that's exactly
+       the kind of same-document navigation some sandboxed local-file preview panes block outright
+       (found the hard way). A <button> has no default action at all, so without JS it's inert
+       but harmless -- clicking it does nothing, same as a plain label would. */
     .summary {
       display: flex;
       flex-wrap: wrap;
@@ -65,8 +75,12 @@
       background: var(--bg);
       border: 1px solid var(--line);
       border-radius: 8px;
+      font-family: inherit;
       font-size: 13px;
+      color: inherit;
+      cursor: pointer;
     }
+    .summary .chip:hover { border-color: var(--accent); }
     .summary .count { font-weight: 600; }
     .dot {
       width: 9px;
@@ -214,6 +228,38 @@
       text-decoration: none;
     }
     .vrow-files a.posting-link:hover { border-color: var(--accent); background: var(--bg-alt); }
+    /* Rendered CV/cover-letter PDF (or its .html fallback if the PDF step failed) -- a plain
+       link to the actual file, not an inline-expand badge like details.file above: the point is
+       to grab something ready to attach to an application, not read it here. Filled/accented
+       (unlike the outline-style posting-link) so it doesn't read as just another metadata badge
+       among several -- this is the one link on the row most likely to be what the candidate
+       actually came here for. */
+    .vrow-files a.doc-link {
+      padding: 2px 8px;
+      border: 1px solid var(--doc);
+      border-radius: 5px;
+      font-size: 11px;
+      color: var(--bg);
+      background: var(--doc);
+      text-decoration: none;
+    }
+    .vrow-files a.doc-link:hover { filter: brightness(0.92); }
+    /* A real <button>, inert without JS -- the script at the end of body wires the click handler
+       that reads its own data-copy attribute (an already-assembled, plain-text vacancy summary,
+       see rendering.ts) and writes it to the clipboard. Outline style like posting-link, not
+       filled like doc-link -- this is a convenience action, not the thing most candidates come to
+       this row for. */
+    .vrow-files button.copy-btn {
+      padding: 2px 8px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 11px;
+      color: var(--accent);
+      background: var(--bg);
+      cursor: pointer;
+    }
+    .vrow-files button.copy-btn:hover { border-color: var(--accent); background: var(--bg-alt); }
     .file-content {
       margin-top: 8px;
       padding: 14px 18px;
@@ -237,57 +283,3 @@
     }
   </style>
 </head>
-<body>
-  <main>
-    <h1>{{ title }}</h1>
-    <p class="meta">{{ total }} vacancies &middot; generated {{ generated_at }} &middot; click a file badge to open it in place</p>
-
-    <div class="summary">
-      {% for group in groups %}
-      <span class="chip"><span class="dot {{ group.status }}"></span>{{ group.label }} <span class="count">{{ group.count }}</span></span>
-      {% endfor %}
-    </div>
-
-    {% for group in groups %}
-    <section>
-      <h2><span class="dot {{ group.status }}"></span>{{ group.label }} <span class="n">({{ group.count }})</span></h2>
-      {% if group.vacancies %}
-      <div class="board">
-        <div class="board-head">
-          <span class="col-fit">Fit</span>
-          <span class="col-company">Company</span>
-          <span class="col-role">Role</span>
-          <span class="col-track">Track</span>
-          <span class="col-updated">Updated</span>
-        </div>
-        {% for v in group.vacancies %}
-        <div class="vrow">
-          <div class="vrow-main">
-            <span class="col-fit">{{ v.fit_score if v.fit_score is not none else '&ndash;' }}</span>
-            <span class="col-company">{{ v.company }}</span>
-            <span class="col-role">{{ v.title }}</span>
-            <span class="col-track">{{ v.track_label or '' }}</span>
-            <span class="col-updated">{{ v.updated_short }}</span>
-          </div>
-          {% if v.file_buttons or v.url %}
-          <div class="vrow-files">
-            {% for f in v.file_buttons %}
-            <details class="file" name="panel-{{ v.slug }}">
-              <summary>{{ f.label }}</summary>
-              <div class="file-content">{{ f.content_html | safe }}</div>
-            </details>
-            {% endfor %}
-            {% if v.url %}<a class="posting-link" href="{{ v.url }}" target="_blank" rel="noopener">posting&nbsp;&#8599;</a>{% endif %}
-          </div>
-          {% endif %}
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p class="empty">Nothing here.</p>
-      {% endif %}
-    </section>
-    {% endfor %}
-  </main>
-</body>
-</html>

@@ -31,7 +31,7 @@ const DEFAULT_SOURCES_PATH = path.join(REPO_ROOT, "data", "sources.yaml");
  * for `douua`/`djinni`, never set `ua_categories` for) has no business running just because one
  * message asked for it by name. Anything requested but not actually configured comes back in
  * `ignored_feeds` rather than silently vanishing, so the caller can tell the candidate why. `[]`/
- * omitted runs every configured feed, same as before this existed. */
+ * omitted runs every configured feed. */
 export async function runScout(sourcesPath?: string, opts: { feeds?: string[] } = {}): Promise<Record<string, unknown>> {
   const config = loadScoutConfig(sourcesPath ?? DEFAULT_SOURCES_PATH);
 

@@ -105,12 +105,11 @@ const STATE_HEADERS: Record<ClusterState, string> = {
   strong: "### Strong overlap",
 };
 
-/** `Math.round`'s half-up tie-breaking differs from Python 3's `round()` (half-to-even /
- * banker's rounding) at an exact `.5` boundary -- e.g. `pythonRound(2.5) === 2`, not 3. Ported
- * explicitly rather than relying on `Math.round` so a score computed here matches what the
- * Python original would have produced for the same input, including at that boundary. See
- * score_fit.test.ts for the boundary case. */
-export function pythonRound(x: number): number {
+/** Round-half-to-even (banker's rounding), not `Math.round`'s half-up tie-breaking -- at an
+ * exact `.5` boundary, `roundHalfToEven(2.5) === 2`, not 3. Deliberate: half-up rounding biases
+ * every exact-`.5` score upward, half-to-even doesn't. See score_fit.test.ts for the boundary
+ * case. */
+export function roundHalfToEven(x: number): number {
   const floor = Math.floor(x);
   const diff = x - floor;
   if (diff < 0.5) return floor;
@@ -180,7 +179,7 @@ export function computeScore(clusters: Cluster[]): number {
     }
   }
 
-  let score = Math.max(1, Math.min(10, pythonRound(1 + score01 * 9)));
+  let score = Math.max(1, Math.min(10, roundHalfToEven(1 + score01 * 9)));
 
   // Hard gate: a real blocker (remote/local scope, mandatory language, clearance, or a
   // technology that IS the role's literal subject) with zero evidence on its own primary

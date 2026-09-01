@@ -1,8 +1,6 @@
 /**
  * Markdown post-processing: structural normalization + ASCII typography cleanup.
  *
- * Faithful port of the same-named functions in the retired scripts/build-cv.js (by way of the
- * later Python port, scripts/markdown_normalize.py -- this restores the original language).
  * Pure string/regex logic, no external dependencies -- safe to unit test anywhere, including
  * sandboxes with no network/package access.
  */
@@ -44,10 +42,8 @@ function isThematicBreak(line: string): boolean {
   return THEMATIC_BREAK_RE.test(line);
 }
 
-/** Insert blank lines around headings/lists/blockquotes so renderers agree on structure.
- *
- * Direct port of `normalizeMarkdownStructure` in the retired build-cv.js -- same line-by-line
- * state machine and rules. */
+/** Insert blank lines around headings/lists/blockquotes so renderers agree on structure --
+ * a line-by-line state machine tracking fence/heading/list context as it goes. */
 export function normalizeMarkdownStructure(markdown: string): string {
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const out: string[] = [];

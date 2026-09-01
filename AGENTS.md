@@ -151,13 +151,12 @@ history.
 9. **Selection fields are not a cache.** Anything whose job is to demonstrate a positioning
    dimension with evidence (proof points, a skills list, achievement bullets) gets freshly
    re-selected from the current `data/CV_GENERAL.md` every time, picking the strongest currently
-   available evidence — never reused from a previous draft just because it's already there. This
-   is a real, previously-hit bug (see `policies/profiles-framework.md`'s history notes), not a
-   hypothetical.
+   available evidence — never reused from a previous draft just because it's already there (see
+   `policies/profiles-framework.md`'s own statement of this rule).
 10. **Technology density is not identity.** A dense, specific cluster of evidence around one
     particular tool or stack in the Master CV is evidence supporting the candidate's positioning
     — it never gets to unilaterally redefine what market or identity the candidate is projecting
-    (also a real, previously-hit bug — see the same file).
+    (see the same file's Fiverr section for the concrete failure shape this guards against).
 
 ## What the candidate can say to trigger each playbook
 

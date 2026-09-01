@@ -49,9 +49,8 @@ permanent.
 - Ownership language preserved (see `policies/generation-rules.md`).
 - No unresolved placeholder text.
 - The generated identity (headline/tagline/position) matches `shared:`, not whichever technology
-  cluster had the most detailed evidence — this is the specific, previously-real failure mode
-  `policies/profiles-framework.md`'s Fiverr section documents; check it explicitly, don't assume
-  it can't happen again just because it's documented.
+  cluster had the most detailed evidence — see `policies/profiles-framework.md`'s Fiverr section
+  for why this specifically needs checking, not assumed correct by default.
 - (Fiverr specifically) the Seller Tagline/Description never collapsed into one Gig's own pitch.
 
 ## Step 4 — show sections + gaps, ask before saving

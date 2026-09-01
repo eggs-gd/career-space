@@ -5,9 +5,7 @@ Step 0). Both platforms filter their public feeds by an exact match against a sm
 taxonomy -- not by arbitrary title text. A value that isn't an exact match from one of the two
 lists below either matches nothing (dou.ua) or is silently ignored, with the platform falling back
 to its unfiltered "latest vacancies" feed instead of an error (Djinni) -- see `scripts/
-scout_sources.ts`'s `fetchDouUa`/`fetchDjinni` docstrings for how that was confirmed live, and
-`_sb/roadmap.md` for the bug this replaced (the original cut queried both platforms with track
-titles, which never actually filtered anything on either one).
+scout_sources.ts`'s `fetchDouUa`/`fetchDjinni` docstrings for how that was confirmed live.
 
 Not relevant to `jobico` (career-space's third Ukraine-focused scout source) -- that one searches
 by a track's own `titles` directly, genuine free text, same as `workable`/`smartrecruiters`; no

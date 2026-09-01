@@ -25,19 +25,19 @@ const DEFAULT_OUTPUT_PATH = path.join(REPO_ROOT, "data", "linkedin-searches.md")
 
 // A bare "hiring" keyword tolerates a long title OR-list fine. A quoted multi-word intent phrase
 // ("we're hiring") combined with that same long list sometimes silently returns 0 results on
-// LinkedIn's content search -- a real, previously-observed limitation, not a hypothetical. The
-// fix is a shorter title list for those two intents specifically; SHORT_TITLE_LIMIT picks the
-// shortest N titles per track automatically rather than requiring a hand-maintained second list.
+// LinkedIn's content search. The fix is a shorter title list for those two intents specifically;
+// SHORT_TITLE_LIMIT picks the shortest N titles per track automatically rather than requiring a
+// hand-maintained second list.
 const INTENT_WORDS = ["hiring", '"looking for"', '"we\'re hiring"'];
 const SHORT_TITLE_LIMIT = 5;
 
-/** Mirrors Python's `urllib.parse.quote()` default behavior exactly (`safe='/'`, RFC3986
- * percent-encoding) -- NOT `encodeURIComponent` alone and NOT `URLSearchParams` (which encodes
- * spaces as `+`, matching `quote_plus`, not `quote`). `encodeURIComponent` also leaves `!*'()`
- * unescaped (an older RFC2396 exemption Python's `quote()` doesn't share) and escapes `/`
- * (which Python's default `safe='/'` doesn't) -- both corrected here. Verified byte-for-byte
- * against `urllib.parse.quote` while porting. */
-function pythonQuote(text: string): string {
+/** RFC3986 percent-encoding with `/` left unescaped -- what LinkedIn's own search URLs expect --
+ * NOT `encodeURIComponent` alone and NOT `URLSearchParams` (which encodes spaces as `+`, a
+ * different convention entirely). `encodeURIComponent` also leaves `!*'()` unescaped (an older
+ * RFC2396 exemption RFC3986 doesn't share) and escapes `/` (which needs to stay literal here) --
+ * both corrected below. Equivalent to Python's `urllib.parse.quote(text, safe='/')`, if you want
+ * a reference implementation to check this against. */
+function rfc3986Quote(text: string): string {
   return encodeURIComponent(text)
     .replace(/%2F/g, "/")
     .replace(/[!*'()]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
@@ -45,7 +45,7 @@ function pythonQuote(text: string): string {
 
 function urlencode(params: Record<string, string>): string {
   return Object.entries(params)
-    .map(([key, value]) => `${pythonQuote(key)}=${pythonQuote(value)}`)
+    .map(([key, value]) => `${rfc3986Quote(key)}=${rfc3986Quote(value)}`)
     .join("&");
 }
 
@@ -64,9 +64,7 @@ function contentUrl(query: string): string {
 /** Finds the hiring managers/founders themselves -- the warm-intro path. Deliberately takes a
  * `hiringTitles`-built query, never a track's own job-search `titles` -- searching by the track's
  * own titles finds peers/competitors for that role (other Engineering Managers), not the people
- * who hire for it (VP Engineering, Director of Engineering, CTO). A real, previously-shipped bug,
- * not a hypothetical: the link used to say "find the hiring managers" while actually searching
- * for the candidate's own peers. */
+ * who hire for it (VP Engineering, Director of Engineering, CTO). */
 function peopleUrl(query: string): string {
   return "https://www.linkedin.com/search/results/people/?" + urlencode({ keywords: query });
 }
@@ -134,7 +132,7 @@ export function buildMarkdown(config: ScoutConfig): string {
         "track in `data/sources.yaml` (who actually hires for this role -- e.g. an Engineering " +
         "Manager track's hiring titles are VP Engineering/Director of Engineering/CTO, never " +
         '"Engineering Manager" itself) and regenerate. Deliberately not falling back to the ' +
-        "track's own job-search titles for this -- that used to search for peers, not hirers._"
+        "track's own job-search titles for this -- that would search for peers, not hirers._"
     );
     lines.push("");
   }

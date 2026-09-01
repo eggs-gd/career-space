@@ -33,17 +33,16 @@ sign anything is broken -- same "unreachable -> fall back" shape already used fo
   ```
   (adjust the path to wherever you actually cloned it -- `AGENTS_TOOLS_DIR` defaults to
   `$HOME/.agents` if unset).
-- **TS Language MCP** (`ts-language`) — replaces the old `pyright` entry now that `scripts/` is
-  TypeScript, not Python. Wraps the TypeScript Compiler API directly (no separate LSP process to
-  manage) -- `get_diagnostics`/`get_all_diagnostics` for type errors on a changed `.ts` file
-  (same check `npm run build`/`npx tsc --noEmit` does, just per-file and faster to iterate on),
-  plus navigation/refactoring tools (`get_definition`, `get_references`, `rename_symbol`,
+- **TS Language MCP** (`ts-language`) — type-checking and navigation for `scripts/`'s TypeScript.
+  Wraps the TypeScript Compiler API directly (no separate LSP process to manage) --
+  `get_diagnostics`/`get_all_diagnostics` for type errors on a changed `.ts` file (same check
+  `npm run build`/`npx tsc --noEmit` does, just per-file and faster to iterate on), plus
+  navigation/refactoring tools (`get_definition`, `get_references`, `rename_symbol`,
   `organize_imports`, and more -- ~30 tools total). `npx -y ts-language-mcp .` -- zero setup
   beyond having `node`, same as `career-space` itself. Small, single-maintainer project (real,
-  actively published on npm, not abandoned) rather than an official/first-party one -- there's no
-  first-party MCP server for TypeScript diagnostics as of this writing, same situation `pyright`
-  was in for Python. If it ever stops working or gets abandoned, `npx tsc --noEmit` alone is
-  always the fallback, same graceful-degradation posture as everything else in this section.
+  actively published on npm, not abandoned) rather than an official/first-party one. If it ever
+  stops working or gets abandoned, `npx tsc --noEmit` alone is always the fallback, same
+  graceful-degradation posture as everything else in this section.
 
 ## Verifying a change to this repo's own tracked files
 

@@ -47,8 +47,9 @@ export class Posting {
     this.postedAt = fields.postedAt;
   }
 
-  /** Immutable field-level update, since `Posting` is otherwise treated as frozen -- mirrors
-   * Python's `dataclasses.replace(posting, ...)` used by scout_prefilter's repost-collapsing. */
+  /** Immutable field-level update, since `Posting` is otherwise treated as frozen -- returns a
+   * new `Posting` with just the given fields overridden. Used by `scout_prefilter`'s
+   * repost-collapsing. */
   withFields(overrides: Partial<{
     source: string;
     company: string;
@@ -142,24 +143,21 @@ export interface TrackConfig {
    * Engineering/CTO, never "Engineering Manager" itself. Domain judgment about that role's own
    * reporting hierarchy, deliberately left for the candidate to fill in (`hiring_titles:` in
    * `sources.yaml`) rather than inferred generically -- there's no reliable rule from a track's
-   * own `titles` alone. Empty when not configured; `linkedin_searches.ts`'s People-search link
-   * is omitted for a track with no `hiringTitles` rather than falling back to `titles` (that
-   * fallback is the exact bug this field exists to fix -- it searched for peers, not hirers). */
+   * own `titles` alone. Empty when not configured; `linkedin_searches.ts`'s People-search link is
+   * omitted for a track with no `hiringTitles` -- never falls back to `titles`, since that would
+   * search for the candidate's own peers instead of the people who'd actually hire them. */
   readonly hiringTitles: readonly string[];
 
   /** Exact category values on dou.ua (`?category=`) and/or Djinni (`?primary_keyword=`) --
    * `scout_sources.ts`'s `fetchDouUa`/`fetchDjinni` filter server-side on these, since neither
    * platform accepts arbitrary title text: dou.ua and Djinni each expose only a small, fixed
-   * taxonomy (~59 and ~123 values respectively -- see `docs/reference/ua-scout-categories.md`,
-   * both lists verified live, not guessed), and a value outside it is either ignored outright
-   * (Djinni silently falls back to its unfiltered "latest" feed for anything that isn't an exact
-   * match) or matches nothing (dou.ua). This repo used to derive dou.ua/Djinni queries from a
-   * track's own `titles` the same way Workable/SmartRecruiters do -- that never actually
-   * filtered anything on either platform (a real, previously-shipped bug; see `_sb/roadmap.md`).
-   * Same spirit as `hiringTitles` above: the candidate picks from the real, stored list during
-   * `playbooks/scout.md`'s Step 0, never invented by whoever's filling in `sources.yaml`. Empty
-   * when not configured -- `fetchDouUa`/`fetchDjinni` then fetch nothing for that candidate
-   * rather than falling back to an unfiltered pull. */
+   * taxonomy (~59 and ~123 values respectively -- see `reference/ua-scout-categories.md`, both
+   * lists verified live, not guessed), and a value outside it is either ignored outright (Djinni
+   * silently falls back to its unfiltered "latest" feed for anything that isn't an exact match)
+   * or matches nothing (dou.ua). Same spirit as `hiringTitles` above: the candidate picks from
+   * the real, stored list during `playbooks/scout.md`'s Step 0, never invented by whoever's
+   * filling in `sources.yaml`. Empty when not configured -- `fetchDouUa`/`fetchDjinni` then fetch
+   * nothing for that candidate rather than falling back to an unfiltered pull. */
   readonly uaCategories: readonly string[];
 }
 
@@ -259,7 +257,7 @@ export class ScoutConfig {
    * track's configured categories go into one shared query list; case is preserved (not
    * lowercased the way `allTrackTitles` normalizes titles) because Djinni's `primary_keyword`
    * match is case-sensitive for anything that isn't already lowercase -- see
-   * `docs/reference/ua-scout-categories.md`. */
+   * `reference/ua-scout-categories.md`. */
   allUaCategories(): string[] {
     const seen = new Set<string>();
     const out: string[] = [];

@@ -13,19 +13,19 @@ test("ensureCleanMarkdown strips a wrapping code fence", () => {
 });
 
 test("normalizeMarkdownStructure adds blank lines around headings and lists", () => {
-  // Verified against the Python original directly (normalize_markdown_structure) -- note no
-  // blank line is inserted between the list and the trailing text: the per-line rules only
-  // insert a blank line BEFORE a list/blockquote/heading, never after one.
+  // Note no blank line is inserted between the list and the trailing text: the per-line rules
+  // only insert a blank line BEFORE a list/blockquote/heading, never after one.
   const input = "# Title\ntext right after\n- item one\n- item two\nmore text";
   const out = normalizeMarkdownStructure(input);
   assert.equal(out, "# Title\n\ntext right after\n\n- item one\n- item two\nmore text\n");
 });
 
-test("normalizeMarkdownStructure's final multi-blank collapse is NOT fence-aware (matches Python)", () => {
-  // The Python original's final `\n{3,}` -> `\n\n` collapse runs on the whole joined string as
-  // a post-process step, after the per-line fence-tracking loop -- so it collapses excess blank
-  // lines inside a fence too. Verified against the Python original directly; this isn't a
-  // regression to "fix" in the port, it's the original's actual documented-by-behavior output.
+test("normalizeMarkdownStructure's final multi-blank collapse is NOT fence-aware", () => {
+  // The final `\n{3,}` -> `\n\n` collapse runs on the whole joined string as a post-process step,
+  // after the per-line fence-tracking loop -- so it collapses excess blank lines inside a fence
+  // too. Deliberate, not a bug to "fix": a code fence with several blank lines in a row is rare
+  // and cosmetic either way, and keeping this one pass unconditional is simpler than threading
+  // fence-awareness through it as well.
   const input = "```js\nconst x=1\n\n\n\nconst y=2\n```";
   const out = normalizeMarkdownStructure(input);
   assert.equal(out, "```js\nconst x=1\n\nconst y=2\n```\n");

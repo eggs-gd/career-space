@@ -9,14 +9,16 @@
  * The four resume/cover-letter templates under `templates/` are loaded as plain text and given
  * exactly two substitutions (`{{ title }}`, `{{ body_html | safe }}`) rather than run through a
  * templating engine -- they're pure interpolation, no loops/conditionals, so a hand-rolled
- * templating engine dependency would add nothing but risk of CSS transcription error. Only
- * `templates/board/default.html.j2` has real control flow (loops over vacancy groups/files);
- * that one's dynamic `<body>` is generated directly in `renderBoardHtml` below, while its (also
- * large, static) `<head>`/CSS is still loaded verbatim from the same file.
+ * templating engine dependency would add nothing but risk of CSS transcription error. The board
+ * needs real control flow (loops over vacancy groups/files) that a flat substitution can't give
+ * it, so `renderBoardHtml` below builds the whole document itself in TS; `templates/board/
+ * head.html.j2` holds only the static `<head>`/CSS it needs verbatim, one `{{ title }}`
+ * substitution, same convention as the other four.
  */
 
 import * as fs from "fs";
 import * as path from "path";
+import { pathToFileURL } from "url";
 import * as yaml from "js-yaml";
 import MarkdownIt from "markdown-it";
 // @ts-expect-error -- markdown-it-footnote ships no types of its own
@@ -212,9 +214,8 @@ const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep
  * actually wants, not a full timestamp. Falls back to the raw value's first 10 characters
  * (better than crashing) if it's ever not a parseable datetime -- a hand-edited record shouldn't
  * break the whole board render over one bad field. Reads the date in UTC, matching what every
- * stored timestamp's explicit `+00:00`/`Z` offset already means (Python's `datetime.
- * fromisoformat(...).strftime` used the string's own -- always UTC here -- calendar date the
- * same way). */
+ * stored timestamp's explicit `+00:00`/`Z` offset already means -- reading it in the local
+ * timezone instead could show a different calendar date near midnight. */
 function boardUpdatedShort(updatedAt: string): string {
   if (!updatedAt) return "";
   const d = new Date(updatedAt);
@@ -327,19 +328,80 @@ export function renderBoardHtml(
         }
         fileButtons.push({ label: BOARD_FILE_LABELS[fname] ?? fname, contentHtml });
       }
+      // Rendered CV/cover-letter output (render_resume.ts/render_cover_letter.ts) -- deliberately
+      // NOT a fixed name like cv.md/cover-letter.md above: the filename itself is recruiter-facing
+      // (`<Full Name>_Resume_<Role>.pdf`, `<Full Name>_Cover_Letter_<Company>.pdf`, see those
+      // scripts' own docstrings) specifically so it's ready to attach to an application without
+      // renaming first -- so this scans `files` for whatever's actually there instead of looking
+      // for one exact name. A direct link, not an inline-embedded badge like the Markdown files
+      // above: a PDF is the thing to attach somewhere else, not something to read inline here.
+      // Groups by stem so a successful render (.pdf + its source .html sitting together) shows
+      // one link, not two -- the .html is only ever linked on its own when the PDF step failed
+      // (render_resume.ts's/render_cover_letter.ts's own documented fallback).
+      //
+      // A real `file://` URI (absolute path, built here while `vdir` is still known), not a
+      // relative `vacancies/<slug>/<file>` string -- a relative link only resolves correctly when
+      // this page is opened as a plain local file. Confirmed live: a candidate viewing this
+      // through a Claude client's own local-file preview instead of a real browser tab had every
+      // relative link silently rewritten against that client's own hosted-content domain
+      // (`claudeusercontent.com`), pointing nowhere real. An absolute `file://` URI has no base to
+      // resolve against, so it survives that -- worse case is a preview that can't follow
+      // `file://` at all and the candidate copies the path instead, never a link to nothing.
+      const docLinks: Array<{ fileUrl: string; label: string }> = [];
+      {
+        const linkedStems = new Set<string>();
+        for (const fname of files) {
+          const ext = path.extname(fname).toLowerCase();
+          if (ext !== ".pdf" && ext !== ".html") continue;
+          const stem = fname.slice(0, -ext.length);
+          if (linkedStems.has(stem)) continue;
+          if (ext === ".html" && files.includes(`${stem}.pdf`)) continue; // pdf takes priority
+          linkedStems.add(stem);
+          // Short semantic label, not the filename -- the candidate's own name/role is already
+          // visible elsewhere on this row, repeating it here is just noise. `resumeOutputStem`/
+          // `coverLetterOutputStem` (rendering.ts, same file) always fold "_Resume"/
+          // "_Cover_Letter" into the stem, which is the only signal available here to tell the
+          // two apart -- anything that doesn't match either is a fallback, not the expected case.
+          const kind = stem.includes("_Cover_Letter") ? "Cover" : stem.includes("_Resume") ? "CV" : stem.replace(/_/g, " ");
+          docLinks.push({
+            fileUrl: pathToFileURL(path.join(vdir, fname)).href,
+            label: `${kind} (${ext.slice(1).toUpperCase()})`,
+          });
+        }
+      }
       const isLocal = matchesLocalKeywords(`${v.location ?? ""} ${postingRaw}`, localKeywords);
-      const result: Rec = { ...v, slug, fileButtons, updatedShort: boardUpdatedShort(v.updated_at ?? ""), isLocal };
+      // The exact text a "Copy" click hands back to the candidate to paste into a fresh chat --
+      // assembled once here, at render time (the renderer stays the one source of truth for
+      // content), not reconstructed by client-side JS from scattered DOM pieces. Just enough to
+      // name the vacancy unambiguously (an agent resolves the rest itself from the slug) --
+      // deliberately NOT the posting text/CV/cover-letter bodies: those are already one click
+      // away on this same board, pasting them into chat would just be a second copy of data that
+      // already exists.
+      const copyPayload = [
+        `Title: ${v.title ?? ""}`,
+        `Company: ${v.company ?? ""}`,
+        `URL: ${v.url ?? ""}`,
+        `Status: ${v.status ?? ""}`,
+        `Fitment: ${v.fit_score !== null && v.fit_score !== undefined ? `${v.fit_score}/10` : "not yet assessed"}`,
+        `Vacancy ID: ${slug}`,
+      ].join("\n");
+      const result: Rec = { ...v, slug, fileButtons, docLinks, copyPayload, updatedShort: boardUpdatedShort(v.updated_at ?? ""), isLocal };
       return result;
     });
 
+    // `<button>`, not `<a href="#...">` -- a same-document fragment link is exactly the kind of
+    // navigation some sandboxed local-file preview panes block outright (see head.html.j2's own
+    // note on this). A plain button has no default action at all without JS, so it's inert but
+    // harmless without it, and the script below (progressive enhancement only, added right
+    // before `</main>`) wires it to scrollIntoView -- never a real navigation event.
     chipsHtml.push(
-      `<span class="chip"><span class="dot ${escapeHtml(status)}"></span>${escapeHtml(label)} <span class="count">${prepared.length}</span></span>`
+      `<button type="button" class="chip" data-scroll-target="section-${escapeHtml(status)}"><span class="dot ${escapeHtml(status)}"></span>${escapeHtml(label)} <span class="count">${prepared.length}</span></button>`
     );
 
     const rowsHtml = prepared
       .map((v) => {
         const fitDisplay = v.fit_score !== null && v.fit_score !== undefined ? String(v.fit_score) : "–";
-        const filesOrUrl = v.fileButtons.length > 0 || v.url;
+        const docLinks: Array<{ fileUrl: string; label: string }> = v.docLinks ?? [];
         const fileButtonsHtml = (v.fileButtons as Array<{ label: string; contentHtml: string }>)
           .map(
             (f) =>
@@ -349,11 +411,24 @@ export function renderBoardHtml(
         const postingLinkHtml = v.url
           ? `<a class="posting-link" href="${escapeHtml(String(v.url))}" target="_blank" rel="noopener">posting&nbsp;&#8599;</a>`
           : "";
+        // An absolute file:// URI (built above, while the real vacancy folder path is still
+        // known) -- see docLinks' own construction comment for why not a relative link. No
+        // `download` attribute: that only ever works for a same-origin/blob URL, not a `file://`
+        // one, so it'd be dead weight here rather than the useful save-prompt it is elsewhere.
+        const docLinksHtml = docLinks
+          .map((d) => `<a class="doc-link" href="${escapeHtml(d.fileUrl)}">📄&nbsp;${escapeHtml(d.label)}</a>`)
+          .join("\n            ");
         const localBadgeHtml = v.isLocal ? `<span class="local-badge" title="Matches your local_keywords">📍 Local</span>` : "";
         // Only ever rendered when a caller explicitly asked to include archived vacancies
         // (see renderBoardHtml's default, which excludes them before this loop even runs) --
         // still worth marking here so that view doesn't read as identical to the active list.
         const archivedBadgeHtml = v.archived ? `<span class="archived-badge">Archived</span>` : "";
+        // A plain button, inert without JS (nothing left for a script-stripping sandbox to
+        // strip or block, same reasoning as the nav buttons above) -- the click handler added
+        // near `</main>` reads this exact, already-assembled payload back out and writes it to
+        // the clipboard verbatim; it never reconstructs it from the row's own visible DOM.
+        const copyAttr = escapeHtml(JSON.stringify(v.copyPayload ?? ""));
+        const copyButtonHtml = `<button type="button" class="copy-btn" data-copy="${copyAttr}">Copy</button>`;
         return `        <div class="vrow${v.isLocal ? " local" : ""}${v.archived ? " archived" : ""}">
           <div class="vrow-main">
             <span class="col-fit">${fitDisplay}</span>
@@ -361,15 +436,13 @@ export function renderBoardHtml(
             <span class="col-role">${escapeHtml(String(v.title ?? ""))}${localBadgeHtml}${archivedBadgeHtml}</span>
             <span class="col-track">${escapeHtml(String(v.track_label || ""))}</span>
             <span class="col-updated">${escapeHtml(v.updatedShort)}</span>
-          </div>${
-            filesOrUrl
-              ? `
+          </div>
           <div class="vrow-files">
             ${fileButtonsHtml}
+            ${docLinksHtml}
             ${postingLinkHtml}
-          </div>`
-              : ""
-          }
+            ${copyButtonHtml}
+          </div>
         </div>`;
       })
       .join("\n");
@@ -389,19 +462,22 @@ ${rowsHtml}
         : `      <p class="empty">Nothing here.</p>`;
 
     groupsHtml.push(
-      `    <section>
+      `    <section id="section-${escapeHtml(status)}">
       <h2><span class="dot ${escapeHtml(status)}"></span>${escapeHtml(label)} <span class="n">(${prepared.length})</span></h2>
 ${bodyForGroup}
     </section>`
     );
   }
 
-  const raw = loadTemplate("board/default.html.j2");
-  const bodyMarkerIndex = raw.indexOf("<body>");
-  const headPart = raw.slice(0, bodyMarkerIndex).replace("{{ title }}", escapeHtml(title));
+  // Head only -- no full-page skeleton to slice a piece out of. The rest of the document
+  // (<html>/<body> and everything in it) is built directly below, in TS.
+  const headHtml = loadTemplate("board/head.html.j2").replace("{{ title }}", escapeHtml(title));
 
   const generatedAt = formatGeneratedAt(new Date());
-  const body = `<body>
+  const document = `<!doctype html>
+<html lang="en">
+${headHtml}
+<body>
   <main>
     <h1>${escapeHtml(title)}</h1>
     <p class="meta">${total} vacancies &middot; generated ${escapeHtml(generatedAt)} &middot; click a file badge to open it in place</p>
@@ -412,11 +488,73 @@ ${bodyForGroup}
 
 ${groupsHtml.join("\n")}
   </main>
+  <script>
+    // Progressive enhancement only, added on top of a page that's already fully usable without
+    // it (see head.html.j2's .summary .chip comment and details.file's own comment). Nothing
+    // here owns or decides vacancy state -- it only scrolls to a section already on the page, or
+    // copies text the renderer already assembled server-side. Stripped or blocked, every
+    // vacancy's data/status/score/links stay exactly as they are; only jump-to-section and
+    // copy-to-clipboard go away.
+    (function () {
+      document.querySelectorAll("button.chip[data-scroll-target]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var target = document.getElementById(btn.getAttribute("data-scroll-target"));
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+
+      // navigator.clipboard needs a secure context and a real user gesture; not guaranteed in
+      // every environment this file gets opened in. document.execCommand("copy") is
+      // deprecated but far more broadly supported as a fallback -- either way, failure here
+      // must never break anything else on the page.
+      function fallbackCopy(text) {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        var ok = false;
+        try {
+          ok = document.execCommand("copy");
+        } catch (e) {
+          ok = false;
+        }
+        document.body.removeChild(ta);
+        return ok;
+      }
+
+      document.querySelectorAll("button.copy-btn[data-copy]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var text;
+          try {
+            text = JSON.parse(btn.getAttribute("data-copy"));
+          } catch (e) {
+            return;
+          }
+          var showCopied = function () {
+            btn.textContent = "Copied";
+            setTimeout(function () {
+              btn.textContent = "Copy";
+            }, 1500);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(showCopied, function () {
+              if (fallbackCopy(text)) showCopied();
+            });
+          } else if (fallbackCopy(text)) {
+            showCopied();
+          }
+        });
+      });
+    })();
+  </script>
 </body>
 </html>
 `;
 
-  return headPart + body;
+  return document;
 }
 
 export function writeTxt(text: string, txtPath: string): void {

@@ -1,10 +1,8 @@
 /**
- * Regression for a real, observed bug: an on-site London posting passed the location gate
- * because its description happened to contain "sell anywhere" (product marketing copy) and
- * "distributed systems" (plain engineering-architecture phrasing) -- both incidental uses of
- * words that used to be bare entries in `REMOTE_SIGNAL_WORDS`/`REMOTE_WORDS`, neither actually
- * describing where the candidate could be based. See those constants' own comments in
- * `scout_prefilter.ts`/`scout_sources.ts` for the full story.
+ * Guards `REMOTE_SIGNAL_WORDS`/`REMOTE_WORDS` against a real failure mode: an on-site London
+ * posting must not pass the location gate just because its description happens to contain "sell
+ * anywhere" (product marketing copy) or "distributed systems" (plain engineering-architecture
+ * phrasing) -- neither actually describes where the candidate could be based.
  */
 
 import { test } from "node:test";

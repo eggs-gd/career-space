@@ -17,8 +17,8 @@ sources.yaml`'s `tracks` -- the same tracks the scout already uses. Job board an
 need nothing new; the people-search link additionally needs each track's own `hiring_titles:` --
 who actually hires for that role (e.g. an Engineering Manager track's hiring titles are VP
 Engineering/Director of Engineering/CTO, never "Engineering Manager" itself -- that would just
-find peers, a real bug this repo used to ship). Optional: a track without it simply gets no
-people-search link, everything else still works. No network call happens here at all. The
+find peers, not hirers). Optional: a track without it simply gets no people-search link,
+everything else still works. No network call happens here at all. The
 candidate opens the resulting links themselves, in their own logged-in browser, at their own pace.
 
 If `data/sources.yaml` doesn't exist yet, say so and point at `playbooks/scout.md`'s Step 0 --
