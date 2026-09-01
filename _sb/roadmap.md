@@ -27,6 +27,15 @@ and why each one was built lives in git history, not here.
       `ua_categories:` to return anything (exact-match category taxonomies -- see `reference/
       ua-scout-categories.md`); `jobico` searches by track `titles` directly, no extra config.
       `robota.ua`/`work.ua` ruled out (no public API / Cloudflare-blocked) -- don't re-investigate.
+- [x] Add a vacancy from a bare URL -- `playbooks/add-from-url.md`. `resolve_vacancy_url`
+      recognizes greenhouse.io/lever.co/ashbyhq.com/recruitee.com/jobico.io URLs and fetches that
+      exact posting via that platform's own single-item API (same reliability as a scout-found
+      one); any other host falls back to the agent's own fetch/read capability, shown to the
+      candidate before writing anything. Either way, the result still goes through
+      `fitment.md`/`scout-record-outcomes.md` and lands at `new` (or just `seen.jsonl`) -- never
+      `tracked` directly, unlike `vacancy-resolve.md`'s handling of a pasted full posting text
+      (which does go straight to `tracked`, since pasting the whole text already implies a
+      decision a bare link doesn't).
 - [x] LinkedIn search links -- ready-to-click Boolean search deep-links. People-search needs a
       track's own `hiring_titles:` to appear at all.
 - [x] Dashboard/board -- every vacancy on one page, grouped by status, sorted by fit; fully usable

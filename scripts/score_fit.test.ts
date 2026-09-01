@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { roundHalfToEven, computeScore } from "./score_fit";
+import { roundHalfToEven, computeScore, render } from "./score_fit";
 
 test("roundHalfToEven uses banker's rounding at exact .5 boundaries, unlike Math.round", () => {
   assert.equal(roundHalfToEven(2.5), 2, "2.5 rounds to even (2), not up to 3");
@@ -29,4 +29,32 @@ test("computeScore applies the blocking cap regardless of the weighted average",
   ] as any;
   const score = computeScore(clusters);
   assert.ok(score <= 3, `blocking cluster with no evidence must cap the score at 3, got ${score}`);
+});
+
+test("location exception renders as eligibility, not as a score penalty", () => {
+  const assessment = {
+    job_summary: "Architecture-heavy engineering role.",
+    clusters: [
+      {
+        cluster: "Architecture",
+        importance: "critical",
+        blocking: false,
+        requirements: [{ requirement: "architecture", primary: true, evidence: "direct_strong", reason: "Strong architecture overlap." }],
+      },
+    ],
+    risk: "The remote scope may need an exception.",
+    appeal: "The content fit is strong.",
+    fit_category: "clean_fit",
+    eligibility: {
+      location: {
+        status: "location_exception_candidate",
+        reason: "Remote scope lists nearby markets but no hard legal blocker.",
+      },
+    },
+  } as const;
+
+  assert.equal(computeScore(assessment.clusters as any), 10);
+  const markdown = render(assessment as any);
+  assert.match(markdown, /^## Match: 10\/10 — clean fit/m);
+  assert.match(markdown, /Location eligibility:\*\* requires location exception/);
 });

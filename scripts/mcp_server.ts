@@ -37,9 +37,11 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import * as rendering from "./rendering";
 import * as scoreFit from "./score_fit";
 import * as vacancyStore from "./vacancy_store";
+import { LOCATION_ELIGIBILITY_STATUSES } from "./eligibility";
 import { generate as generateLinkedinSearches } from "./linkedin_searches";
 import { renderBoard } from "./render_board";
 import { runScout } from "./scout_fetch";
+import { resolveVacancyFromUrl } from "./resolve_vacancy_url";
 
 /** Expands a leading `~` to the home directory, then resolves to an absolute path. */
 function resolvePath(input: string): string {
@@ -151,15 +153,26 @@ server.registerTool(
       risk: z.string().default(""),
       appeal: z.string().default(""),
       fit_category: z.string().default("unclear"),
+      eligibility: z
+        .object({
+          location: z
+            .object({
+              status: z.enum(LOCATION_ELIGIBILITY_STATUSES),
+              reason: z.string().optional(),
+            })
+            .optional(),
+        })
+        .optional(),
     },
   },
-  async ({ job_summary, clusters, risk, appeal, fit_category }): Promise<CallToolResult> => {
+  async ({ job_summary, clusters, risk, appeal, fit_category, eligibility }): Promise<CallToolResult> => {
     const assessment = {
       job_summary,
       clusters: clusters as scoreFit.Assessment["clusters"],
       risk,
       appeal,
       fit_category,
+      eligibility,
     };
     return respond(scoreFit.render(assessment));
   }
@@ -189,6 +202,30 @@ server.registerTool(
   async ({ sources_path, feeds }): Promise<CallToolResult> => {
     const resolved = sources_path ? resolvePath(sources_path) : undefined;
     return respond(await runScout(resolved, { feeds }));
+  }
+);
+
+server.registerTool(
+  "resolve_vacancy_url",
+  {
+    description:
+      "Resolves one vacancy URL (not a search) into a candidate shaped exactly like one " +
+      "scout_fetch candidate (same fields, plus track_label) -- see playbooks/add-from-url.md. " +
+      "Only works for a URL from a source this repo already fetches precisely (greenhouse.io, " +
+      "lever.co, ashbyhq.com, recruitee.com, jobico.io); returns `matched: false` (not an error) " +
+      "for anything else, meaning fall back to your own fetch/read capability instead. On a " +
+      "match, `already_seen` is true if this exact posting is already in data/vacancies/" +
+      "seen.jsonl -- don't re-judge it, tell the candidate it's already been through this before. " +
+      "Does no judgment and writes nothing; feed the returned `candidate` through fitment.md + " +
+      "scout-record-outcomes.md exactly like a scout_fetch candidate.",
+    inputSchema: {
+      url: z.string(),
+      sources_path: z.string().optional(),
+    },
+  },
+  async ({ url, sources_path }): Promise<CallToolResult> => {
+    const resolved = sources_path ? resolvePath(sources_path) : undefined;
+    return respond(await resolveVacancyFromUrl(url, resolved));
   }
 );
 
@@ -252,7 +289,7 @@ server.registerTool(
       "Calling this again for the same posting updates the same folder (and appends a " +
       "status_history entry if `status` changed) rather than creating a duplicate -- and every " +
       "enrichment argument (`location`, `remote`, `source`, `posted_at`, `track_label`, " +
-      "`fit_score`/`fit_category`/`fit_reason`) you leave out of THIS call is left alone, not " +
+      "`fit_score`/`fit_category`/`fit_reason`, `eligibility_location_status`/`eligibility_location_reason`) you leave out of THIS call is left alone, not " +
       "cleared -- so calling this again with just a status change, or just to attach a document, " +
       "never erases fit data (or anything else) a previous call already recorded. Whatever gets " +
       "generated for this vacancy (a targeted CV, a cover letter) should be written directly into " +
@@ -275,6 +312,8 @@ server.registerTool(
       fit_score: z.number().int().optional(),
       fit_category: z.string().optional(),
       fit_reason: z.string().optional(),
+      eligibility_location_status: z.enum(LOCATION_ELIGIBILITY_STATUSES).optional(),
+      eligibility_location_reason: z.string().optional(),
     },
   },
   async (args): Promise<CallToolResult> => {
@@ -296,6 +335,9 @@ server.registerTool(
         fitScore: args.fit_score,
         fitCategory: args.fit_category,
         fitReason: args.fit_reason,
+        eligibility: args.eligibility_location_status
+          ? { location: { status: args.eligibility_location_status, reason: args.eligibility_location_reason } }
+          : undefined,
       })
     );
   }
@@ -377,7 +419,7 @@ server.registerTool(
   {
     description:
       "List tracked vacancies (slug/status/company/title/fit_score/track_label/url/updated_at/" +
-      "location/archived/files -- `files` is every filename actually present in that vacancy's " +
+      "location/archived/eligibility/files -- `files` is every filename actually present in that vacancy's " +
       "folder), optionally filtered to one status. Excludes an archived vacancy (see " +
       "vacancy_set_archived) unless include_archived is true. Doesn't include seen.jsonl's " +
       "rejected-and-not-tracked entries -- use this for \"what am I actually pursuing,\" not a full " +

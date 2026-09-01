@@ -178,6 +178,7 @@ ask riding along with an operator one) before you act on it.
 | "онови мій профіль на LinkedIn/Djinni/Upwork/Fiverr" | `playbooks/update-profile.md` |
 | "розкажи про career-space" / "чим ми кращі за інші боти" / "pitch this system" | `playbooks/pitch.md` |
 | "пошукай вакансії" / "run the scout" / "find me matches" | `playbooks/scout.md` |
+| candidate gives a bare vacancy URL, no pasted text | `playbooks/add-from-url.md` |
 | "згенеруй лінки для LinkedIn" / "linkedin search links" | `playbooks/linkedin-search.md` |
 | "покажи дошку" / "show me the board" / "what's the status of everything" | `playbooks/board.md` |
 | "що з дошки викинути" / "дай топ 10" / "what should I actually pursue" | `playbooks/prioritize.md` |
@@ -241,7 +242,7 @@ data/                           # gitignored, personal
     <slug>/                     # one folder per vacancy worth attention -- scout-found (status
                                  # starts "new") or candidate-pasted via cover-letter.md/cv-targeted.md
                                  # (status starts "tracked" -- already past "found it, not reviewed").
-                                 # record.yaml (status/status_history/fit/track_label/archived/metadata) + posting.md
+                                 # record.yaml (status/status_history/fit/eligibility/track_label/archived/metadata) + posting.md
                                  # always; cv.md / cover-letter.md / fitment.md / targeting-plan.md live
                                  # here too once generated -- never in cv/ above or a separate
                                  # cover-letters/ (that folder is retired)

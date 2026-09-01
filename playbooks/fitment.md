@@ -20,27 +20,36 @@ demonstrates — don't invent gaps or strengths in either direction. For the man
 check specifically, use `data/config.yaml`'s `shared.languages` — don't infer proficiency from the
 Master CV's prose or guess from absence of a mention.
 
-**Remote/local check — same rule as the scout's own location gate (`scout_prefilter.ts`'s
-`_passes_location_gate`), applied here by hand, plus one thing the cheap prefilter structurally
-can't do.** Candidate-specific location scope lives in `data/sources.yaml`'s `local_keywords`;
-don't hard-code a country or city in this playbook. A posting the scout found already passed the
-prefilter's gate before you ever see it, but a posting the candidate pastes directly never went
-through it at all — check it here. If the posting's title/location/description doesn't say
-"remote"/"anywhere"/"work from home"/"wfh" and doesn't match `local_keywords`, treat this as a
-`blocking: true` cluster with `evidence: none` (see Step 1). If `data/sources.yaml` doesn't exist
-yet, ask for the candidate's location scope rather than guessing.
+**Location eligibility is separate from content fit.** Candidate-specific location scope lives in
+`data/sources.yaml`'s `local_keywords`; don't hard-code a country or city in this playbook. A
+posting the scout found already passed the cheap prefilter's location gate before you ever see it,
+but a posting the candidate pastes directly never went through it at all — check it here. If
+`data/sources.yaml` doesn't exist yet, ask for the candidate's location scope rather than
+guessing.
+
+Classify `eligibility.location.status` before scoring requirement clusters:
+
+- `open_remote`: the posting is genuinely open remote/anywhere, with no country/payroll/residency
+  restriction that excludes the candidate.
+- `local`: the posting matches the candidate's `local_keywords`.
+- `location_exception_candidate`: the posting is remote but scoped to nearby/adjacent markets or
+  time zones the candidate is not explicitly inside, and the text does not state a hard legal,
+  security, clearance, payroll, or work-authorization gate. Treat this as an operational risk
+  worth surfacing, not a content mismatch: do not create a blocking cluster solely for this and
+  do not lower the content score by hand.
+- `hard_location_block`: the posting is on-site outside the candidate's local scope, remote only
+  for a region/country the candidate is outside of with explicit residency/payroll/work-
+  authorization language, US-only-style scope, clearance, or no-sponsorship language that makes
+  eligibility itself the blocker. This is a `blocking: true` cluster with `evidence: none`.
+- `unclear`: the posting's own text is genuinely ambiguous after close reading.
 
 **The word "remote" alone is not enough — actively look for a scope attached to it, don't just
 pattern-match the word and stop.** The prefilter's own check is a cheap keyword match with no
 room to catch this; that's fine there (its job is "worth a judgment turn," not a final verdict),
 but here it's a real failure mode, not a hypothetical one: "Remote (US only)," "must be authorized
 to work in [country] without sponsorship," "remote — must reside in [region]," and similar
-phrasing all contain the word "remote" while meaning the opposite of open scope for a candidate
-outside that region. Read the actual sentence the word "remote" sits in,
-not just its presence — if it's scoped to somewhere the candidate isn't and isn't covered by
-`local_keywords`, that's the same `blocking: true`/`evidence: none` outcome as no remote language
-at all, not a pass. If the scope is genuinely ambiguous even after reading closely, say so as an
-open question rather than defaulting to either a pass or a block.
+phrasing all contain the word "remote" while meaning very different things. Read the actual
+sentence the word "remote" sits in, not just its presence.
 Decompose each real requirement into the underlying capability it needs (not the literal words)
 before checking the Master CV against it: a requirement can be genuinely met by something that
 never uses the posting's vocabulary, and isn't met just because some entry happens to share a word
@@ -72,8 +81,9 @@ For each cluster:
   `important` (affects confidence/ramp-up, isn't the center of the role) / `nice_to_have`
   (a preference/bonus). Base this only on the posting's own emphasis and wording.
 - **`blocking`**: almost always `false`. Only `true` for an actual hard gate that disqualifies
-  regardless of everything else — the remote/local check above, or a mandatory spoken language
-  the candidate doesn't have per `shared.languages` — OR a specific technology the posting makes
+  regardless of everything else — `eligibility.location.status = hard_location_block`, or a
+  mandatory spoken language the candidate doesn't have per `shared.languages` — OR a specific
+  technology the posting makes
   the literal subject of the role itself (in the title, or an explicit "must personally code in X
   daily" mandate) — in that case the role
   *is* about that thing, not "otherwise strong candidate, one gap." An ordinary missing critical
@@ -86,7 +96,8 @@ be encouraging — but also don't invent a requirement the posting never actuall
 
 - **`job_summary`**: 2-3 sentences, the real ask stripped of buzzwords/boilerplate.
 - **`risk`**: one honest sentence — what about the weakest clusters could make a hiring team
-  hesitate or reject. Empty string if genuinely nothing.
+  hesitate or reject, including a `location_exception_candidate` operational risk if present.
+  Empty string if genuinely nothing.
 - **`appeal`**: one honest sentence — what about the strongest clusters could make them interested
   regardless of the gaps.
 - **`fit_category`**, exactly one: `clean_fit` (requirements and evidence line up cleanly) /
@@ -103,7 +114,7 @@ be encouraging — but also don't invent a requirement the posting never actuall
 
 If the `career-space` MCP server is connected, call its `score_fit` tool directly with the
 structure from Steps 1-2 as arguments (`job_summary`, `clusters`, `risk`, `appeal`,
-`fit_category`) — no file needed. Otherwise, write the same structure to a scratch file (e.g.
+`fit_category`, `eligibility`) — no file needed. Otherwise, write the same structure to a scratch file (e.g.
 `/tmp/fitment-<company>.json` — working data, not something that needs to live under `data/`)
 matching `scripts/score_fit.ts`'s documented input shape, then run:
 

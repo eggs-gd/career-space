@@ -35,7 +35,14 @@
  *   "risk": "one honest sentence, or empty string",
  *   "appeal": "one honest sentence, or empty string",
  *   "fit_category": "clean_fit" | "stretch_fit" | "underreach" | "craft_mismatch" |
- *                    "altitude_mismatch" | "context_gap" | "unclear"
+ *                    "altitude_mismatch" | "context_gap" | "unclear",
+ *   "eligibility": {
+ *     "location": {
+ *       "status": "open_remote" | "local" | "location_exception_candidate" |
+ *                 "hard_location_block" | "unclear",
+ *       "reason": "one sentence, optional"
+ *     }
+ *   }
  * }
  *
  * Exactly one requirement per cluster should have "primary": true -- if zero or more than one
@@ -44,6 +51,7 @@
  */
 
 import * as fs from "fs";
+import { Eligibility, normalizeEligibility } from "./eligibility";
 
 interface Requirement {
   requirement?: string;
@@ -66,6 +74,7 @@ export interface Assessment {
   risk?: string;
   appeal?: string;
   fit_category?: string;
+  eligibility?: Eligibility;
 }
 
 const EVIDENCE_VALUE: Record<string, number> = {
@@ -103,6 +112,14 @@ const STATE_HEADERS: Record<ClusterState, string> = {
   minor_gap: "### Minor gaps",
   transferable: "### Transferable / partial overlap",
   strong: "### Strong overlap",
+};
+
+const LOCATION_ELIGIBILITY_LABELS: Record<string, string> = {
+  open_remote: "open remote",
+  local: "local",
+  location_exception_candidate: "requires location exception",
+  hard_location_block: "hard location block",
+  unclear: "unclear",
 };
 
 /** Round-half-to-even (banker's rounding), not `Math.round`'s half-up tie-breaking -- at an
@@ -181,7 +198,7 @@ export function computeScore(clusters: Cluster[]): number {
 
   let score = Math.max(1, Math.min(10, roundHalfToEven(1 + score01 * 9)));
 
-  // Hard gate: a real blocker (remote/local scope, mandatory language, clearance, or a
+  // Hard gate: a real blocker (hard location block, mandatory language, clearance, or a
   // technology that IS the role's literal subject) with zero evidence on its own primary
   // requirement caps the score outright, regardless of how the weighted average came out.
   if (clusters.some((cluster) => cluster.blocking && clusterPrimary(cluster).evidence === "none")) {
@@ -200,6 +217,7 @@ export function render(assessment: Assessment): string {
   const score = computeScore(clusters);
   const category = assessment.fit_category ?? "unclear";
   const [shortLabel, explanation] = FIT_CATEGORY_LABELS[category] ?? [category, ""];
+  const eligibility = normalizeEligibility(assessment.eligibility);
 
   const lines: string[] = [`## Match: ${score}/10 — ${shortLabel}`];
   if (explanation) lines.push(`*${explanation}*`);
@@ -207,6 +225,13 @@ export function render(assessment: Assessment): string {
   if (jobSummary) {
     lines.push("");
     lines.push(jobSummary);
+  }
+  const locationEligibility = eligibility?.location;
+  if (locationEligibility) {
+    lines.push("");
+    const label = LOCATION_ELIGIBILITY_LABELS[locationEligibility.status] ?? locationEligibility.status;
+    const reason = locationEligibility.reason ? ` — ${locationEligibility.reason}` : "";
+    lines.push(`**Location eligibility:** ${label}${reason}`);
   }
   lines.push("");
   lines.push("---");

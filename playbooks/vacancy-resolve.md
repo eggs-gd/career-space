@@ -14,9 +14,15 @@ board"), resolve it with `vacancy_list` (MCP tool, or `node scripts/dist/vacancy
 If the match is ambiguous, ask which one they mean. Once resolved, read that vacancy's
 `posting.md`; don't ask the candidate to paste the posting again.
 
-If the candidate pasted a posting or link/description instead, identify company and title from
-the posting. If either is genuinely unclear, ask; don't invent a company/title just to make a
-folder.
+If the candidate pasted the full posting text, identify company and title from it. If they gave
+only a URL with no text, call `resolve_vacancy_url` (MCP tool, or `node scripts/dist/
+resolve_vacancy_url.js <url>`) to get company/title/posting text -- same mechanism `playbooks/
+add-from-url.md` uses, resolved directly here instead since asking for a document (a CV, a cover
+letter, a fitment check) is itself the "I've decided this is worth a look" signal `add-from-url.md`
+would otherwise get from a fitment pass. If it returns `matched: false`, fetch the URL yourself and
+read it (same fallback `add-from-url.md`'s Step 1 describes); if you can't get a clean read, ask
+the candidate to paste the text instead. If company/title is still genuinely unclear after all
+that, ask; don't invent one just to make a folder.
 
 ## Step 2 -- create or update the vacancy record
 

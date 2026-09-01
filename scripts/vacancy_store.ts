@@ -18,17 +18,18 @@
  *   `tracked` instead -- see `upsertVacancy`'s docstring, no reason to route a posting through
  *   `new` when the candidate already decided to act on it). A judged-and-rejected scout posting
  *   leaves its trace solely in `seen.jsonl` (score/category/reason) -- it never gets a folder
- *   here. Inside a vacancy's folder: `record.yaml` (status/status_history/fit/track_label/
- *   metadata) and `posting.md` (the posting's own text, when known) always; whatever a playbook
- *   generates for it (a targeted CV, a cover letter, a deeper fitment writeup) belongs alongside
- *   them in the same folder -- a vacancy's folder IS its association with everything about it,
- *   not a separate pointer/dict to maintain.
+ *   here. Inside a vacancy's folder: `record.yaml` (status/status_history/fit/eligibility/
+ *   track_label/metadata) and `posting.md` (the posting's own text, when known) always; whatever
+ *   a playbook generates for it (a targeted CV, a cover letter, a deeper fitment writeup) belongs
+ *   alongside them in the same folder -- a vacancy's folder IS its association with everything
+ *   about it, not a separate pointer/dict to maintain.
  */
 
 import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
 import { parseArgs } from "util";
+import { Eligibility, isLocationEligibilityStatus, normalizeEligibility } from "./eligibility";
 import * as postingIds from "./posting_ids";
 import { REPO_ROOT } from "./repo_paths";
 
@@ -184,6 +185,9 @@ export interface VacancySummary {
    * `includeArchived` option), so this is mainly here for a caller that explicitly asked to see
    * archived ones too and still needs to tell them apart from active ones in the result. */
   archived: boolean;
+  /** Operational eligibility flags from fitment judgment, stored so deterministic renderers can
+   * show them without re-reading or re-judging fitment.md. */
+  eligibility?: Eligibility;
   /** every file actually present in the vacancy's folder, sorted -- lets a caller (a dashboard
    * renderer, an agent deciding what to offer) know exactly what's openable without a second
    * lookup or guessing from record fields alone. */
@@ -202,6 +206,7 @@ function summaryToDict(s: VacancySummary): Rec {
     updated_at: s.updatedAt,
     location: s.location,
     archived: s.archived,
+    eligibility: s.eligibility ?? null,
     files: [...s.files],
   };
 }
@@ -257,6 +262,7 @@ export interface UpsertVacancyOptions {
   fitScore?: number;
   fitCategory?: string;
   fitReason?: string;
+  eligibility?: Eligibility;
 }
 
 /** Create a new vacancy folder, or update the existing one for this posting.
@@ -426,6 +432,8 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   } else {
     setdefault(record, "fit", { score: null, category: null, reason: null });
   }
+  const eligibility = normalizeEligibility(opts.eligibility);
+  if (eligibility !== undefined) record.eligibility = eligibility;
   setdefault(record, "location", "");
   setdefault(record, "remote", false);
   setdefault(record, "source", "");
@@ -558,6 +566,7 @@ export function listVacancies(status?: string, opts: { includeArchived?: boolean
       updatedAt: record.updated_at ?? "",
       location: record.location ?? "",
       archived: record.archived ?? false,
+      eligibility: normalizeEligibility(record.eligibility),
       files,
     });
   }
@@ -589,6 +598,8 @@ function cli(): void {
       status: { type: "string" },
       "track-label": { type: "string" },
       "fit-reason": { type: "string" },
+      "eligibility-location-status": { type: "string" },
+      "eligibility-location-reason": { type: "string" },
       slug: { type: "string" },
       kind: { type: "string" },
       path: { type: "string" },
@@ -623,6 +634,12 @@ function cli(): void {
     if (status !== undefined && !isValidStatus(status)) {
       throw new VacancyStoreError(`--status must be one of ${VALID_STATUSES.join(", ")}`);
     }
+    const eligibilityStatus = values["eligibility-location-status"];
+    if (eligibilityStatus !== undefined && !isLocationEligibilityStatus(eligibilityStatus)) {
+      throw new VacancyStoreError(
+        "--eligibility-location-status must be one of open_remote, local, location_exception_candidate, hard_location_block, unclear"
+      );
+    }
     result = upsertVacancy({
       postingId: values["posting-id"],
       contentId: values["content-id"],
@@ -640,6 +657,9 @@ function cli(): void {
       fitScore: values["fit-score"] !== undefined ? Number(values["fit-score"]) : undefined,
       fitCategory: values["fit-category"],
       fitReason: values["fit-reason"],
+      eligibility: eligibilityStatus
+        ? { location: { status: eligibilityStatus, reason: values["eligibility-location-reason"] } }
+        : undefined,
     });
   } else if (command === "set-status") {
     if (!values.slug || !values.status || !isValidStatus(values.status)) {

@@ -370,6 +370,8 @@ export function renderBoardHtml(
         }
       }
       const isLocal = matchesLocalKeywords(`${v.location ?? ""} ${postingRaw}`, localKeywords);
+      const locationEligibility = v.eligibility?.location ?? null;
+      const requiresLocationException = locationEligibility?.status === "location_exception_candidate";
       // The exact text a "Copy" click hands back to the candidate to paste into a fresh chat --
       // assembled once here, at render time (the renderer stays the one source of truth for
       // content), not reconstructed by client-side JS from scattered DOM pieces. Just enough to
@@ -386,6 +388,8 @@ export function renderBoardHtml(
         `Vacancy ID: ${slug}`,
       ].join("\n");
       const result: Rec = { ...v, slug, fileButtons, docLinks, copyPayload, updatedShort: boardUpdatedShort(v.updated_at ?? ""), isLocal };
+      result.requiresLocationException = requiresLocationException;
+      result.locationExceptionReason = requiresLocationException ? locationEligibility.reason ?? "" : "";
       return result;
     });
 
@@ -419,6 +423,11 @@ export function renderBoardHtml(
           .map((d) => `<a class="doc-link" href="${escapeHtml(d.fileUrl)}">📄&nbsp;${escapeHtml(d.label)}</a>`)
           .join("\n            ");
         const localBadgeHtml = v.isLocal ? `<span class="local-badge" title="Matches your local_keywords">📍 Local</span>` : "";
+        const locationExceptionBadgeHtml = v.requiresLocationException
+          ? `<span class="location-exception-badge" title="${escapeHtml(
+              String(v.locationExceptionReason || "May require a location/payroll exception")
+            )}">⚠ Location exception</span>`
+          : "";
         // Only ever rendered when a caller explicitly asked to include archived vacancies
         // (see renderBoardHtml's default, which excludes them before this loop even runs) --
         // still worth marking here so that view doesn't read as identical to the active list.
@@ -429,11 +438,11 @@ export function renderBoardHtml(
         // the clipboard verbatim; it never reconstructs it from the row's own visible DOM.
         const copyAttr = escapeHtml(JSON.stringify(v.copyPayload ?? ""));
         const copyButtonHtml = `<button type="button" class="copy-btn" data-copy="${copyAttr}">Copy</button>`;
-        return `        <div class="vrow${v.isLocal ? " local" : ""}${v.archived ? " archived" : ""}">
+        return `        <div class="vrow${v.isLocal ? " local" : ""}${v.requiresLocationException ? " location-exception" : ""}${v.archived ? " archived" : ""}">
           <div class="vrow-main">
             <span class="col-fit">${fitDisplay}</span>
             <span class="col-company">${escapeHtml(String(v.company ?? ""))}</span>
-            <span class="col-role">${escapeHtml(String(v.title ?? ""))}${localBadgeHtml}${archivedBadgeHtml}</span>
+            <span class="col-role">${escapeHtml(String(v.title ?? ""))}${localBadgeHtml}${locationExceptionBadgeHtml}${archivedBadgeHtml}</span>
             <span class="col-track">${escapeHtml(String(v.track_label || ""))}</span>
             <span class="col-updated">${escapeHtml(v.updatedShort)}</span>
           </div>

@@ -1001,3 +1001,187 @@ export async function fetchAll(opts: {
 
   return [postings, errors.length > 0 ? errors.join("; ") : null];
 }
+
+// --------------------------------------------------------------- resolve a single posting by URL
+
+export type UrlResolveResult =
+  | { matched: true; posting: Posting }
+  | { matched: true; posting: null; error: string }
+  | { matched: false };
+
+/** Given one vacancy URL (not a feed to search), checks it against the handful of job-board/ATS
+ * URL shapes this file already knows precisely -- greenhouse.io, lever.co, ashbyhq.com,
+ * recruitee.com, jobico.io -- and if it matches, fetches that EXACT posting via that platform's
+ * own single-item API, the same reliability as anything scout_fetch finds. `matched: false` means
+ * genuinely unrecognized (not an error) -- the caller falls back to its own general fetch/read
+ * capability for that case, see `playbooks/add-from-url.md`.
+ *
+ * Every URL shape and endpoint below confirmed live against a real posting before writing this,
+ * same discipline as every other fetcher in this file -- not assumed from API docs alone.
+ * Greenhouse specifically: only matches `boards.greenhouse.io`/`job-boards.greenhouse.io` URLs,
+ * where the company slug is directly in the path -- a company's own white-labeled careers domain
+ * (`stripe.com/jobs/...?gh_jid=...`) has no reliable way to recover that slug from the URL alone,
+ * so those fall through to `matched: false` rather than guessing. Ashby has no documented
+ * single-posting endpoint -- fetches the company's whole board (same one `fetchAshby` above
+ * already pulls per scout run) and picks out the matching id; cheap at a per-company scale. */
+export async function resolvePostingFromUrl(rawUrl: string): Promise<UrlResolveResult> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return { matched: false };
+  }
+  const host = url.hostname.toLowerCase();
+  const path = url.pathname;
+
+  if (host === "jobico.io" || host === "www.jobico.io") {
+    const m = /^\/jobs\/([^/]+)\/?$/.exec(path);
+    if (!m) return { matched: false };
+    try {
+      const detail = await postJobicoTool("get_job", { slug: m[1] });
+      if (!detail.found) return { matched: true, posting: null, error: `jobico.io: no job found for slug ${m[1]}` };
+      const techStack = (detail.techStack ?? []).join(" ");
+      const description = [detail.description, detail.requirements, detail.niceToHave, detail.responsibilities, techStack]
+        .filter((x: unknown) => x)
+        .join("\n\n");
+      const locParts = [detail.city, detail.country].filter((x: unknown) => x);
+      let location = locParts.join(", ");
+      if (detail.locationType === "remote") location = location ? `Remote, ${location}` : "Remote";
+      return {
+        matched: true,
+        posting: makePosting({
+          source: "jobico",
+          company: (detail.company ?? {}).name ?? "?",
+          title: detail.title ?? "",
+          location,
+          url: detail.url ?? rawUrl,
+          description,
+          postedAt: detail.postedAt ?? "",
+          remoteOverride: detail.locationType === "remote",
+        }),
+      };
+    } catch (error) {
+      return { matched: true, posting: null, error: `jobico.io: ${errorMessage(error)}` };
+    }
+  }
+
+  if (host === "boards.greenhouse.io" || host === "job-boards.greenhouse.io") {
+    const m = /^\/([^/]+)\/jobs\/(\d+)/.exec(path);
+    if (!m) return { matched: false };
+    const [, company, jobId] = m as unknown as [string, string, string];
+    try {
+      const detail = await getJson(`https://boards-api.greenhouse.io/v1/boards/${company}/jobs/${jobId}?content=true`);
+      return {
+        matched: true,
+        posting: makePosting({
+          source: "greenhouse",
+          company: detail.company_name ?? company,
+          title: detail.title ?? "",
+          location: (detail.location ?? {}).name ?? "",
+          url: detail.absolute_url ?? rawUrl,
+          description: stripHtml(detail.content ?? ""),
+          postedAt: detail.updated_at ?? "",
+        }),
+      };
+    } catch (error) {
+      return { matched: true, posting: null, error: `greenhouse (${company}/${jobId}): ${errorMessage(error)}` };
+    }
+  }
+
+  if (host === "jobs.lever.co") {
+    const m = /^\/([^/]+)\/([0-9a-f-]{36})/i.exec(path);
+    if (!m) return { matched: false };
+    const [, company, postingId] = m as unknown as [string, string, string];
+    try {
+      const detail = await getJson(`https://api.lever.co/v0/postings/${company}/${postingId}?mode=json`);
+      const cats = detail.categories ?? {};
+      const loc = cats.location ?? "";
+      const parts = [detail.descriptionPlain ?? ""];
+      for (const lst of detail.lists ?? []) parts.push(stripHtml(lst.content ?? ""));
+      parts.push(detail.additionalPlain ?? "");
+      const description = parts.filter((p: string) => p).join("\n");
+      const locFull = [loc, cats.team ?? "", cats.commitment ?? ""].filter((x: unknown) => x).join(", ");
+      return {
+        matched: true,
+        posting: makePosting({
+          source: "lever",
+          company,
+          title: detail.text ?? "",
+          location: locFull,
+          url: detail.hostedUrl ?? rawUrl,
+          description,
+          postedAt: String(detail.createdAt ?? ""),
+        }),
+      };
+    } catch (error) {
+      return { matched: true, posting: null, error: `lever (${company}/${postingId}): ${errorMessage(error)}` };
+    }
+  }
+
+  const recruiteeMatch = /^([a-z0-9-]+)\.recruitee\.com$/.exec(host);
+  if (recruiteeMatch) {
+    const company = recruiteeMatch[1]!;
+    const m = /^\/o\/([^/]+)/.exec(path);
+    if (!m) return { matched: false };
+    const slug = m[1];
+    try {
+      const data = await getJson(`https://${company}.recruitee.com/api/offers/${slug}`);
+      const offer = data.offer ?? {};
+      const loc = [offer.city, offer.country].filter((x: unknown) => x).map(String).join(", ");
+      const description = stripHtml(`${offer.description ?? ""} ${offer.requirements ?? ""}`);
+      const remoteOverride = ["true", "1", "yes"].includes(String(offer.remote ?? "").toLowerCase()) || null;
+      return {
+        matched: true,
+        posting: makePosting({
+          source: "recruitee",
+          company: offer.company_name ?? company,
+          title: offer.title ?? "",
+          location: loc,
+          url: offer.careers_url || offer.careers_apply_url || rawUrl,
+          description,
+          postedAt: String(offer.published_at ?? ""),
+          remoteOverride,
+        }),
+      };
+    } catch (error) {
+      return { matched: true, posting: null, error: `recruitee (${company}/${slug}): ${errorMessage(error)}` };
+    }
+  }
+
+  if (host === "jobs.ashbyhq.com") {
+    const m = /^\/([^/]+)\/([0-9a-f-]{36})/i.exec(path);
+    if (!m) return { matched: false };
+    const [, company, postingId] = m as unknown as [string, string, string];
+    try {
+      const data = await getJson(`https://api.ashbyhq.com/posting-api/job-board/${company}?includeCompensation=true`);
+      const job = (data.jobs ?? []).find((j: any) => j.id === postingId);
+      if (!job) return { matched: true, posting: null, error: `ashby (${company}): no job with id ${postingId} on the current board` };
+      const loc = job.location ?? "";
+      const secondary = (job.secondaryLocations ?? [])
+        .map((s: any) => s.location ?? "")
+        .filter((x: string) => x)
+        .join(", ");
+      const locFull = [loc, secondary].filter((x: unknown) => x).join(", ");
+      const description = job.descriptionPlain || stripHtml(job.descriptionHtml ?? "");
+      const remoteOverride = Boolean(job.isRemote || job.workplaceType === "Remote") || null;
+      return {
+        matched: true,
+        posting: makePosting({
+          source: "ashby",
+          company,
+          title: job.title ?? "",
+          location: locFull,
+          url: job.jobUrl ?? rawUrl,
+          applyUrl: job.applyUrl ?? "",
+          description,
+          postedAt: job.publishedAt ?? "",
+          remoteOverride,
+        }),
+      };
+    } catch (error) {
+      return { matched: true, posting: null, error: `ashby (${company}): ${errorMessage(error)}` };
+    }
+  }
+
+  return { matched: false };
+}

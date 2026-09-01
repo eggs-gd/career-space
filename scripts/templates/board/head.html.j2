@@ -29,6 +29,8 @@
       --skipped: #9ca3af;
       --local: #0e7490;
       --local-tint: #ecfeff;
+      --location-exception: #b45309;
+      --location-exception-tint: #fffbeb;
       --doc: #4338ca;
     }
     * { box-sizing: border-box; }
@@ -147,6 +149,11 @@
       background: var(--local-tint);
     }
     .vrow.local:hover { background: var(--local-tint); filter: brightness(0.97); }
+    .vrow.location-exception {
+      border-left-color: var(--location-exception);
+      background: var(--location-exception-tint);
+    }
+    .vrow.location-exception:hover { background: var(--location-exception-tint); filter: brightness(0.97); }
     .local-badge {
       display: inline-block;
       margin-left: 6px;
@@ -157,6 +164,19 @@
       color: var(--local);
       background: var(--bg);
       border: 1px solid var(--local);
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .location-exception-badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--location-exception);
+      background: var(--bg);
+      border: 1px solid var(--location-exception);
       white-space: nowrap;
       vertical-align: middle;
     }
