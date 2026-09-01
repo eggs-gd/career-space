@@ -328,14 +328,10 @@ export function renderBoardHtml(
         }
         fileButtons.push({ label: BOARD_FILE_LABELS[fname] ?? fname, contentHtml });
       }
-      // A "📁 Folder" panel with a `file://` link per file in the vacancy dir (first entry the dir
-      // itself), not a link per rendered PDF: a browser-opened PDF can't be dragged into an
-      // application form anyway, so the only job here is reaching the file to upload.
-      //
-      // Absolute `file://` URIs, not relative `vacancies/<slug>/…`: a Claude client's local-file
-      // preview rewrites relative links against its own hosted-content domain, pointing nowhere;
-      // an absolute URI has no base to rewrite. Trailing separator on the dir URL so it reads as a
-      // directory. `fs.existsSync` guard so a test fixture with no real dir just omits the panel.
+      // A "📁 Folder" panel: a `file://` link per file in the vacancy dir, plus the dir itself.
+      // Absolute URIs, not relative `vacancies/<slug>/…` -- a Claude client's local-file preview
+      // rewrites relative links against its own domain. Trailing separator so the dir URL reads as
+      // a directory. `fs.existsSync` guard so a fixture with no real dir just omits the panel.
       const folderUrl = fs.existsSync(vdir) ? pathToFileURL(vdir + path.sep).href : "";
       const folderFiles = folderUrl
         ? files.map((name) => ({ name, url: pathToFileURL(path.join(vdir, name)).href }))
