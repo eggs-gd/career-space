@@ -122,9 +122,10 @@ final letter in chat. Mention briefly what Step 4 caught and fixed, if anything 
 should see that check happened, not just the polished result.
 
 Some application forms have a file-upload field for the cover letter instead of a text box, so
-chat text alone isn't enough. Offer (don't wait to be asked) a downloadable version: call the
-`career-space` MCP server's `render_cover_letter` tool on the saved file if connected, otherwise
-run `node scripts/dist/render_cover_letter.js <file>.md` (see AGENTS.md's "Scripts and the MCP
-server" section). Either way this writes a plain `.txt` (for a text-upload field), an `.html`, and
-a `.pdf` (for a document-upload field) next to the saved draft — deterministic formatting, not
+chat text alone isn't enough. Produce a downloadable version as part of finishing — don't ask
+first, it's execution of an already-approved letter (see AGENTS.md's "A deterministic tool call
+is execution, not a decision"): call the `career-space` MCP server's `render_cover_letter` tool
+on the saved file if connected, otherwise run `node scripts/dist/render_cover_letter.js
+<file>.md`. Either way this writes a plain `.txt` (for a text-upload field), an `.html`, and a
+`.pdf` (for a document-upload field) next to the saved draft — deterministic formatting, not
 something to hand-produce yourself.

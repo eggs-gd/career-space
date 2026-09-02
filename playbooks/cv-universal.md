@@ -40,7 +40,8 @@ whichever evidence was most detailed?
 
 ## Step 5 — save and show
 
-Save to `data/cv/universal-<role-profile-slug>.md`. Show the full document in chat. If the candidate wants
-a PDF, call the `career-space` MCP server's `render_resume` tool on it if connected, otherwise run
-`node scripts/dist/render_resume.js data/cv/universal-<role-profile-slug>.md` (see AGENTS.md's "Scripts and
-the MCP server" section) — either way, don't attempt to produce styled output yourself.
+Save to `data/cv/universal-<role-profile-slug>.md`. Show the full document in chat. A universal CV
+often isn't tied to an immediate application, so a PDF is worth offering rather than assuming —
+but if they want one, that's the whole decision: render it (`render_resume` MCP tool, or `node
+scripts/dist/render_resume.js data/cv/universal-<role-profile-slug>.md`) without a further "shall
+I render now?". Don't attempt to produce styled output yourself.

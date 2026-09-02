@@ -52,6 +52,8 @@ them.
 - `surface-freeform-landing.md` -- a free-form surface (personal site); checks the agent runs the
   discovery conversation before drafting and doesn't invent a platform schema or position from CV
   density.
+- `render-is-execution.md` -- an approved artifact plus one exact edit; checks the agent
+  re-renders through the MCP tool as execution, without asking permission to run it.
 
 ## Run history format
 

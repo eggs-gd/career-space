@@ -20,3 +20,6 @@ trap and the rule -- not the story.
 - Canonical `reference/surfaces/<name>.md` always wins over a private `data/surfaces/<name>/reference.md`.
 - A generated surface identity is checked against the user's direction + `context.md`, never against
   whichever tech cluster the Master CV has most evidence for.
+- Once content is approved, running a `career-space` renderer/tool is execution, not a new
+  decision -- never ask "shall I render / regenerate the PDF now?". Confirm content changes, not
+  tool runs.

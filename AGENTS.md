@@ -308,6 +308,14 @@ blob); if it isn't, the CLI fallback documented in each script's own docstring w
 nothing behaves differently between the two. Don't try to hand-produce a styled document or a fit
 score yourself instead of calling the relevant tool/script — see the playbooks' own notes on why.
 
+**A deterministic tool call is execution, not a decision.** Once the candidate has approved the
+content, or asked for a workflow whose output is an artifact, running the renderer — or any other
+`career-space` tool/script — is the mechanical completion of that decision, not a new one. Don't
+stop to ask "shall I render it now?" / "may I regenerate the PDF?"; the confirmation that matters
+already happened, on the content. Ask again only when the content or the decision itself is
+changing. (A host that pops its own `Allow` prompt for the tool is separate — that's the host's
+sandbox, not something a playbook controls or should pre-empt with a question of its own.)
+
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `docs/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a change
 to this repo's own files: `docs/development.md`.
