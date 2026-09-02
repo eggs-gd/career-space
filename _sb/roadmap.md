@@ -75,6 +75,15 @@ and why each one was built lives in git history, not here.
 
 ## Later / maybe
 
+- **Market-feedback loop -- preserve outcomes before automating learning from them.** The model
+  today stops at `application`; the closed loop is `application -> market response -> learn ->
+  strategy / positioning / selection`. Near-term step is small: `record.yaml` has `status` /
+  `status_history` but no field for *why* a transition happened, so a signal like a recruiter
+  opening on a stack the CV doesn't evidence (a fitment miss) is lost. Decide whether status
+  transitions should also capture a known reason/signal (a `feedback:` field per vacancy, or a
+  `data/outcomes.md` log). Analysis/calibration is a later, separate step. Reference: career-ops'
+  `/outcome` + `calibrate.mjs`; full comparison and other prior-art pointers (outreach, posting
+  legitimacy, interview prep, evidence-provenance markers) in `_sb/ideas/career-ops-comparison.md`.
 - **Per-company cap on how many postings one scout run surfaces.** One company posting 10+
   near-identical roles in one run burns that many judgment turns on what's really one decision.
   Worked around per-candidate via a `hard_exclude` entry in `data/sources.yaml` (reversible, not a
