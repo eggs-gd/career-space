@@ -19,7 +19,11 @@ and why each one was built lives in git history, not here.
 - [x] CV review -- blunt quality diagnostic (score, top fixes, strengths, risks, target role
       slices, likely interview questions) for the Master CV or any generated CV.
 - [x] Pitch -- explain/position career-space itself, audience- and length-aware.
-- [x] Platform profile updates -- LinkedIn / Djinni / Upwork / Fiverr.
+- [x] Public career surfaces -- one abstraction (`shared:` identity + per-surface `context.md`
+      intent + `reference/surfaces/<name>.md` platform facts -> `output.md`). Ships LinkedIn /
+      Djinni / Upwork / Fiverr as canonical references; `surface-define.md` handles free-form
+      surfaces (portfolio, personal site, GitHub README) and unknown platforms (agent researches
+      + defines per-candidate, no code change). `update-surface.md` regenerates from evidence.
 - [x] Scout -- auto-fetch/filter/dedup postings from 14 job boards/aggregators (plus 4 supported
       per-company ATS types -- greenhouse/lever/ashby/recruitee, opt-in per company in
       `sources.yaml`), judged the same way as a pasted posting. `scout_fetch`'s `feeds` param can
@@ -42,7 +46,8 @@ and why each one was built lives in git history, not here.
       with no JavaScript. A vacancy matching `local_keywords` gets a colored highlight. A vacancy
       can be archived (`vacancy_set_archived`, orthogonal to `status`, `include_archived` brings
       it back). Each row has a `📁 Folder` panel with `file://` links to every file in the vacancy's
-      directory, for grabbing the CV/cover-letter files to attach to an application. Each row has a "Copy"
+      directory (highlighted when a CV is present), for grabbing files to attach to an
+      application. Each row has a "Copy"
       button -- header only (title/company/URL/status/fit/slug), not the posting text, meant for
       pasting into a new chat so an agent can resolve the rest itself. Status chips double as
       jump-to-section nav when JavaScript runs.
@@ -71,6 +76,15 @@ and why each one was built lives in git history, not here.
 
 ## Later / maybe
 
+- **Market-feedback loop -- preserve outcomes before automating learning from them.** The model
+  today stops at `application`; the closed loop is `application -> market response -> learn ->
+  strategy / positioning / selection`. Near-term step is small: `record.yaml` has `status` /
+  `status_history` but no field for *why* a transition happened, so a signal like a recruiter
+  opening on a stack the CV doesn't evidence (a fitment miss) is lost. Decide whether status
+  transitions should also capture a known reason/signal (a `feedback:` field per vacancy, or a
+  `data/outcomes.md` log). Analysis/calibration is a later, separate step. Reference: career-ops'
+  `/outcome` + `calibrate.mjs`; full comparison and other prior-art pointers (outreach, posting
+  legitimacy, interview prep, evidence-provenance markers) in `_sb/ideas/career-ops-comparison.md`.
 - **Per-company cap on how many postings one scout run surfaces.** One company posting 10+
   near-identical roles in one run burns that many judgment turns on what's really one decision.
   Worked around per-candidate via a `hard_exclude` entry in `data/sources.yaml` (reversible, not a

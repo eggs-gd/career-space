@@ -150,9 +150,9 @@ shared:
 
 Deliberately no default `work_authorization`/`open_to_relocation` fields. Location and remote
 preferences are candidate-specific and belong in `data/sources.yaml`'s `local_keywords` plus any
-confirmed contact/application strategy in `shared:`. Leave platform-specific keys
-(`linkedin:`, `djinni:`, `upwork:`, `fiverr:`) out for now — `playbooks/update-profile.md` creates
-those the first time each platform is actually generated.
+confirmed contact/application strategy in `shared:`. `config.yaml` holds `shared:` only — a
+public surface's own positioning lives in `data/surfaces/<name>/context.md`, created by
+`playbooks/surface-define.md` when that surface is first worked on, not here.
 
 ## Step 5 — derive initial role profiles
 
@@ -164,6 +164,17 @@ candidate's Master CV and config.
 
 After confirmation, write the selected profiles to `data/role-profiles/*.md`. These are the files
 CV playbooks use later.
+
+## Step 5b — surface the public-positioning capability
+
+Once positioning exists, tell the candidate — once, plainly — that Career Space can also help with
+how they're represented publicly: LinkedIn, freelance marketplaces (Upwork, Djinni, Fiverr),
+a portfolio, a personal site, a GitHub profile, or another surface relevant to their goals. It can
+work from an existing one or define a new surface from scratch (`playbooks/surface-define.md`).
+
+This is an invitation, not a workflow to start now. Note which surfaces they already have (from
+the `contacts` links and anything they mentioned), offer to pick one up whenever they want, and
+move on. If they only want job applications, that's fine — don't push.
 
 ## Step 6 — show files, ask for corrections before treating onboarding as done
 

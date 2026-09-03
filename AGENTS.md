@@ -18,8 +18,12 @@ git history as a backup for it. `playbooks/`, `policies/`, and `scripts/` are re
 `examples/` contains onboarding seed examples: useful for shape and quality, never runtime
 candidate data and not something a playbook should read except during onboarding. `reference/`
 holds static reference data a playbook consults but never invents or guesses on its own — e.g. a
-third-party site's fixed category taxonomy; a playbook that names one of these files means read
-the real values in it and offer them to the candidate, not approximate from memory.
+third-party site's fixed category taxonomy, or `reference/surfaces/<name>.md` (a factual
+description of a public platform — fields, order, limits, discovery mechanics, no positioning
+advice); a playbook that names one of these files means read the real values in it and offer them
+to the candidate, not approximate from memory. The shipped `reference/surfaces/*` files are
+examples of the mechanism, not a whitelist — a surface with no canonical file is defined
+per-candidate instead (`playbooks/surface-define.md`).
 
 **Everything in this repo except `_sb/` and `agent-contract/` is for execution — what you read and
 act on to run a playbook. `_sb/` is for development**: this repo's own roadmap, status, and design
@@ -170,11 +174,18 @@ history.
    dimension with evidence (proof points, a skills list, achievement bullets) gets freshly
    re-selected from the current `data/CV_GENERAL.md` every time, picking the strongest currently
    available evidence — never reused from a previous draft just because it's already there (see
-   `policies/profiles-framework.md`'s own statement of this rule).
+   `policies/generation-rules.md`'s own statement of this rule).
 10. **Technology density is not identity.** A dense, specific cluster of evidence around one
     particular tool or stack in the Master CV is evidence supporting the candidate's positioning
     — it never gets to unilaterally redefine what market or identity the candidate is projecting
-    (see the same file's Fiverr section for the concrete failure shape this guards against).
+    (see `policies/surfaces-framework.md`'s "Umbrella identity vs sub-offers" for the concrete
+    failure shape this guards against).
+11. **Public positioning is a first-class concern.** How the candidate is represented across the
+    places the market sees them — LinkedIn, freelance marketplaces, portfolio, personal site,
+    GitHub, or any other surface relevant to their goals — is part of what this repo does, not an
+    afterthought to job applications. During onboarding the Operator makes the candidate aware of
+    this capability and offers it; the candidate decides whether and where to use it. It's an
+    invitation, never an automatic personal-branding workflow.
 
 ## What the candidate can say to trigger each playbook
 
@@ -193,9 +204,11 @@ ask riding along with an operator one) before you act on it.
 | "проаналізуй мій CV" / "review my CV" | `playbooks/cv-review.md` |
 | "згенеруй CV під роль X" (no specific vacancy) | `playbooks/cv-universal.md` |
 | "згенеруй CV під цю вакансію" | `playbooks/cv-targeted.md` |
-| "онови мій профіль на LinkedIn/Djinni/Upwork/Fiverr" | `playbooks/update-profile.md` |
+| "хочу профіль на <платформі>" / "допоможи з портфоліо/лендосом/сайтом" / a surface not yet defined | `playbooks/surface-define.md` |
+| "онови мій LinkedIn/Upwork/портфоліо" / "перепиши профіль" / a surface already defined | `playbooks/update-surface.md` |
 | "розкажи про career-space" / "чим ми кращі за інші боти" / "pitch this system" | `playbooks/pitch.md` |
 | "пошукай вакансії" / "run the scout" / "find me matches" | `playbooks/scout.md` |
+| "зроби one-off / ad-hoc hunt" / "разово пошукай по темі X, треки не чіпай" | the inline note below the internal-playbooks list |
 | candidate gives a bare vacancy URL, no pasted text | `playbooks/add-from-url.md` |
 | "згенеруй лінки для LinkedIn" / "linkedin search links" | `playbooks/linkedin-search.md` |
 | "покажи дошку" / "show me the board" / "what's the status of everything" | `playbooks/board.md` |
@@ -210,6 +223,13 @@ call these to avoid copying the same procedure into every workflow:
   `targeting-plan.md`.
 - `playbooks/scout-record-outcomes.md` — write scout seen-ledger outcomes and matched vacancy
   folders after judgment.
+
+Not every reasonable ask is a playbook. A candidate might want a one-off themed hunt ("defence/
+miltech on the local boards, don't touch my tracks") — treat it as research over the existing
+pieces: search wider than the scout's tracks with your own web capability, judge finds through
+`playbooks/fitment.md`, add only the worthwhile ones as `new` vacancies via `vacancy_upsert`,
+change nothing in `data/sources.yaml`, and keep rejected finds out of `seen.jsonl` (that ledger
+is the standing scout's record, not a scratchpad for a throwaway theme).
 
 **First contact, before any of the above:** if `data/CV_GENERAL.md` doesn't exist yet (a fresh
 setup), how you respond depends on what the message actually says:
@@ -237,14 +257,18 @@ and the MCP server" below) is the only server that matters here.
 ```
 data/                           # gitignored, personal
   CV_GENERAL.md                 # Master CV -- narrative evidence (achievements, recurring pattern)
-  config.yaml                   # identity/strategy, per-platform pinned overrides, and concrete
-                                 # facts (contacts, certs, education, languages) under `shared:`
-                                 # -- fitment's mandatory-language gate reads these
-  profiles/
-    LINKEDIN_PROFILE.md
-    DJINNI_PROFILE.md
-    UPWORK_PROFILE.md
-    FIVERR_PROFILE.md
+  config.yaml                   # `shared:` only -- identity/direction and concrete facts
+                                 # (contacts, contact_strategy, certs, education, languages).
+                                 # fitment's mandatory-language gate reads these. No per-surface
+                                 # blocks -- those live in surfaces/<name>/context.md
+  surfaces/                     # one folder per public career surface the candidate has defined
+                                 # -- see playbooks/surface-define.md, playbooks/update-surface.md
+    <name>/                     # e.g. linkedin, upwork, firestart.dev, github-profile
+      context.md               # this candidate's intent for this surface: purpose, audience,
+                                 # what to emphasize / not say, tone, pinned verbatim wording
+      output.md                # the generated representation, ready to paste
+      reference.md             # optional -- provisional facts about a platform with no canonical
+                                 # reference/surfaces/<name>.md yet (canonical always wins if it exists)
   role-profiles/                 # candidate-specific CV lenses/role profiles generated during
                                  # onboarding; playbooks read these, not reference examples
   cv/                           # role-profile CVs only, no specific vacancy -- universal-<role-profile>.md
@@ -291,6 +315,14 @@ tools when the `career-space` server is connected (typed arguments, no shell-esc
 blob); if it isn't, the CLI fallback documented in each script's own docstring works the same --
 nothing behaves differently between the two. Don't try to hand-produce a styled document or a fit
 score yourself instead of calling the relevant tool/script — see the playbooks' own notes on why.
+
+**A deterministic tool call is execution, not a decision.** Once the candidate has approved the
+content, or asked for a workflow whose output is an artifact, running the renderer — or any other
+`career-space` tool/script — is the mechanical completion of that decision, not a new one. Don't
+stop to ask "shall I render it now?" / "may I regenerate the PDF?"; the confirmation that matters
+already happened, on the content. Ask again only when the content or the decision itself is
+changing. (A host that pops its own `Allow` prompt for the tool is separate — that's the host's
+sandbox, not something a playbook controls or should pre-empt with a question of its own.)
 
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `docs/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a change

@@ -35,8 +35,8 @@ language even when the posting never says "full-time." If it's genuinely ambiguo
 weighing both readings (rare — most postings aren't), ask the candidate rather than guessing.
 
 This mode sets the balance between "what you'll get" (task) and "who you are" (long-term) — the
-same distinction `policies/profiles-framework.md` draws between Upwork (client-driven, sells a
-specific solved problem) and LinkedIn (broad professional identity). Carry it through every step
+same distinction between Upwork (client-driven, sells a specific solved problem — see
+`reference/surfaces/upwork.md`) and LinkedIn (broad professional identity). Carry it through every step
 below, not just as a label: a task-mode letter should read closer to an Upwork Overview reframe
 ("if you have problem X, I've solved exactly that"); a long-term-mode letter should read closer to
 "here's the pattern I repeatedly bring to a role like this."
@@ -122,9 +122,10 @@ final letter in chat. Mention briefly what Step 4 caught and fixed, if anything 
 should see that check happened, not just the polished result.
 
 Some application forms have a file-upload field for the cover letter instead of a text box, so
-chat text alone isn't enough. Offer (don't wait to be asked) a downloadable version: call the
-`career-space` MCP server's `render_cover_letter` tool on the saved file if connected, otherwise
-run `node scripts/dist/render_cover_letter.js <file>.md` (see AGENTS.md's "Scripts and the MCP
-server" section). Either way this writes a plain `.txt` (for a text-upload field), an `.html`, and
-a `.pdf` (for a document-upload field) next to the saved draft — deterministic formatting, not
+chat text alone isn't enough. Produce a downloadable version as part of finishing — don't ask
+first, it's execution of an already-approved letter (see AGENTS.md's "A deterministic tool call
+is execution, not a decision"): call the `career-space` MCP server's `render_cover_letter` tool
+on the saved file if connected, otherwise run `node scripts/dist/render_cover_letter.js
+<file>.md`. Either way this writes a plain `.txt` (for a text-upload field), an `.html`, and a
+`.pdf` (for a document-upload field) next to the saved draft — deterministic formatting, not
 something to hand-produce yourself.

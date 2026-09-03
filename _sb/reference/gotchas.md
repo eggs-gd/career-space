@@ -11,3 +11,15 @@ trap and the rule -- not the story.
   independent. Dependency only ever `prioritize -> fitment`, never back.
 - Write a fetcher only after curl/WebFetch of a real sample. Never guess API/HTML shape.
 - `macos-13` GitHub runner is retired -- keep it out of CI matrices.
+- `reference/surfaces/<name>.md` is facts only -- fields, order, limits, discovery mechanics. No
+  positioning advice (that's `surfaces-framework.md` methodology + the user's own `context.md`). A
+  shipped file with any "should" in it is the bug -- it must be contributable by someone who
+  disagrees with how to build a career.
+- The strategic role a surface plays is user-specific and lives in `data/surfaces/<name>/context.md`
+  -- derived from `data/strategy.md` + `shared:`, never assumed from the platform or another user.
+- Canonical `reference/surfaces/<name>.md` always wins over a private `data/surfaces/<name>/reference.md`.
+- A generated surface identity is checked against the user's direction + `context.md`, never against
+  whichever tech cluster the Master CV has most evidence for.
+- Once content is approved, running a `career-space` renderer/tool is execution, not a new
+  decision -- never ask "shall I render / regenerate the PDF now?". Confirm content changes, not
+  tool runs.
