@@ -186,6 +186,51 @@ server.registerTool(
 );
 
 server.registerTool(
+  "vacancy_resolve",
+  {
+    description:
+      "Resolve or create one canonical vacancy folder and return its record, posting text, artifact flags, and paths.",
+    inputSchema: {
+      slug: z.string().optional(),
+      posting_id: z.string().optional(),
+      content_id: z.string().optional(),
+      company: z.string().optional(),
+      title: z.string().optional(),
+      url: z.string().optional(),
+      apply_url: z.string().optional(),
+      location: z.string().optional(),
+      remote: z.boolean().optional(),
+      source: z.string().optional(),
+      posted_at: z.string().optional(),
+      posting_text: z.string().optional(),
+      status: z.enum(vacancyStore.VALID_STATUSES).optional(),
+      track_label: z.string().optional(),
+      render_board: z.boolean().default(true),
+    },
+  },
+  async (args): Promise<CallToolResult> => {
+    const result = vacancyStore.resolveVacancy({
+      slug: args.slug,
+      postingId: args.posting_id,
+      contentId: args.content_id,
+      company: args.company,
+      title: args.title,
+      url: args.url,
+      applyUrl: args.apply_url,
+      location: args.location,
+      remote: args.remote,
+      source: args.source,
+      postedAt: args.posted_at,
+      postingText: args.posting_text,
+      status: args.status,
+      trackLabel: args.track_label,
+    });
+    const board = args.render_board && result.changed ? renderBoardResult() : null;
+    return respond({ ...result, board });
+  }
+);
+
+server.registerTool(
   "vacancy_mark_seen",
   {
     description:

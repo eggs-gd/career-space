@@ -266,6 +266,54 @@ export interface RecordedScoutOutcome {
   fitment_path: string | null;
 }
 
+export interface VacancyArtifacts {
+  posting: boolean;
+  targeting_plan: boolean;
+  cv: boolean;
+  cover_letter: boolean;
+  fitment: boolean;
+}
+
+export interface VacancyPaths {
+  dir: string;
+  record: string;
+  posting: string;
+  targeting_plan: string;
+  cv: string;
+  cover_letter: string;
+  fitment: string;
+}
+
+export interface VacancyContext {
+  slug: string;
+  record: Rec;
+  posting_text: string | null;
+  paths: VacancyPaths;
+  artifacts: VacancyArtifacts;
+}
+
+export interface ResolveVacancyOptions {
+  slug?: string;
+  postingId?: string;
+  contentId?: string;
+  company?: string;
+  title?: string;
+  url?: string;
+  applyUrl?: string;
+  location?: string;
+  remote?: boolean;
+  source?: string;
+  postedAt?: string;
+  postingText?: string;
+  status?: VacancyStatus;
+  trackLabel?: string;
+}
+
+export interface ResolveVacancyResult {
+  context: VacancyContext;
+  changed: boolean;
+}
+
 /** Create or update a vacancy folder. Omitted enrichment fields mean "no opinion"; existing
  * values are preserved. `status: "new"` only applies to a new record. */
 export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
@@ -454,6 +502,109 @@ export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedSco
     reason,
     fitment_path: fitmentPath,
   };
+}
+
+function vacancyPaths(slug: string): VacancyPaths {
+  const dir = vacancyDir(slug);
+  return {
+    dir,
+    record: recordPath(slug),
+    posting: postingPath(slug),
+    targeting_plan: path.join(dir, "targeting-plan.md"),
+    cv: path.join(dir, "cv.md"),
+    cover_letter: path.join(dir, "cover-letter.md"),
+    fitment: path.join(dir, "fitment.md"),
+  };
+}
+
+export function readVacancyContext(slug: string): VacancyContext {
+  const paths = vacancyPaths(slug);
+  if (!fs.existsSync(paths.record)) {
+    throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)} at ${paths.record}`);
+  }
+  const record = readYamlRecord(paths.record);
+  return {
+    slug,
+    record,
+    posting_text: fs.existsSync(paths.posting) ? fs.readFileSync(paths.posting, "utf-8") : null,
+    paths,
+    artifacts: {
+      posting: fs.existsSync(paths.posting),
+      targeting_plan: fs.existsSync(paths.targeting_plan),
+      cv: fs.existsSync(paths.cv),
+      cover_letter: fs.existsSync(paths.cover_letter),
+      fitment: fs.existsSync(paths.fitment),
+    },
+  };
+}
+
+export function resolveVacancy(opts: ResolveVacancyOptions): ResolveVacancyResult {
+  let slug = opts.slug;
+  let existing: Rec | null = null;
+  if (slug !== undefined) {
+    existing = readYamlRecord(recordPath(slug));
+  } else if (opts.company && opts.title) {
+    slug = findByCompanyTitle(opts.company, opts.title) ?? undefined;
+    if (slug !== undefined) existing = readYamlRecord(recordPath(slug));
+  }
+
+  let changed = false;
+  const hasUpdate =
+    opts.postingText !== undefined ||
+    opts.url !== undefined ||
+    opts.applyUrl !== undefined ||
+    opts.location !== undefined ||
+    opts.remote !== undefined ||
+    opts.source !== undefined ||
+    opts.postedAt !== undefined ||
+    opts.trackLabel !== undefined;
+
+  if (slug !== undefined && existing !== null) {
+    if (hasUpdate) {
+      const record = upsertVacancy({
+        postingId: existing.posting_id,
+        contentId: existing.content_id,
+        company: opts.company ?? existing.company ?? "",
+        title: opts.title ?? existing.title ?? "",
+        url: opts.url ?? existing.url ?? "",
+        applyUrl: opts.applyUrl ?? existing.apply_url ?? "",
+        location: opts.location ?? existing.location ?? "",
+        remote: opts.remote ?? existing.remote,
+        source: opts.source ?? existing.source ?? "",
+        postedAt: opts.postedAt ?? existing.posted_at ?? "",
+        postingText: opts.postingText ?? "",
+        status: opts.status,
+        trackLabel: opts.trackLabel ?? existing.track_label ?? undefined,
+      });
+      slug = String(record.slug);
+      changed = true;
+    } else if (opts.status !== undefined && opts.status !== "new" && existing.status !== opts.status) {
+      setStatus(slug, opts.status);
+      changed = true;
+    }
+    return { context: readVacancyContext(slug), changed };
+  }
+
+  if (!opts.company || !opts.title || !opts.postingText) {
+    throw new VacancyStoreError("resolveVacancy requires slug, an existing company/title, or company/title/postingText");
+  }
+
+  const record = upsertVacancy({
+    postingId: opts.postingId,
+    contentId: opts.contentId,
+    company: opts.company,
+    title: opts.title,
+    url: opts.url ?? "",
+    applyUrl: opts.applyUrl ?? "",
+    location: opts.location ?? "",
+    remote: opts.remote,
+    source: opts.source ?? "",
+    postedAt: opts.postedAt ?? "",
+    postingText: opts.postingText,
+    status: opts.status,
+    trackLabel: opts.trackLabel,
+  });
+  return { context: readVacancyContext(String(record.slug)), changed: true };
 }
 
 /** `note` is stored only on a real status transition, and only for an explicitly observed reason. */
@@ -671,9 +822,31 @@ function cli(): void {
         minFitScore: payload.min_fit_score ?? 4,
       })
     );
+  } else if (command === "resolve") {
+    const status = values.status;
+    if (status !== undefined && !isValidStatus(status)) {
+      throw new VacancyStoreError(`--status must be one of ${VALID_STATUSES.join(", ")}`);
+    }
+    const presentString = (value: string | undefined): string | undefined => (value && value.length > 0 ? value : undefined);
+    result = resolveVacancy({
+      slug: values.slug,
+      postingId: values["posting-id"],
+      contentId: values["content-id"],
+      company: presentString(values.company),
+      title: presentString(values.title),
+      url: presentString(values.url),
+      applyUrl: presentString(values["apply-url"]),
+      location: presentString(values.location),
+      remote: values.remote,
+      source: presentString(values.source),
+      postedAt: presentString(values["posted-at"]),
+      postingText: presentString(values["posting-text"]),
+      status,
+      trackLabel: presentString(values["track-label"]),
+    });
   } else {
     throw new VacancyStoreError(
-      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, attach-artifact, list, record-scout-outcomes`
+      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, attach-artifact, list, record-scout-outcomes, resolve`
     );
   }
 

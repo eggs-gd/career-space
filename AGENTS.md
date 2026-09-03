@@ -219,7 +219,7 @@ Some playbooks are internal capabilities, not direct candidate triggers. Orchest
 call these to avoid copying the same procedure into every workflow:
 
 - `playbooks/vacancy-resolve.md` — resolve/create the canonical vacancy folder and return its
-  slug + posting text.
+  slug + posting text + artifact flags.
 - `playbooks/requirement-evidence-plan.md` — turn one posting into a reusable
   `targeting-plan.md`.
 - `playbooks/scout-record-outcomes.md` — write scout seen-ledger outcomes and matched vacancy
@@ -321,8 +321,8 @@ facts as facts about the current candidate; runtime workflows read `data/`.
 
 The deterministic, non-LLM steps in this repo — real code, not something a playbook should ask
 you to eyeball or improvise: rendering a CV/cover letter to HTML/PDF, the fitment score's fixed
-weighted formula, the scout's fetch/dedup pipeline, scout outcome recording, vacancy record
-read/write, and board rendering. Prefer the MCP tools when the `career-space` server is connected
+weighted formula, the scout's fetch/dedup pipeline, vacancy resolving, scout outcome recording,
+vacancy record read/write, and board rendering. Prefer the MCP tools when the `career-space` server is connected
 (typed arguments, no shell-escaping a JSON blob). If it isn't, use the CLI fallback documented in
 each script's own docstring. Don't hand-produce a styled document, fit score, board, or scout
 ledger write instead of calling the relevant tool/script.

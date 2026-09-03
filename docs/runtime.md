@@ -30,8 +30,8 @@ interface over it or over `score_fit.ts`'s scoring formula:
   `scout_sources.ts`'s `resolvePostingFromUrl` (the same per-source fetchers scout_fetch uses,
   matched by URL shape instead of searched) — `playbooks/add-from-url.md` is the caller.
 - `scripts/vacancy_store.ts` — the seen-log ledger and each vacancy's own `<slug>/` folder's
-  *metadata*: slug generation, scout outcome recording, `record.yaml`, `posting.md`, status
-  transitions, fit indexes, and eligibility flags. Called by
+  *metadata*: slug generation, vacancy resolving, scout outcome recording, `record.yaml`,
+  `posting.md`, status transitions, fit indexes, and eligibility flags. Called by
   `playbooks/scout.md` for a scout-found posting and by `playbooks/cover-letter.md`/
   `playbooks/cv-targeted.md` for a candidate-pasted one -- see `posting_ids.ts` for how both
   resolve to the same vacancy when it's actually the same posting. Never hand-edit `record.yaml`
@@ -54,7 +54,7 @@ interface over it or over `score_fit.ts`'s scoring formula:
 **Prefer the MCP tools if the `career-space` MCP server is connected** — typed arguments, no
 shell-escaping a JSON blob, no constructing a `node ...` invocation by hand. `scripts/
 mcp_server.ts` wraps the exact same functions (`render_resume`, `render_cover_letter`,
-`score_fit`, `scout_fetch`, `resolve_vacancy_url`, `vacancy_mark_seen`,
+`score_fit`, `scout_fetch`, `resolve_vacancy_url`, `vacancy_resolve`, `vacancy_mark_seen`,
 `record_scout_outcomes`, `vacancy_upsert`, `vacancy_set_status`, `vacancy_set_archived`,
 `vacancy_attach_artifact`, `vacancy_list`,
 `linkedin_searches`, `render_board`). If the server isn't connected (not set up yet, or an agent
@@ -63,7 +63,7 @@ form documented in each script's own docstring (`node scripts/dist/render_resume
 `node scripts/dist/render_cover_letter.js <file>.md`, `node scripts/dist/score_fit.js
 <file>.json`, `node scripts/dist/scout_fetch.js`, `node scripts/dist/resolve_vacancy_url.js <url>`,
 `node scripts/dist/vacancy_store.js <mark-seen|upsert|set-status|set-archived|attach-artifact|
-list|record-scout-outcomes> ...`, `node scripts/dist/linkedin_searches.js`,
+list|record-scout-outcomes|resolve> ...`, `node scripts/dist/linkedin_searches.js`,
 `node scripts/dist/render_board.js
 [--include-archived]`) -- run `npm run build` first if `scripts/dist/` doesn't exist yet.
 

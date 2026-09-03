@@ -16,11 +16,11 @@ text. The CV will be saved into that vacancy folder, never into `data/cv/`.
 
 ## Step 2 -- ensure the targeting plan
 
-If `data/vacancies/<slug>/targeting-plan.md` does not exist, run
+If `vacancy_resolve` returned `artifacts.targeting_plan: false`, run
 `playbooks/requirement-evidence-plan.md`.
 
-If it exists, read it in full and use it. Don't reselect evidence from an older generated CV; the
-plan is the reusable selection artifact.
+If `artifacts.targeting_plan` is true, read `paths.targeting_plan` in full and use it. Don't
+reselect evidence from an older generated CV; the plan is the reusable selection artifact.
 
 ## Step 3 -- write the CV
 

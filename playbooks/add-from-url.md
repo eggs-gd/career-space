@@ -35,9 +35,8 @@ broad automated scan, and the candidate already chose this specific URL on purpo
 ## Step 3 -- record the outcome
 
 Run `playbooks/scout-record-outcomes.md` for this one judged candidate -- same
-`min_fit_score`/`fit_category` matched-vs-rejected split, same `vacancy_mark_seen`/`vacancy_upsert`
-calls, `candidate.track_label` passed straight through. A match lands at `new`, exactly like a
-scout-found one -- never jump it straight to `tracked`.
+recording rules as a scout-found candidate. A match lands at `new`, exactly like a scout-found one
+-- never jump it straight to `tracked`.
 
 ## Step 4 -- tell the candidate
 
