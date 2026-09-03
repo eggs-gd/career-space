@@ -1,10 +1,11 @@
 # ad-hoc-themed-hunt
 
-**Tests:** whether a fresh Operator handles a one-off themed search **with no dedicated
-playbook** — reusing the normal vacancy/fitment primitives, without mutating the standing scout
-config. This is deliberately an unformalized case: if a fresh agent gets it right from the
-existing instructions, no `ad-hoc-hunt.md` playbook is needed. If it fails the same way twice,
-that failure mode is what gets formalized — not a feature invented ahead of the need.
+**Tests:** whether a fresh Operator handles a one-off themed search from the short note in
+`AGENTS.md` ("Not every reasonable ask is a playbook…") alone — reusing the normal
+vacancy/fitment primitives, without mutating the standing scout config. Deliberately kept to that
+note, not a dedicated playbook: if a fresh agent gets it right from there, no playbook is needed.
+If it fails the same way twice, that failure mode is what gets formalized — not a feature
+invented ahead of the need.
 
 ## Setup
 

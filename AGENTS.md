@@ -208,6 +208,7 @@ ask riding along with an operator one) before you act on it.
 | "онови мій LinkedIn/Upwork/портфоліо" / "перепиши профіль" / a surface already defined | `playbooks/update-surface.md` |
 | "розкажи про career-space" / "чим ми кращі за інші боти" / "pitch this system" | `playbooks/pitch.md` |
 | "пошукай вакансії" / "run the scout" / "find me matches" | `playbooks/scout.md` |
+| "зроби one-off / ad-hoc hunt" / "разово пошукай по темі X, треки не чіпай" | the inline note below the internal-playbooks list |
 | candidate gives a bare vacancy URL, no pasted text | `playbooks/add-from-url.md` |
 | "згенеруй лінки для LinkedIn" / "linkedin search links" | `playbooks/linkedin-search.md` |
 | "покажи дошку" / "show me the board" / "what's the status of everything" | `playbooks/board.md` |
@@ -222,6 +223,13 @@ call these to avoid copying the same procedure into every workflow:
   `targeting-plan.md`.
 - `playbooks/scout-record-outcomes.md` — write scout seen-ledger outcomes and matched vacancy
   folders after judgment.
+
+Not every reasonable ask is a playbook. A candidate might want a one-off themed hunt ("defence/
+miltech on the local boards, don't touch my tracks") — treat it as research over the existing
+pieces: search wider than the scout's tracks with your own web capability, judge finds through
+`playbooks/fitment.md`, add only the worthwhile ones as `new` vacancies via `vacancy_upsert`,
+change nothing in `data/sources.yaml`, and keep rejected finds out of `seen.jsonl` (that ledger
+is the standing scout's record, not a scratchpad for a throwaway theme).
 
 **First contact, before any of the above:** if `data/CV_GENERAL.md` doesn't exist yet (a fresh
 setup), how you respond depends on what the message actually says:
