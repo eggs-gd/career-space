@@ -1,19 +1,8 @@
 /**
- * Markdown -> HTML -> PDF rendering, shared by `render_resume.ts` and `render_cover_letter.ts`
- * (both thin CLI wrappers over this module) and by `mcp_server.ts`'s `render_resume`/
- * `render_cover_letter` tools. Two templates, not one, because the two documents have genuinely
- * different shapes: a CV has structured sections (three interchangeable styles,
- * `RESUME_STYLES`); a cover letter is plain letter prose (paragraphs, occasional "- " bullets),
- * one simple template, no style choice.
+ * Rendering helpers for CVs, cover letters, and the vacancy board.
  *
- * The four resume/cover-letter templates under `templates/` are loaded as plain text and given
- * exactly two substitutions (`{{ title }}`, `{{ body_html | safe }}`) rather than run through a
- * templating engine -- they're pure interpolation, no loops/conditionals, so a hand-rolled
- * templating engine dependency would add nothing but risk of CSS transcription error. The board
- * needs real control flow (loops over vacancy groups/files) that a flat substitution can't give
- * it, so `renderBoardHtml` below builds the whole document itself in TS; `templates/board/
- * head.html.j2` holds only the static `<head>`/CSS it needs verbatim, one `{{ title }}`
- * substitution, same convention as the other four.
+ * Resume/cover-letter templates use flat string substitution. Board rendering is built in TS
+ * because it needs loops over statuses, files, and folder links.
  */
 
 import * as fs from "fs";
@@ -31,14 +20,7 @@ import { matchesLocalKeywords } from "./scout_prefilter";
 const TEMPLATE_DIR = path.join(__dirname, "..", "templates");
 const CONFIG_PATH = path.join(REPO_ROOT, "data", "config.yaml");
 
-// `html: true` matches python-markdown's own default -- raw HTML in the Markdown source passes
-// straight through unescaped unless the caller neutralizes it first (see renderBoardHtml's
-// deliberate `&`/`<` escaping of untrusted posting.md content below `html` has no bearing there,
-// since that source is pre-neutralized either way -- this only matters for renderHtml/
-// renderCoverLetterHtml's agent-authored, policy-constrained Markdown).
-// `typographer`/`linkify` stay off: formatCvMarkdown already normalizes typography to plain
-// ASCII (see markdown_normalize.ts), and python-markdown's `extra` bundle doesn't autolink bare
-// URLs either -- re-introducing either here would be new behavior, not a faithful port.
+// Raw HTML is allowed for agent-authored artifacts; board-embedded external text is escaped first.
 const md = new MarkdownIt({ html: true, linkify: false, typographer: false }).use(markdownItFootnote);
 
 export const RESUME_STYLES = ["default", "compact", "whitepaper"] as const;
@@ -274,38 +256,7 @@ export function renderBoardMd(vacancies: Rec[]): string {
   return lines.join("\n");
 }
 
-/** Renders `data/vacancies/`'s current state -- grouped by status, sorted by fit score within
- * each group (ties broken by company name, not fetch order -- this is a human-scanned view,
- * alphabetical-within-a-score-tier is more useful than "whatever order the filesystem listing
- * returned"), with a button for every file actually present in each vacancy's folder
- * (`fitment.md`, `posting.md`, `cv.md`, `cover-letter.md`, `targeting-plan.md` -- never a guess,
- * always from the `files` list `vacancy_store.listVacancies()` reports) plus the original
- * posting URL when known.
- *
- * Every file's content is read and pre-rendered to HTML (the same Markdown pipeline as
- * `renderHtml`) and embedded directly in the page inside a native `<details>`/`<summary>` per
- * file -- click the badge, the content opens right there, click again to close. Deliberately NOT
- * a real `<a href>` to an external file, and deliberately NOT a JavaScript-driven open/close
- * either -- both were tried first and both silently did nothing when this page was opened inside
- * a coding agent's own sandboxed local-file preview pane (the common case this is actually meant
- * to be viewed in, not just a separate browser tab): the sandbox stripped `<script>` entirely,
- * and blocked even a same-page `#fragment` anchor as a disallowed top-frame navigation.
- * `<details>` is a native, script-free, navigation-free browser widget -- there's nothing left
- * for a sandbox like that to strip or block short of disabling the element outright. `record.
- * yaml` is never embedded (its useful fields are already table columns; the raw YAML isn't a
- * candidate-facing document).
- *
- * `vacancies` is `vacancy_store.listVacancies()`'s own output (unfiltered -- this renders every
- * status in one page). `vacancyDirFn` resolves a slug to its folder path -- injected rather than
- * imported directly so this stays a pure "data (+ a lookup) -> HTML" function; defaults to
- * `vacancy_store.vacancyDir` if not given.
- *
- * `localKeywords` (from `data/sources.yaml`, see `render_board.ts`) highlights a vacancy whose
- * stored `location` or `posting.md` text matches one of the candidate's own local phrases --
- * checked with the exact same `matchesLocalKeywords` helper the scout's own prefilter uses, so
- * "local" means the same thing here as it does at fetch time. `[]` (the default) highlights
- * nothing rather than erroring -- a candidate who hasn't set up scouting, or never configured
- * `local_keywords`, still gets a usable board. */
+/** Render the vacancy board from `vacancy_store.listVacancies()` output. */
 export function renderBoardHtml(
   vacancies: Rec[],
   opts: { title?: string; vacancyDirFn?: (slug: string) => string; localKeywords?: readonly string[] } = {}
@@ -354,16 +305,7 @@ export function renderBoardHtml(
         if (fname === "posting.md") postingRaw = raw;
         let contentHtml: string;
         if (raw.trim()) {
-          // markdown-it (like python-markdown) passes raw HTML in its source straight through
-          // unescaped -- fine for renderHtml/renderCoverLetterHtml above (agent-authored
-          // content, constrained by policy to plain Markdown), not fine here: `posting.md` in
-          // particular can hold a candidate-pasted job posting, i.e. untrusted external text.
-          // Escaping `<`/`&` before markdown conversion neutralizes any raw HTML/script in the
-          // source (a browser needs a literal `<` to recognize a tag at all, so this alone is
-          // enough -- shows up as literal text instead of executing/rendering). Deliberately NOT
-          // escaping `>` too, unlike a blanket escape: Markdown blockquotes (`> quoted text`,
-          // used by cv.md's aggregate-duration line) need a literal `>` at line start to parse;
-          // escaping it would silently break that syntax for every board-embedded file.
+          // Escape raw HTML in vacancy documents before markdown rendering.
           const escaped = raw.replace(/&/g, "&amp;").replace(/</g, "&lt;");
           contentHtml = md.render(escaped);
         } else {
@@ -371,10 +313,7 @@ export function renderBoardHtml(
         }
         fileButtons.push({ label: BOARD_FILE_LABELS[fname] ?? fname, contentHtml });
       }
-      // A "📁 Folder" panel: a `file://` link per file in the vacancy dir, plus the dir itself.
-      // Absolute URIs, not relative `vacancies/<slug>/…` -- a Claude client's local-file preview
-      // rewrites relative links against its own domain. Trailing separator so the dir URL reads as
-      // a directory. `fs.existsSync` guard so a fixture with no real dir just omits the panel.
+      // Folder links must be absolute file:// URLs; see _sb/reference/gotchas.md.
       const folderUrl = fs.existsSync(vdir) ? pathToFileURL(vdir + path.sep).href : "";
       const folderFiles = folderUrl
         ? files.map((name) => ({ name, url: pathToFileURL(path.join(vdir, name)).href }))
@@ -385,13 +324,7 @@ export function renderBoardHtml(
       const isLocal = matchesLocalKeywords(`${v.location ?? ""} ${postingRaw}`, localKeywords);
       const locationEligibility = v.eligibility?.location ?? null;
       const requiresLocationException = locationEligibility?.status === "location_exception_candidate";
-      // The exact text a "Copy" click hands back to the candidate to paste into a fresh chat --
-      // assembled once here, at render time (the renderer stays the one source of truth for
-      // content), not reconstructed by client-side JS from scattered DOM pieces. Just enough to
-      // name the vacancy unambiguously (an agent resolves the rest itself from the slug) --
-      // deliberately NOT the posting text/CV/cover-letter bodies: those are already one click
-      // away on this same board, pasting them into chat would just be a second copy of data that
-      // already exists.
+      // Header-only copy payload; document bodies stay in the vacancy folder.
       const copyPayload = [
         `Title: ${v.title ?? ""}`,
         `Company: ${v.company ?? ""}`,
@@ -406,11 +339,7 @@ export function renderBoardHtml(
       return result;
     });
 
-    // `<button>`, not `<a href="#...">` -- a same-document fragment link is exactly the kind of
-    // navigation some sandboxed local-file preview panes block outright (see head.html.j2's own
-    // note on this). A plain button has no default action at all without JS, so it's inert but
-    // harmless without it, and the script below (progressive enhancement only, added right
-    // before `</main>`) wires it to scrollIntoView -- never a real navigation event.
+    // Button navigation avoids same-page fragment links; see _sb/reference/gotchas.md.
     chipsHtml.push(
       `<button type="button" class="chip" data-scroll-target="section-${escapeHtml(status)}"><span class="dot ${escapeHtml(status)}"></span>${escapeHtml(label)} <span class="count">${prepared.length}</span></button>`
     );
@@ -430,8 +359,7 @@ export function renderBoardHtml(
         const postingLinkHtml = v.url
           ? `<a class="posting-link" href="${escapeHtml(String(v.url))}" target="_blank" rel="noopener">posting&nbsp;&#8599;</a>`
           : "";
-        // Same `<details class="file">` widget and per-row accordion group (`name="panel-<slug>"`)
-        // as the Markdown badges. Links open in a new tab. See folderUrl's comment for the rest.
+        // Same native details widget as the Markdown badges.
         const folderLinksHtml = folderUrl
           ? `<details class="${folderClass}" name="panel-${escapeHtml(String(v.slug))}"><summary>📁&nbsp;Folder</summary>` +
             `<div class="file-content folder-list">` +
@@ -447,14 +375,7 @@ export function renderBoardHtml(
               String(v.locationExceptionReason || "May require a location/payroll exception")
             )}">⚠ Location exception</span>`
           : "";
-        // Only ever rendered when a caller explicitly asked to include archived vacancies
-        // (see renderBoardHtml's default, which excludes them before this loop even runs) --
-        // still worth marking here so that view doesn't read as identical to the active list.
         const archivedBadgeHtml = v.archived ? `<span class="archived-badge">Archived</span>` : "";
-        // A plain button, inert without JS (nothing left for a script-stripping sandbox to
-        // strip or block, same reasoning as the nav buttons above) -- the click handler added
-        // near `</main>` reads this exact, already-assembled payload back out and writes it to
-        // the clipboard verbatim; it never reconstructs it from the row's own visible DOM.
         const copyAttr = escapeHtml(JSON.stringify(v.copyPayload ?? ""));
         const copyButtonHtml = `<button type="button" class="copy-btn" data-copy="${copyAttr}">Copy</button>`;
         return `        <div class="vrow${v.isLocal ? " local" : ""}${v.requiresLocationException ? " location-exception" : ""}${v.archived ? " archived" : ""}">
@@ -497,8 +418,6 @@ ${bodyForGroup}
     );
   }
 
-  // Head only -- no full-page skeleton to slice a piece out of. The rest of the document
-  // (<html>/<body> and everything in it) is built directly below, in TS.
   const headHtml = loadTemplate("board/head.html.j2").replace("{{ title }}", escapeHtml(title));
 
   const generatedAt = formatGeneratedAt(new Date());
@@ -517,12 +436,7 @@ ${headHtml}
 ${groupsHtml.join("\n")}
   </main>
   <script>
-    // Progressive enhancement only, added on top of a page that's already fully usable without
-    // it (see head.html.j2's .summary .chip comment and details.file's own comment). Nothing
-    // here owns or decides vacancy state -- it only scrolls to a section already on the page, or
-    // copies text the renderer already assembled server-side. Stripped or blocked, every
-    // vacancy's data/status/score/links stay exactly as they are; only jump-to-section and
-    // copy-to-clipboard go away.
+    // Progressive enhancement only; the page is readable without this script.
     (function () {
       document.querySelectorAll("button.chip[data-scroll-target]").forEach(function (btn) {
         btn.addEventListener("click", function () {
@@ -531,10 +445,7 @@ ${groupsHtml.join("\n")}
         });
       });
 
-      // navigator.clipboard needs a secure context and a real user gesture; not guaranteed in
-      // every environment this file gets opened in. document.execCommand("copy") is
-      // deprecated but far more broadly supported as a fallback -- either way, failure here
-      // must never break anything else on the page.
+      // Clipboard support varies for local files; keep a fallback and never fail the page.
       function fallbackCopy(text) {
         var ta = document.createElement("textarea");
         ta.value = text;

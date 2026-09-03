@@ -39,7 +39,5 @@ strong generic CV?
 
 ## Step 5 -- save, show, render
 
-Save to `data/vacancies/<slug>/cv.md` and show the full document in chat. Then render the PDF —
-call `render_resume` (MCP tool, or `node scripts/dist/render_resume.js <file>.md`). This is a
-deterministic formatting step and execution of the CV you just produced, not a separate decision
-to ask about (see AGENTS.md's "A deterministic tool call is execution, not a decision").
+Save to `data/vacancies/<slug>/cv.md` and show the full document in chat. Then render it with
+`render_resume` (MCP tool, or `node scripts/dist/render_resume.js <file>.md`).

@@ -109,8 +109,7 @@ subroutine, but don't paste the rendered result to the candidate yet. `candidate
 is already shaped like a pasted posting. Keep `fitment.md` as the only place that defines detailed
 scoring semantics; scout only batches judgments and routes outcomes.
 
-Keep `score_fit`'s full returned Markdown around for Step 3 (not just the score/category you
-pull out of it) -- the record step needs the full breakdown.
+Keep `score_fit`'s structured result around for Step 3, including its rendered Markdown.
 
 Do this for every candidate before moving to Step 3 -- batching the judgments first, then the
 writes, keeps a partial failure (a tool error mid-run) from leaving some postings judged-but-
@@ -118,9 +117,7 @@ unrecorded while others are recorded.
 
 ## Step 3 -- record every outcome
 
-Run `playbooks/scout-record-outcomes.md` for the judged batch. It owns the
-`vacancy_mark_seen`/`vacancy_upsert` calls, the `min_fit_score` threshold, and writing full
-`fitment.md` artifacts for matches.
+Run `playbooks/scout-record-outcomes.md` for the judged batch.
 
 ## Step 4 -- summarize
 
@@ -133,6 +130,4 @@ wants. If the candidate confirms one is worth pursuing (a plain "track this one"
 it" is enough, no fixed phrase required), call `vacancy_set_status(slug, "tracked")` right then --
 nothing else in this playbook moves a record off `new` on its own.
 
-Then re-render the board (`render_board`) -- this run created new records and possibly moved some
-to `tracked`, so `data/board.html`/`board.md` are stale. Not a question, just the last step (see
-AGENTS.md's "A status or archive change is finalized by re-rendering the board").
+The record/status tools return updated board paths when they change board-visible state.

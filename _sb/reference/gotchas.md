@@ -37,3 +37,7 @@ trap and the rule -- not the story.
   inference. Keeps the field usable for the market-feedback loop instead of a speculation dump.
 - Scout auto-runs `reconcile.md` first when an email capability exists -- not a prompt. Reconcile
   itself asks only on ambiguous matches. A reconcile error never blocks the fetch.
+- Skill stacking is not free: route to the smallest needed playbook/reference, compose instead of
+  copying semantics, and move deterministic checks into scripts/MCP.
+- MCP server type-check slowness often means SDK/zod compatibility trouble -- check dependency
+  versions before blaming tool schemas.

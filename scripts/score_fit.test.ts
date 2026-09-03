@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { roundHalfToEven, computeScore, render } from "./score_fit";
+import { roundHalfToEven, computeScore, evaluate, render } from "./score_fit";
 
 test("roundHalfToEven uses banker's rounding at exact .5 boundaries, unlike Math.round", () => {
   assert.equal(roundHalfToEven(2.5), 2, "2.5 rounds to even (2), not up to 3");
@@ -57,4 +57,24 @@ test("location exception renders as eligibility, not as a score penalty", () => 
   const markdown = render(assessment as any);
   assert.match(markdown, /^## Match: 10\/10 — clean fit/m);
   assert.match(markdown, /Location eligibility:\*\* requires location exception/);
+});
+
+test("evaluate returns structured score data with rendered Markdown", () => {
+  const assessment = {
+    job_summary: "Engineering leadership role.",
+    clusters: [
+      {
+        cluster: "Leadership",
+        importance: "critical",
+        blocking: false,
+        requirements: [{ requirement: "lead teams", primary: true, evidence: "direct_partial", reason: "Some leadership overlap." }],
+      },
+    ],
+    fit_category: "stretch_fit",
+  };
+
+  const result = evaluate(assessment as any);
+  assert.equal(result.score, computeScore(assessment.clusters as any));
+  assert.equal(result.fit_category, "stretch_fit");
+  assert.match(result.markdown, /^## Match: \d+\/10 — stretch fit/m);
 });

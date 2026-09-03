@@ -76,12 +76,10 @@ transition.
   two roles at one company) → present it to the candidate and ask before moving anything.
 - Never mutate Gmail or Calendar.
 
-## Step 5 — re-render and summarise
+## Step 5 — summarise
 
-Re-render the board (`render_board`) — deterministic execution of the transitions just made, not
-a separate decision to ask about.
-
-Then, in one pass: transitions applied (with the one-line why), transitions proposed and waiting
-on the candidate, and vacancies with no new signal. For a fresh `interview`, offer
+In one pass: transitions applied (with the one-line why), transitions proposed and waiting on the
+candidate, and vacancies with no new signal. The status tool returns updated board paths for
+applied transitions. For a fresh `interview`, offer
 `playbooks/cv-targeted.md` / interview-prep next steps; for a `rejected` with a stated reason,
 note whether it points at a real gap worth reflecting in positioning or the Master CV.

@@ -5,7 +5,7 @@ any candidate-facing playbook, never read during normal execution; see `AGENTS.m
 split. Keep this current and terse -- a list of what exists and what's next, not a changelog; how
 and why each one was built lives in git history, not here.
 
-## Status as of 2026-09-01
+## Current Status
 
 **Built** (see `_sb/architecture.md` for how any of this actually works):
 - [x] Onboarding -- Master CV, config, role profiles, and a starter `data/strategy.md` from a
@@ -86,6 +86,13 @@ and why each one was built lives in git history, not here.
    independently (right now a CV and cover letter for the same vacancy can select different
    evidence for the same requirement), and the framework's vacancy-specific validator criteria
    (retells the resume, no concrete why-this-company, doesn't use the vacancy's own vocabulary).
+2. **Skill hygiene + agent-contract coverage** -- review external agent-skill repos for
+   conventions, not content: short capability playbooks, explicit orchestrators, strict reference
+   routing, and regression prompts that prove a fresh agent follows the repo without chat history.
+   First pass: audit thick playbooks (`cv-targeted.md`, `scout.md`, `cover-letter.md`) for
+   extractable internal capabilities; add agent-contract prompts for the failure modes already
+   seen (`data/` boundary in Developer mode, no blind regeneration, no user-specific example
+   leakage, location-exception scoring).
 
 ## Later / maybe
 

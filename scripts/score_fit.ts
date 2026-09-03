@@ -77,6 +77,13 @@ export interface Assessment {
   eligibility?: Eligibility;
 }
 
+export interface FitResult {
+  score: number;
+  fit_category: string;
+  eligibility?: Eligibility;
+  markdown: string;
+}
+
 const EVIDENCE_VALUE: Record<string, number> = {
   direct_strong: 1.0,
   direct_partial: 0.7,
@@ -213,6 +220,11 @@ export function computeScore(clusters: Cluster[]): number {
  * undifferentiated dash-bullets was a real, reported readability problem here, not a
  * hypothetical one -- this is the fix. */
 export function render(assessment: Assessment): string {
+  const result = evaluate(assessment);
+  return result.markdown;
+}
+
+export function evaluate(assessment: Assessment): FitResult {
   const clusters = assessment.clusters ?? [];
   const score = computeScore(clusters);
   const category = assessment.fit_category ?? "unclear";
@@ -278,7 +290,12 @@ export function render(assessment: Assessment): string {
     lines.push(`✅ **Appeal:** ${appeal}`);
   }
 
-  return lines.join("\n");
+  return {
+    score,
+    fit_category: category,
+    eligibility,
+    markdown: lines.join("\n"),
+  };
 }
 
 function main(): void {

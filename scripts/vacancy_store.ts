@@ -1,28 +1,9 @@
 /**
- * Deterministic reads/writes for `data/vacancies/` -- the scout's dedup+audit ledger and every
- * tracked vacancy's own folder. No LLM judgment happens here; this module only ever does what
- * it's told (slugging, file I/O, status-history bookkeeping) so several different agents
- * touching the same `data/` never drift on how a record is shaped. See `playbooks/scout.md` for
- * the flow that calls these functions (via `scripts/mcp_server.ts`'s `vacancy_*` tools).
+ * Deterministic storage for `data/vacancies/`.
  *
- * Two things, two different jobs:
- *
- * - `seen.jsonl` -- one flat, append-only log, one line per posting the agent actually judged
- *   (regardless of outcome). Read at the start of every scout run to skip re-judging the same
- *   posting; a posting dropped earlier by the cheap prefilter never appears here, so it's picked
- *   up again on a later run rather than lost for good.
- * - `<slug>/` -- one folder per vacancy worth the candidate's attention: either the scout found it
- *   and it cleared the bar (`status` starts at `new` -- distinct from `seen.jsonl`'s `outcome`
- *   field, which only records whether a folder got created at all, not the vacancy's own pipeline
- *   stage), or the candidate pasted it by hand and asked for a document (`status` starts at
- *   `tracked` instead -- see `upsertVacancy`'s docstring, no reason to route a posting through
- *   `new` when the candidate already decided to act on it). A judged-and-rejected scout posting
- *   leaves its trace solely in `seen.jsonl` (score/category/reason) -- it never gets a folder
- *   here. Inside a vacancy's folder: `record.yaml` (status/status_history/fit/eligibility/
- *   track_label/metadata) and `posting.md` (the posting's own text, when known) always; whatever
- *   a playbook generates for it (a targeted CV, a cover letter, a deeper fitment writeup) belongs
- *   alongside them in the same folder -- a vacancy's folder IS its association with everything
- *   about it, not a separate pointer/dict to maintain.
+ * - `seen.jsonl`: append-only ledger for judged postings, matched or rejected.
+ * - `<slug>/`: one tracked vacancy folder with `record.yaml`, `posting.md`, and generated
+ *   artifacts for that vacancy.
  */
 
 import * as fs from "fs";
@@ -101,15 +82,12 @@ function writeYamlRecord(filePath: string, record: Rec): void {
   fs.writeFileSync(filePath, yaml.dump(record, { sortKeys: false }), "utf-8");
 }
 
-/** Only sets `obj[key]` if the key is not already present -- mirrors Python's `dict.setdefault`,
- * which checks key PRESENCE, not truthiness/nullishness (a stored `null`/`""`/`false` value is
- * left alone, unlike `??=`). */
+/** Set only when the key is absent; existing `null`/`""`/`false` values are preserved. */
 function setdefault(obj: Rec, key: string, value: unknown): void {
   if (!(key in obj)) obj[key] = value;
 }
 
-/** Returns [postingIds, contentIds] already judged. Tolerant of lines missing content_id
- * (an older or hand-edited entry) -- just skips it instead of throwing. */
+/** Returns [postingIds, contentIds] already judged. Missing ids are skipped. */
 export function readSeenIds(): [Set<string>, Set<string>] {
   const filePath = seenPath();
   if (!fs.existsSync(filePath)) return [new Set(), new Set()];
@@ -126,15 +104,7 @@ export function readSeenIds(): [Set<string>, Set<string>] {
   return [postingIdSet, contentIdSet];
 }
 
-/** Append one judged posting to seen.jsonl. Call this for EVERY posting the agent actually
- * judges, whether it got a vacancy folder or not -- the point of this ledger is never
- * re-judging the same posting, not just remembering the ones that passed. `outcome` is
- * deliberately `matched`/`rejected`, not `tracked`/`rejected` -- `tracked` is a specific
- * VALID_STATUSES value a vacancy only reaches once the candidate confirms it, and a posting
- * that just cleared the scout's bar starts at `new`, not `tracked`; reusing that word here
- * would claim a pipeline stage that hasn't happened yet. `company`/`title` are stored purely so
- * a human skimming the raw file can tell what a line was about; they play no role in dedup
- * (posting_id/content_id do that). */
+/** Append one judged posting to seen.jsonl. `outcome` is scout outcome, not vacancy status. */
 export function markSeen(
   postingId: string,
   contentId: string,
@@ -211,8 +181,7 @@ function summaryToDict(s: VacancySummary): Rec {
   };
 }
 
-/** One level of `<slug>` directories under DATA_DIR, each checked for a `record.yaml` --
- * deliberately not a recursive glob, matching the Python original's one-level `Path.glob`. */
+/** One level of `<slug>` directories under DATA_DIR, each checked for a `record.yaml`. */
 function listRecordPaths(): string[] {
   if (!fs.existsSync(DATA_DIR)) return [];
   const out: string[] = [];
@@ -224,22 +193,13 @@ function listRecordPaths(): string[] {
   return out;
 }
 
-/** Returns the slug of an existing vacancy folder whose company+title match (normalized,
- * case-insensitive), or null. Used by `upsertVacancy` as a fallback for a manually-supplied
- * posting (no posting_id/content_id given) when a fresh hash computation wouldn't find the
- * existing folder -- e.g. a vacancy first created from a bare paste (no URL, no description)
- * later getting richer data, or the same posting reaching this repo once via the scout and
- * once via a candidate's paste with slightly different exact wording, so the content-hash
- * wouldn't match byte-for-byte. Deliberately loose (company+title only, not content) --
- * reasonable for a personal tool where two genuinely different openings at the same company
- * sharing the exact same title string are rare; NOT used for a scout-found posting, which
- * already has a reliable hash from a real URL and shouldn't be second-guessed this way. */
+/** Find an existing vacancy by normalized company+title. Used only as an upsert fallback. */
 export function findByCompanyTitle(company: string, title: string): string | null {
   if (!fs.existsSync(DATA_DIR)) return null;
-  const target = `${slugify(company)} ${slugify(title)}`;
+  const target = `${slugify(company)}\0${slugify(title)}`;
   for (const rpath of listRecordPaths()) {
     const record = readYamlRecord(rpath);
-    const key = `${slugify(record.company ?? "")} ${slugify(record.title ?? "")}`;
+    const key = `${slugify(record.company ?? "")}\0${slugify(record.title ?? "")}`;
     if (key === target) return record.slug ?? path.basename(path.dirname(rpath));
   }
   return null;
@@ -263,56 +223,51 @@ export interface UpsertVacancyOptions {
   fitCategory?: string;
   fitReason?: string;
   eligibility?: Eligibility;
+  markSeenOnCreate?: boolean;
 }
 
-/** Create a new vacancy folder, or update the existing one for this posting.
- *
- * `postingId`/`contentId` come from the scout (`scout_domain.Posting`) for a scout-found
- * posting -- pass them through as given. For a posting the candidate pasted by hand, omit both:
- * they're computed fresh from company/title/postingText/url via `posting_ids.manualIds`, the
- * same hash functions the scout uses, UNLESS an existing folder already has the same
- * company+title (see `findByCompanyTitle`), in which case its ids are reused instead so this
- * updates that folder rather than creating a duplicate. A bare paste with no URL at all is fine
- * -- leave `url` empty too.
- *
- * **The company+title reconciliation also runs when explicit ids ARE given, as a fallback only
- * -- never overriding an exact id match, only filling in for one that doesn't exist yet.** A
- * scout-found posting's own explicit ids take priority (an exact match on them always wins), but
- * if nothing on disk has that exact posting_id/content_id yet, an existing folder with the same
- * company+title is reused rather than minting a second folder for what's very likely the same
- * real vacancy discovered a second time through a different route -- most commonly, the
- * candidate tracked it by hand (`playbooks/vacancy-resolve.md`) before the scout ever found it,
- * so the scout's own hash (source+URL-based) never had a reason to match the earlier manual
- * one. Traded off deliberately: the same company genuinely reposting an identical title months
- * apart would now merge into the older folder too, overwriting its posting text -- rarer and
- * less costly for a single-candidate tool than the alternative (a silent duplicate board entry
- * for the exact same real vacancy, every time this crossover happens).
- *
- * Slug (and so the folder name) is always derived deterministically from company/title/
- * postingId -- never accepted as a free-form argument, so two different callers can never
- * invent two different slugs for the same posting.
- *
- * Writes `record.yaml` (metadata) and `posting.md` (the posting's own text, only overwritten
- * when `postingText` is non-empty -- an update call that only changes status/fit doesn't need
- * to re-pass the full text). Every enrichment field (`location`, `remote`, `source`,
- * `postedAt`, the `fit` block, `trackLabel`) works the same way: omitted on this call means
- * "I don't have an opinion," not "clear whatever's there" -- an existing value survives an
- * update call that doesn't mention it (a real, previously-real bug: `playbooks/
- * cover-letter.md`'s Step 0 calling this for an already scout-matched vacancy, with no fit
- * info of its own to pass, used to silently wipe out that vacancy's fit score). `company`/
- * `title`/`url`/`applyUrl` are the exception -- always written from what's passed, since
- * they're identity, not enrichment, and should always reflect the latest call's understanding
- * of them.
- *
- * `status` follows the same "omit means no opinion" rule as the enrichment fields above --
- * omitted on an update call, the vacancy's current status is left exactly as it was (defaults
- * to `"new"` only when creating a brand-new record, never as a side effect of an update). This
- * is deliberate, not incidental: a real bug here silently regressed several `applied`/
- * `rejected`/`tracked` vacancies back to `"new"` -- complete with a bogus status_history entry
- * -- because a bulk field-backfill script called this without re-passing each vacancy's own
- * current status, and the old unconditional `"new"` default did the rest.
- *
- * Returns the record dict (not the posting text -- read `posting.md` directly for that). */
+export interface ScoutOutcomeCandidate {
+  posting_id: string;
+  content_id: string;
+  company: string;
+  title: string;
+  job_post_text: string;
+  url?: string;
+  apply_url?: string;
+  location?: string;
+  remote?: boolean;
+  source?: string;
+  posted_at?: string;
+  track_label?: string | null;
+}
+
+export interface ScoutOutcomeFit {
+  score: number;
+  fit_category: string;
+  reason?: string;
+  markdown: string;
+  eligibility?: Eligibility;
+}
+
+export interface RecordScoutOutcomeOptions {
+  candidate: ScoutOutcomeCandidate;
+  fit: ScoutOutcomeFit;
+  minFitScore: number;
+}
+
+export interface RecordedScoutOutcome {
+  outcome: "matched" | "rejected";
+  slug: string | null;
+  company: string;
+  title: string;
+  score: number;
+  fit_category: string;
+  reason: string;
+  fitment_path: string | null;
+}
+
+/** Create or update a vacancy folder. Omitted enrichment fields mean "no opinion"; existing
+ * values are preserved. `status: "new"` only applies to a new record. */
 export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   if (opts.status !== undefined && !isValidStatus(opts.status)) {
     throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(opts.status)}`);
@@ -320,7 +275,7 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
 
   let pid = opts.postingId;
   let cid = opts.contentId;
-  let idSource = "scout"; // overwritten below on either the omitted-ids or the reconciled path
+  let idSource = "scout";
 
   if (pid === undefined || cid === undefined) {
     idSource = "manual";
@@ -334,16 +289,7 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
       [pid, cid] = postingIds.manualIds(opts.company, opts.title, opts.postingText ?? "", opts.url ?? "");
     }
   } else if (!fs.existsSync(recordPath(makeSlug(opts.company, opts.title, pid)))) {
-    // Explicit ids given (the scout's own path), but nothing on disk has this exact posting
-    // yet -- fall back to an existing company+title match, but ONLY when that existing
-    // record's own ids are NOT known to already be a trustworthy scout hash (idSource ===
-    // "scout"): two genuinely different scout-found postings sharing a company+title (a real,
-    // previously-verified case -- e.g. the same role reposted with a new req) must stay
-    // separate, since their real posting_ids will always differ and there's no other signal
-    // to tell them apart. A record with no id_source at all (anything created before this
-    // field existed) defaults to eligible -- the crossover case below is common and active
-    // right now, the false-merge case is rare, and an old record predates any of this
-    // distinction anyway.
+    // Explicit ids do not merge onto records already known to be scout-created.
     const existingSlug = findByCompanyTitle(opts.company, opts.title);
     if (existingSlug !== null) {
       const existing = readYamlRecord(recordPath(existingSlug));
@@ -356,8 +302,6 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   }
 
   if (pid === undefined || cid === undefined) {
-    // Should be unreachable given the logic above -- every branch resolves both ids. Guards
-    // against a future edit silently breaking that invariant rather than writing a corrupt slug.
     throw new VacancyStoreError("internal error: posting_id/content_id unresolved in upsertVacancy");
   }
 
@@ -371,8 +315,7 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
     record = readYamlRecord(rpath);
     const existingPostingId = record.posting_id;
     if (existingPostingId && existingPostingId !== pid) {
-      // makeSlug's 8-char postingId suffix isn't collision-proof -- catch a genuine
-      // slug collision here rather than silently overwriting a different posting's record.
+      // makeSlug uses a short hash suffix; guard against a real collision.
       throw new VacancyStoreError(
         `slug ${JSON.stringify(slug)} already belongs to posting_id ${JSON.stringify(existingPostingId)}, not ` +
           `${JSON.stringify(pid)} -- refusing to overwrite a different vacancy's record.`
@@ -384,35 +327,22 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
       slug,
       posting_id: pid,
       content_id: cid,
-      // "scout" (explicit ids, a real source+URL/content hash) or "manual" (computed by
-      // posting_ids.manualIds, or reused from an existing manual record via the
-      // company+title fallback above) -- read by that same fallback logic to decide whether
-      // a FUTURE explicit-id call is allowed to reconcile onto this record. Never load-
-      // bearing for anything else; safe to ignore for any record predating this field.
       id_source: idSource,
       status: initialStatus,
       status_history: [{ status: initialStatus, at: nowStr }],
       created_at: nowStr,
     };
-    // Every vacancy that gets a folder is, by definition, a posting that's been judged and
-    // matched -- record that in the seen ledger here too, not just when a caller remembers to
-    // call markSeen separately. Closes a real gap: playbooks/vacancy-resolve.md's
-    // manual-paste path never called vacancy_mark_seen, so a posting tracked by hand had no
-    // seen.jsonl entry at all -- a later scout run fetching the same real posting from a
-    // public board would find no match there and spend a judgment turn re-analyzing it (the
-    // company+title fallback above still prevents an actual duplicate folder, but this avoids
-    // the wasted judgment call in the first place, and keeps the ledger honest either way).
-    // Harmless if a caller (scout-record-outcomes.md) also calls markSeen explicitly for the
-    // same posting -- readSeenIds() just dedups into a set, an extra line costs nothing but
-    // a few bytes.
-    markSeen(pid, cid, {
-      outcome: "matched",
-      company: opts.company,
-      title: opts.title,
-      fitScore: opts.fitScore,
-      fitCategory: opts.fitCategory,
-      reason: opts.fitReason,
-    });
+    // New tracked vacancies are also scout-seen for future dedup.
+    if (opts.markSeenOnCreate ?? true) {
+      markSeen(pid, cid, {
+        outcome: "matched",
+        company: opts.company,
+        title: opts.title,
+        fitScore: opts.fitScore,
+        fitCategory: opts.fitCategory,
+        reason: opts.fitReason,
+      });
+    }
   }
 
   Object.assign(record, {
@@ -440,13 +370,7 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   setdefault(record, "posted_at", "");
   setdefault(record, "track_label", null);
 
-  // "new" is only ever a legitimate status for a posting nobody has looked at yet -- never a
-  // real transition an existing record should make. Guards a real second-order bug the
-  // company+title reconciliation above (re)surfaced: a scout call that (correctly, for what it
-  // believes is a first discovery) passes status="new" must NOT regress an existing record this
-  // same posting just reconciled onto (e.g. one the candidate already tracked by hand) back to
-  // "new" -- a brand-new record's own initialStatus handling above already covers the actual
-  // "new" case, so this condition only ever suppresses an incorrect regression, never a real one.
+  // `new` is an initial state, not an update target for existing records.
   if (opts.status !== undefined && opts.status !== "new" && record.status !== opts.status) {
     record.status = opts.status;
     setdefault(record, "status_history", []);
@@ -454,12 +378,7 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   }
   setdefault(record, "status", "new");
   setdefault(record, "status_history", [{ status: record.status, at: nowStr }]);
-  // Never set from `opts` here, unlike the enrichment fields above -- "archived" isn't
-  // something a scout/candidate re-discovery call should ever have an opinion on, only
-  // `setArchived` (a deliberate candidate action) does. Defaulting false only at creation means
-  // a repost of an already-archived vacancy reconciling onto this same record (see the
-  // company+title fallback above) leaves the archive decision exactly as the candidate left it,
-  // never silently un-archiving it just because the posting resurfaced.
+  // Upsert never changes archive visibility; only setArchived does.
   setdefault(record, "archived", false);
 
   fs.mkdirSync(vdir, { recursive: true });
@@ -468,12 +387,76 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   return record;
 }
 
-/** `note`, when given, is stored on the `status_history` entry for this transition (`{status, at,
- * note}`) -- an **explicitly observed** reason or context for the move: what a rejection email
- * actually said, that an interview was scheduled, a recruiter's stated requirement. Not an
- * inferred cause ("probably too senior", "likely comp mismatch") -- omit inference entirely for
- * now rather than record a guess as if it were fact. Free text; omit `note` when there's no
- * stated reason. A no-op transition (status unchanged) records nothing, note or not. */
+function scoutOutcomeMatched(fit: ScoutOutcomeFit, minFitScore: number): boolean {
+  const locationStatus = normalizeEligibility(fit.eligibility)?.location?.status;
+  return fit.score >= minFitScore && fit.fit_category !== "craft_mismatch" && locationStatus !== "hard_location_block";
+}
+
+export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedScoutOutcome {
+  const candidate = opts.candidate;
+  const fit = opts.fit;
+  const reason = fit.reason ?? "";
+  const outcome = scoutOutcomeMatched(fit, opts.minFitScore) ? "matched" : "rejected";
+
+  markSeen(candidate.posting_id, candidate.content_id, {
+    outcome,
+    company: candidate.company,
+    title: candidate.title,
+    fitScore: fit.score,
+    fitCategory: fit.fit_category,
+    reason,
+  });
+
+  if (outcome === "rejected") {
+    return {
+      outcome,
+      slug: null,
+      company: candidate.company,
+      title: candidate.title,
+      score: fit.score,
+      fit_category: fit.fit_category,
+      reason,
+      fitment_path: null,
+    };
+  }
+
+  const record = upsertVacancy({
+    postingId: candidate.posting_id,
+    contentId: candidate.content_id,
+    company: candidate.company,
+    title: candidate.title,
+    url: candidate.url ?? "",
+    applyUrl: candidate.apply_url ?? "",
+    location: candidate.location ?? "",
+    remote: candidate.remote,
+    source: candidate.source ?? "",
+    postedAt: candidate.posted_at ?? "",
+    postingText: candidate.job_post_text,
+    status: "new",
+    trackLabel: candidate.track_label ?? undefined,
+    fitScore: fit.score,
+    fitCategory: fit.fit_category,
+    fitReason: reason,
+    eligibility: fit.eligibility,
+    markSeenOnCreate: false,
+  });
+  const slug = String(record.slug);
+  const fitmentPath = path.join(vacancyDir(slug), "fitment.md");
+  fs.writeFileSync(fitmentPath, fit.markdown, "utf-8");
+
+  return {
+    outcome,
+    slug,
+    company: candidate.company,
+    title: candidate.title,
+    score: fit.score,
+    fit_category: fit.fit_category,
+    reason,
+    fitment_path: fitmentPath,
+  };
+}
+
+/** `note` is stored only on a real status transition, and only for an explicitly observed reason. */
 export function setStatus(slug: string, status: VacancyStatus, note?: string): Rec {
   if (!isValidStatus(status)) {
     throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(status)}`);
@@ -496,14 +479,7 @@ export function setStatus(slug: string, status: VacancyStatus, note?: string): R
   return record;
 }
 
-/** Archives (or unarchives) a vacancy -- orthogonal to `status`, not a new pipeline stage.
- * `status` records where a vacancy is in the hiring process (several of which -- `rejected`,
- * `skipped`, an old `offer` -- are legitimately terminal but still worth keeping on record);
- * `archived` only controls whether it's still worth seeing on the board day to day. No
- * `status_history`-style log kept for this -- it's a visibility toggle, not a pipeline event.
- * `render_board.ts`/`vacancy_list` exclude an archived vacancy by default (see
- * `listVacancies`'s `includeArchived` option) but never delete anything; unarchiving (`archived:
- * false`) brings it straight back with its full history intact. */
+/** Archive visibility is orthogonal to pipeline status. */
 export function setArchived(slug: string, archived: boolean): Rec {
   const rpath = recordPath(slug);
   if (!fs.existsSync(rpath)) {
@@ -518,13 +494,7 @@ export function setArchived(slug: string, archived: boolean): Rec {
   return record;
 }
 
-/** Copies an existing file into `data/vacancies/<slug>/` as `<kind><original suffix>` --
- * under this layout a vacancy folder's *contents* are its association with everything about
- * it, not a separate pointer field, so "attaching" means physically placing the file there.
- * For a playbook generating fresh output for an already-known vacancy, write directly into
- * `data/vacancies/<slug>/` in the first place rather than writing elsewhere and calling this;
- * this exists for a file that already lives somewhere else (a doc pulled in from outside, or
- * output written before the vacancy's slug was known). */
+/** Copy an existing artifact into a vacancy folder. Fresh generated artifacts should be written there directly. */
 export function attachArtifact(slug: string, kind: string, sourcePathStr: string): { path: string } {
   if (!fs.existsSync(recordPath(slug))) {
     throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)}`);
@@ -581,9 +551,7 @@ export function listVacancies(status?: string, opts: { includeArchived?: boolean
   return summaries.map(summaryToDict);
 }
 
-/** CLI fallback for an agent without MCP support -- one subcommand per MCP tool in
- * `scripts/mcp_server.ts`, same arguments, same behavior. Prefer the MCP tools when connected;
- * see AGENTS.md's "Scripts and the MCP server" section. */
+/** CLI fallback for agents without MCP support. Prefer the MCP tools when connected. */
 function cli(): void {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
@@ -616,6 +584,7 @@ function cli(): void {
       // `false` explicitly), and un-archiving needs that just as much as archiving does.
       archived: { type: "string" },
       "include-archived": { type: "boolean" },
+      input: { type: "string" },
     },
   });
 
@@ -687,9 +656,24 @@ function cli(): void {
     result = attachArtifact(values.slug, values.kind, values.path);
   } else if (command === "list") {
     result = listVacancies(values.status, { includeArchived: values["include-archived"] });
+  } else if (command === "record-scout-outcomes") {
+    if (!values.input) {
+      throw new VacancyStoreError("record-scout-outcomes requires --input <json>");
+    }
+    const payload = JSON.parse(fs.readFileSync(values.input, "utf-8")) as {
+      min_fit_score?: number;
+      items?: { candidate: ScoutOutcomeCandidate; fit: ScoutOutcomeFit }[];
+    };
+    result = (payload.items ?? []).map((item) =>
+      recordScoutOutcome({
+        candidate: item.candidate,
+        fit: item.fit,
+        minFitScore: payload.min_fit_score ?? 4,
+      })
+    );
   } else {
     throw new VacancyStoreError(
-      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, attach-artifact, list`
+      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, attach-artifact, list, record-scout-outcomes`
     );
   }
 
