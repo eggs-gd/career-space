@@ -321,11 +321,11 @@ facts as facts about the current candidate; runtime workflows read `data/`.
 
 The deterministic, non-LLM steps in this repo — real code, not something a playbook should ask
 you to eyeball or improvise: rendering a CV/cover letter to HTML/PDF, the fitment score's fixed
-weighted formula, the scout's fetch/dedup pipeline, vacancy record read/write. Prefer the MCP
-tools when the `career-space` server is connected (typed arguments, no shell-escaping a JSON
-blob); if it isn't, the CLI fallback documented in each script's own docstring works the same --
-nothing behaves differently between the two. Don't try to hand-produce a styled document or a fit
-score yourself instead of calling the relevant tool/script — see the playbooks' own notes on why.
+weighted formula, the scout's fetch/dedup pipeline, scout outcome recording, vacancy record
+read/write, and board rendering. Prefer the MCP tools when the `career-space` server is connected
+(typed arguments, no shell-escaping a JSON blob). If it isn't, use the CLI fallback documented in
+each script's own docstring. Don't hand-produce a styled document, fit score, board, or scout
+ledger write instead of calling the relevant tool/script.
 
 **A deterministic tool call is execution, not a decision.** Once the candidate has approved the
 content, or asked for a workflow whose output is an artifact, running the renderer — or any other
@@ -335,13 +335,10 @@ already happened, on the content. Ask again only when the content or the decisio
 changing. (A host that pops its own `Allow` prompt for the tool is separate — that's the host's
 sandbox, not something a playbook controls or should pre-empt with a question of its own.)
 
-**A status or archive change is finalized by re-rendering the board.** Any `vacancy_set_status` /
-`vacancy_set_archived` call leaves `data/board.html` and `data/board.md` stale, so regenerating
-them (`render_board`) is the last step of that change — without being asked and without asking, by
-the same rule as above. This holds however the change arose: a playbook (scout, add-from-url,
-reconcile), a direct "mark this one applied" from the candidate, or a batch of them — apply all
-the changes, then render once at the end. The only time not to is when the very next thing you'll
-do is another status change; render after the last one.
+**A status or archive change returns a fresh board.** `vacancy_set_status`,
+`vacancy_set_archived`, and `record_scout_outcomes` return board paths when they change
+board-visible state. With a CLI fallback, run `render_board` after the last status/archive/scout
+recording command.
 
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `docs/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a change

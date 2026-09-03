@@ -51,6 +51,12 @@ as not-yet-committed.
 - The generated identity (headline / tagline / position) matches the candidate's direction and
   `context.md`, not whichever technology cluster had the most detailed evidence
   (`policies/surfaces-framework.md`'s "Umbrella identity vs sub-offers" has the failure shape).
+- **Leakage check** (`policies/surfaces-framework.md`'s "Projection is subtraction"): for each
+  substantial theme in the output, does it serve *this* surface's assigned role, or is it here
+  only because it's true / strong / umbrella-level? Shared professional identity recurring is
+  fine; unrelated breadth riding along on the umbrella's strength is leakage — cut it or move it
+  to the `context.md`'s "don't belong here" note. Don't add artificial differences from sibling
+  surfaces to compensate.
 - Constrained platform: every field is within its character/structure limits.
 
 ## Step 4 — show sections + gaps, ask before saving

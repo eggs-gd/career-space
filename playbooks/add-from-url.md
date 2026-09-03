@@ -29,8 +29,8 @@ Call `resolve_vacancy_url` (MCP tool, or `node scripts/dist/resolve_vacancy_url.
 Run `playbooks/fitment.md`'s judgment on the resolved posting exactly as if the scout had found
 it -- `candidate.job_post_text` is already shaped like a pasted posting. Skip the scout's own
 prefilter (title_exclude/hard_exclude/location gate) entirely; that exists to cut noise from a
-broad automated scan, and the candidate already chose this specific URL on purpose. Keep the full
-scored Markdown for Step 3, same as `playbooks/scout.md`'s Step 2.
+broad automated scan, and the candidate already chose this specific URL on purpose. Keep
+`score_fit`'s structured result for Step 3, same as `playbooks/scout.md`'s Step 2.
 
 ## Step 3 -- record the outcome
 
@@ -41,9 +41,8 @@ scout-found one -- never jump it straight to `tracked`.
 
 ## Step 4 -- tell the candidate
 
-If it matched, a new `new` record now exists -- re-render the board (`render_board`) as the last
-step (see AGENTS.md's "A status or archive change is finalized by re-rendering the board"), not a
-question. Then show the fitment result the same way `playbooks/fitment.md`'s own Step 3 does, and
-mention the natural next steps (`playbooks/cv-targeted.md`, `playbooks/cover-letter.md`) the same
-way `playbooks/scout.md`'s Step 4 does. If it didn't clear `min_fit_score`, say so plainly -- it's
-logged in `seen.jsonl`, not lost, no vacancy folder was created, and the board is unchanged.
+If it matched, a new `new` record now exists. Show the fitment result the same way
+`playbooks/fitment.md`'s own Step 3 does, and mention the natural next steps
+(`playbooks/cv-targeted.md`, `playbooks/cover-letter.md`) the same way `playbooks/scout.md`'s
+Step 4 does. If it didn't clear `min_fit_score`, say so plainly -- it's logged in `seen.jsonl`,
+not lost, no vacancy folder was created, and the board is unchanged.

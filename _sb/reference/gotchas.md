@@ -17,6 +17,10 @@ trap and the rule -- not the story.
   disagrees with how to build a career.
 - The strategic role a surface plays is user-specific and lives in `data/surfaces/<name>/context.md`
   -- derived from `data/strategy.md` + `shared:`, never assumed from the platform or another user.
+- Projection is subtraction: a narrower surface must leave out true/strong/umbrella-level themes
+  that don't serve its role -- else every surface converges back to one profile. Shared identity
+  recurring is fine; unrelated breadth riding the umbrella is leakage. Don't manufacture
+  differences between surfaces either.
 - Canonical `reference/surfaces/<name>.md` always wins over a private `data/surfaces/<name>/reference.md`.
 - A generated surface identity is checked against the user's direction + `context.md`, never against
   whichever tech cluster the Master CV has most evidence for.
@@ -33,3 +37,7 @@ trap and the rule -- not the story.
   inference. Keeps the field usable for the market-feedback loop instead of a speculation dump.
 - Scout auto-runs `reconcile.md` first when an email capability exists -- not a prompt. Reconcile
   itself asks only on ambiguous matches. A reconcile error never blocks the fetch.
+- Skill stacking is not free: route to the smallest needed playbook/reference, compose instead of
+  copying semantics, and move deterministic checks into scripts/MCP.
+- MCP server type-check slowness often means SDK/zod compatibility trouble -- check dependency
+  versions before blaming tool schemas.

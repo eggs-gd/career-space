@@ -10,9 +10,12 @@ platform with no canonical reference, `data/surfaces/<name>/reference.md`). Gene
 the actual `output.md` is `playbooks/update-surface.md`.
 
 Read `policies/generation-rules.md` and `policies/surfaces-framework.md` first, and
-`data/strategy.md` if it exists — a surface's role is derived from the candidate's career
-direction, not assumed. If `data/config.yaml` has no `shared:` block, stop and run
-`playbooks/onboard.md` — every surface projects from it.
+`data/strategy.md` — a surface's role is derived from the candidate's career direction, not
+assumed. If `data/strategy.md` is missing, say so and offer to establish it first
+(`playbooks/onboard.md`'s Step 5c is a quick pass); if the candidate would rather not, work from
+`config.yaml`'s `shared:` identity for now and note that the surface's role is a best guess until
+direction is captured. If there's no `shared:` block at all, stop and run `playbooks/onboard.md`
+— every surface projects from it.
 
 ## Define vs revise
 
@@ -68,7 +71,9 @@ suggestion to react to, not a template:
   their other surfaces? (e.g. converge toward one identity, or carry a distinct positioning the
   others don't.)
 - Who should see it? What should they understand and remember? What action should it cause?
-- What should it emphasise — and what should it deliberately not communicate?
+- What should it emphasise? And — at the topic level, not sentence level — which real, strong
+  themes from the candidate's story deliberately *don't* belong here because they serve a
+  different surface's role? (e.g. independent-lab work on a hiring-marketplace profile.)
 - What tone fits?
 - For a constrained platform: any values the candidate wants pinned verbatim (headline, target
   title, CTA, tagline, top skills)?
@@ -79,11 +84,12 @@ doesn't support (ground rules #1, #5).
 ## Step 3 — write `context.md`
 
 Plain Markdown. Sections roughly: **Role in strategy** (what this surface is for, relative to the
-others), **Audience**, **Emphasise / don't say**, **Tone**, **Pinned** (verbatim values, if any),
-plus any category-level decisions (service directions, role emphasis order, whether a
-fractional/advisory title is explicit here). No evidence or achievement text (re-derived at
-generation time), no cached selection, and no presentation implementation — layout, fonts,
-per-section HTML belong in `output.md`, not here.
+others), **Audience**, **Emphasise**, **Doesn't belong here** (themes to keep off this surface,
+topic-level), **Tone**, **Pinned** (verbatim values, if any), plus any category-level decisions
+(service directions, role emphasis order, whether a fractional/advisory title is explicit here).
+No evidence or achievement text (re-derived at generation time), no cached selection, no
+presentation implementation (layout/fonts/per-section HTML — that's `output.md`), and no
+sentence-by-sentence outline of the output — "Doesn't belong here" names topics, not phrasings.
 
 ## Step 4 — show it, ask before saving
 

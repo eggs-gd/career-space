@@ -57,12 +57,7 @@
       font-size: 13px;
       margin: 0 0 20px;
     }
-    /* Every group is always on the page regardless of JS -- scrolling to one never depends on
-       script running. The chip itself is a real <button>, wired to scrollIntoView by the script
-       at the end of body when it runs; NOT an `<a href="#...">` fragment link -- that's exactly
-       the kind of same-document navigation some sandboxed local-file preview panes block outright
-       (found the hard way). A <button> has no default action at all, so without JS it's inert
-       but harmless -- clicking it does nothing, same as a plain label would. */
+    /* Summary chips are progressive enhancement; every group is present without JS. */
     .summary {
       display: flex;
       flex-wrap: wrap;
@@ -140,10 +135,7 @@
     }
     .vrow:last-child { border-bottom: none; }
     .vrow:hover { background: var(--bg-alt); }
-    /* "Local" = matches data/sources.yaml's local_keywords -- see scout_prefilter's
-       matchesLocalKeywords, checked against this vacancy's stored location + posting.md. Left
-       border for at-a-glance scanning down the list, badge for anyone relying on text over
-       color (colorblind-safe, and still legible with print/no-CSS). */
+    /* Local = matches data/sources.yaml's local_keywords. */
     .vrow.local {
       border-left-color: var(--local);
       background: var(--local-tint);
@@ -218,10 +210,7 @@
       /* Top-aligned so an expanded <details> doesn't drag the other badges to its vertical middle. */
       align-items: flex-start;
     }
-    /* <details>/<summary> for expand/collapse: native, needs no JS and no <a href>. A sandboxed
-       local-file preview pane strips <script> and blocks same-page anchor navigation, so a
-       JS toggle or a #fragment link would silently do nothing there; <details> has nothing left
-       for it to strip. */
+    /* Native details/summary keeps file panels usable without JavaScript. */
     details.file {
       display: inline-block;
     }
@@ -238,8 +227,7 @@
     details.file > summary::-webkit-details-marker { display: none; }
     details.file > summary:hover { border-color: var(--accent); background: var(--bg-alt); }
     details.file[open] > summary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-    /* The "📁 Folder" badge, when a CV for this vacancy exists (rendered resume or cv.md). Only
-       the closed state is recoloured; open state keeps the shared dark styling above. */
+    /* Highlight the folder badge when a CV exists for this vacancy. */
     details.file.has-cv:not([open]) > summary {
       border-color: var(--doc);
       color: var(--doc);
@@ -254,7 +242,7 @@
       text-decoration: none;
     }
     .vrow-files a.posting-link:hover { border-color: var(--accent); background: var(--bg-alt); }
-    /* "📁 Folder" panel body -- reuses .file-content's box, swaps prose layout for a link list. */
+    /* Folder panel body. */
     .file-content.folder-list {
       display: flex;
       flex-direction: column;
@@ -263,10 +251,7 @@
     }
     .file-content.folder-list a { color: var(--doc); text-decoration: none; }
     .file-content.folder-list a:hover { text-decoration: underline; }
-    /* A real <button>, inert without JS -- the script at the end of body wires the click handler
-       that reads its own data-copy attribute (an already-assembled, plain-text vacancy summary,
-       see rendering.ts) and writes it to the clipboard. Outline style like posting-link -- this is
-       a convenience action, not the thing most candidates come to this row for. */
+    /* Copy is progressive enhancement; the row remains useful without JS. */
     .vrow-files button.copy-btn {
       padding: 2px 8px;
       border: 1px solid var(--line);

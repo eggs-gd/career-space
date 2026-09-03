@@ -1,35 +1,14 @@
 #!/usr/bin/env node
 /**
- * Local MCP server wrapping this repo's deterministic scripts (`rendering.ts`, `score_fit.ts`,
- * `scout_fetch.ts`, `vacancy_store.ts`) as proper MCP tools, instead of a playbook shelling out
- * to `node scripts/dist/*.js` via Bash or hand-editing `data/vacancies/<slug>/record.yaml`
- * itself. Same underlying functions, same reasoning for why these stay real code, not something
- * a playbook asks an agent to eyeball or freehand-edit -- see each module's own docstring. This
- * just gives an MCP-capable agent (Claude Code, Cursor, ...) direct, typed tool calls instead of
- * a freehand shell invocation or file write. An agent without MCP support still works fine via
- * the plain CLI paths documented in each script and in AGENTS.md -- this server is an
- * additional, nicer interface over the same functions, not a replacement for them.
- *
- * Smoke test directly: `node scripts/dist/mcp_server.js` (blocks on stdio -- Ctrl-C to stop;
- * useful to confirm it starts without error, not a normal way to invoke it).
- *
- * Registered per-agent in `.mcp.json` / `.codex/config.toml` / `.gemini/settings.json` /
- * `.cursor/mcp.json` (via `scripts/mcp_bootstrap.js`) -- see AGENTS.md's "Scripts and the MCP
- * server" section.
+ * MCP wrapper for the deterministic `scripts/` layer. Handlers stay thin; core behavior lives in
+ * the same modules used by CLI fallbacks.
  */
 
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { z } from "zod";
-// A version-compat note for future maintenance, since the history here is genuinely confusing:
-// @modelcontextprotocol/sdk was pinned to exactly 1.12.3 for a while, paired with zod v3 --
-// SDK >=1.26 combined with zod v3.25.x made `tsc` hang/OOM on this file's `registerTool`/`.tool()`
-// calls (a real, reproduced zod-compat type-inference pathology, isolated down to a single
-// trivial `z.string()` schema at the time). Bumping to zod v4 (alongside SDK ^1.30.0) made that
-// pathology disappear entirely -- it was specifically about the SDK's dual zod v3/v4 "compat"
-// bridging layer, not the SDK version by itself. If `tsc` ever starts hanging/OOMing again after
-// touching this file, check the zod version first before assuming it's this file's fault.
+// If type-checking this file becomes unexpectedly slow, check SDK/zod compatibility first.
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
@@ -60,14 +39,27 @@ function respond(value: unknown): CallToolResult {
 
 const server = new McpServer({ name: "career-space", version: "1.0.0" });
 
+const eligibilitySchema = z
+  .object({
+    location: z
+      .object({
+        status: z.enum(LOCATION_ELIGIBILITY_STATUSES),
+        reason: z.string().optional(),
+      })
+      .optional(),
+  })
+  .optional();
+
+function renderBoardResult(): { output_path: string; markdown_path: string } {
+  const { htmlPath, mdPath } = renderBoard();
+  return { output_path: htmlPath, markdown_path: mdPath };
+}
+
 server.registerTool(
   "render_resume",
   {
     description:
-      "Render a CV Markdown file (written by playbooks/cv-universal.md or playbooks/cv-targeted.md) " +
-      "to styled HTML, and to PDF too (via a headless Chromium print step, unless that fails). " +
-      "Deterministic formatting -- never hand-produce styled HTML/PDF-like output yourself instead " +
-      "of calling this. Returns the paths actually written.",
+      "Render a CV Markdown file to styled HTML and PDF. Returns the written paths; pdf_path is null if PDF rendering fails.",
     inputSchema: {
       markdown_path: z.string(),
       style: z.enum(rendering.RESUME_STYLES).default("default"),
@@ -101,11 +93,7 @@ server.registerTool(
   "render_cover_letter",
   {
     description:
-      "Render a cover letter draft (written by playbooks/cover-letter.md) to a plain .txt file, " +
-      "styled HTML, and PDF too (via a headless Chromium print step, unless that fails). The .txt " +
-      "output matters specifically because some application forms have a file-upload field for the " +
-      "cover letter instead of a text box -- chat text alone isn't attachable. Returns the paths " +
-      "actually written.",
+      "Render a cover letter Markdown file to plain text, styled HTML, and PDF. Returns the written paths; pdf_path is null if PDF rendering fails.",
     inputSchema: {
       markdown_path: z.string(),
       title: z.string().optional(),
@@ -142,27 +130,14 @@ server.registerTool(
   "score_fit",
   {
     description:
-      "Deterministically score a fitment assessment -- a fixed formula weighted by each requirement " +
-      "cluster's importance/evidence/blocking -- and render it as Markdown, grouped by evidence state " +
-      "(Major gaps / Minor gaps / Transferable / Strong overlap, then risk/appeal). See scripts/" +
-      "score_fit.ts's module docstring for exactly what each cluster object needs. Never compute or " +
-      "state this score yourself -- that's what this tool exists to replace, see playbooks/fitment.md.",
+      "Score a structured fitment assessment and return score, fit_category, eligibility, and rendered Markdown.",
     inputSchema: {
       job_summary: z.string(),
       clusters: z.array(z.record(z.string(), z.unknown())),
       risk: z.string().default(""),
       appeal: z.string().default(""),
       fit_category: z.string().default("unclear"),
-      eligibility: z
-        .object({
-          location: z
-            .object({
-              status: z.enum(LOCATION_ELIGIBILITY_STATUSES),
-              reason: z.string().optional(),
-            })
-            .optional(),
-        })
-        .optional(),
+      eligibility: eligibilitySchema,
     },
   },
   async ({ job_summary, clusters, risk, appeal, fit_category, eligibility }): Promise<CallToolResult> => {
@@ -174,7 +149,7 @@ server.registerTool(
       fit_category,
       eligibility,
     };
-    return respond(scoreFit.render(assessment));
+    return respond(scoreFit.evaluate(assessment));
   }
 );
 
@@ -182,18 +157,7 @@ server.registerTool(
   "scout_fetch",
   {
     description:
-      "Fetch public ATS/job-board postings, run the cheap prefilter + repost-collapse, and drop " +
-      "anything already in data/vacancies/seen.jsonl. Returns `candidates` -- postings worth the " +
-      "agent's own fitment judgment (see playbooks/scout.md), each with a `track_label` (which of " +
-      "data/sources.yaml's tracks it matched on title, or null if it only cleared the prefilter via " +
-      "the role_signals-only recall lane -- pass this straight through to vacancy_upsert, don't drop " +
-      "it) -- plus counts at each stage (fetched/survived_prefilter/collapsed/considered/returned/" +
-      "capped) and any per-source fetch errors. Does no judgment and writes nothing; call " +
-      "vacancy_mark_seen/vacancy_upsert per candidate after judging it. `feeds`, if given, restricts " +
-      "this run to that subset of data/sources.yaml's own `feeds:` list (e.g. the candidate asking " +
-      "for just the Ukrainian boards this time) -- an intersection, never a way to run a feed that " +
-      "isn't actually configured there; anything requested but not configured comes back in " +
-      "`ignored_feeds` instead of silently doing nothing. Omit to run every configured feed.",
+      "Fetch configured public job sources, prefilter and dedup postings, and return new candidates plus funnel counts and fetch errors.",
     inputSchema: {
       sources_path: z.string().optional(),
       feeds: z.array(z.string()).optional(),
@@ -209,15 +173,7 @@ server.registerTool(
   "resolve_vacancy_url",
   {
     description:
-      "Resolves one vacancy URL (not a search) into a candidate shaped exactly like one " +
-      "scout_fetch candidate (same fields, plus track_label) -- see playbooks/add-from-url.md. " +
-      "Only works for a URL from a source this repo already fetches precisely (greenhouse.io, " +
-      "lever.co, ashbyhq.com, recruitee.com, jobico.io); returns `matched: false` (not an error) " +
-      "for anything else, meaning fall back to your own fetch/read capability instead. On a " +
-      "match, `already_seen` is true if this exact posting is already in data/vacancies/" +
-      "seen.jsonl -- don't re-judge it, tell the candidate it's already been through this before. " +
-      "Does no judgment and writes nothing; feed the returned `candidate` through fitment.md + " +
-      "scout-record-outcomes.md exactly like a scout_fetch candidate.",
+      "Resolve one supported vacancy URL into a scout-shaped candidate. Returns matched=false for unsupported URL shapes.",
     inputSchema: {
       url: z.string(),
       sources_path: z.string().optional(),
@@ -233,11 +189,7 @@ server.registerTool(
   "vacancy_mark_seen",
   {
     description:
-      "Append one line to data/vacancies/seen.jsonl. Call this for EVERY scout_fetch candidate the " +
-      "agent actually judges, regardless of outcome -- it's what stops the same posting from being " +
-      "judged twice on a later scout run. For a `matched` outcome, also call vacancy_upsert to create " +
-      "the actual record (status starts at \"new\", not \"tracked\" -- that's a later, candidate-" +
-      "confirmed stage); for `rejected`, this call alone is the posting's only trace.",
+      "Append one judged posting outcome to data/vacancies/seen.jsonl.",
     inputSchema: {
       posting_id: z.string(),
       content_id: z.string(),
@@ -263,38 +215,58 @@ server.registerTool(
 );
 
 server.registerTool(
+  "record_scout_outcomes",
+  {
+    description:
+      "Record judged scout/add-from-url outcomes: append seen ledger entries, create matched vacancy folders, write fitment.md, and render the board if changed.",
+    inputSchema: {
+      min_fit_score: z.number().int().default(4),
+      render_board: z.boolean().default(true),
+      items: z.array(
+        z.object({
+          candidate: z.object({
+            posting_id: z.string(),
+            content_id: z.string(),
+            company: z.string(),
+            title: z.string(),
+            job_post_text: z.string(),
+            url: z.string().optional(),
+            apply_url: z.string().optional(),
+            location: z.string().optional(),
+            remote: z.boolean().optional(),
+            source: z.string().optional(),
+            posted_at: z.string().optional(),
+            track_label: z.string().nullable().optional(),
+          }),
+          fit: z.object({
+            score: z.number().int(),
+            fit_category: z.string(),
+            reason: z.string().optional(),
+            markdown: z.string(),
+            eligibility: eligibilitySchema,
+          }),
+        })
+      ),
+    },
+  },
+  async ({ min_fit_score, render_board, items }): Promise<CallToolResult> => {
+    const results = items.map((item) =>
+      vacancyStore.recordScoutOutcome({
+        candidate: item.candidate,
+        fit: item.fit,
+        minFitScore: min_fit_score,
+      })
+    );
+    const board = render_board && results.some((item) => item.outcome === "matched") ? renderBoardResult() : null;
+    return respond({ results, board });
+  }
+);
+
+server.registerTool(
   "vacancy_upsert",
   {
     description:
-      "Create or update data/vacancies/<slug>/ for one vacancy worth tracking -- record.yaml " +
-      "(metadata) plus posting.md (the posting's own text, written when `posting_text` is given). " +
-      "The slug is always derived deterministically -- never pass one in.\n\n" +
-      "`status` defaults to omitted, meaning \"no opinion\" -- an update call that omits it leaves " +
-      "the vacancy's current status exactly as it was (only defaults to \"new\" when creating a " +
-      "brand new record). Pass it explicitly whenever this call is actually meant to set/change " +
-      "status; a metadata-only refresh (attaching a document, updating fit) should leave it out " +
-      "entirely, never pass it \"just to be safe\" -- doing so would silently regress a " +
-      "tracked/applied/interview vacancy back to new.\n\n" +
-      "For a posting the SCOUT found: pass `posting_id`/`content_id` through exactly as scout_fetch " +
-      "returned them, `status=\"new\"`, and `track_label` too if scout_fetch's candidate had one " +
-      "(which track it matched in data/sources.yaml -- null is a valid answer, not an error, for a " +
-      "posting that only cleared the prefilter via the role_signals lane).\n\n" +
-      "For a posting the CANDIDATE pasted by hand (via playbooks/cover-letter.md, playbooks/" +
-      "cv-targeted.md, or a direct ask to track something): omit `posting_id`/`content_id` entirely " +
-      "-- they're computed automatically from company/title/posting_text/url, using the same " +
-      "hashing the scout uses, so a posting the scout already saw resolves to the same vacancy " +
-      "instead of a duplicate. Use `status=\"tracked\"`, not \"new\" -- the candidate already " +
-      "decided to act on it by asking for a document, there's no reason to route it through an " +
-      "unreviewed state it's already past.\n\n" +
-      "Calling this again for the same posting updates the same folder (and appends a " +
-      "status_history entry if `status` changed) rather than creating a duplicate -- and every " +
-      "enrichment argument (`location`, `remote`, `source`, `posted_at`, `track_label`, " +
-      "`fit_score`/`fit_category`/`fit_reason`, `eligibility_location_status`/`eligibility_location_reason`) you leave out of THIS call is left alone, not " +
-      "cleared -- so calling this again with just a status change, or just to attach a document, " +
-      "never erases fit data (or anything else) a previous call already recorded. Whatever gets " +
-      "generated for this vacancy (a targeted CV, a cover letter) should be written directly into " +
-      "this same folder -- never into data/cv/ or data/cover-letters/ for a vacancy that has one of " +
-      "these.",
+      "Create or update data/vacancies/<slug>/ record metadata and posting.md. Omitted enrichment fields preserve existing values.",
     inputSchema: {
       company: z.string(),
       title: z.string(),
@@ -347,48 +319,40 @@ server.registerTool(
   "vacancy_set_status",
   {
     description:
-      "Move a tracked vacancy to a new pipeline stage, appending one {status, at} entry to its " +
-      "status_history. No-op (no new history entry) if it's already at that status. `note`, if " +
-      "given, is stored on that history entry -- an EXPLICITLY OBSERVED reason/context for the " +
-      "move (what a rejection email said, that an interview was scheduled), never an inferred " +
-      "cause. Omit it when there's no stated reason; do not record a guess.",
+      "Set a vacancy pipeline status, append status_history on real transitions, and render the board.",
     inputSchema: {
       slug: z.string(),
       status: z.enum(vacancyStore.VALID_STATUSES),
       note: z.string().optional(),
     },
   },
-  async ({ slug, status, note }): Promise<CallToolResult> => respond(vacancyStore.setStatus(slug, status, note))
+  async ({ slug, status, note }): Promise<CallToolResult> => {
+    const record = vacancyStore.setStatus(slug, status, note);
+    return respond({ record, board: renderBoardResult() });
+  }
 );
 
 server.registerTool(
   "vacancy_set_archived",
   {
     description:
-      "Archive or unarchive a vacancy -- orthogonal to status, not a new pipeline stage. An " +
-      "archived vacancy is excluded from vacancy_list and render_board by default (nothing is " +
-      "deleted; pass include_archived to vacancy_list, or archived: false here, to bring it back). " +
-      "Use when the candidate wants stale/no-longer-relevant vacancies off the board without " +
-      "losing their history -- a rejected or skipped vacancy from months ago is the common case, " +
-      "but any status can be archived.",
+      "Set a vacancy archive flag and render the board.",
     inputSchema: {
       slug: z.string(),
       archived: z.boolean(),
     },
   },
-  async ({ slug, archived }): Promise<CallToolResult> => respond(vacancyStore.setArchived(slug, archived))
+  async ({ slug, archived }): Promise<CallToolResult> => {
+    const record = vacancyStore.setArchived(slug, archived);
+    return respond({ record, board: renderBoardResult() });
+  }
 );
 
 server.registerTool(
   "vacancy_attach_artifact",
   {
     description:
-      "Copies an existing file into data/vacancies/<slug>/ as <kind>.<its original extension> -- a " +
-      "vacancy folder's contents ARE its association with everything about it, so \"attaching\" " +
-      "means physically placing the file there, not recording a pointer. `kind` is a short " +
-      "caller-chosen label (e.g. \"cover_letter\", \"cv\"). For output you're generating fresh for " +
-      "an already-known vacancy, write directly into its folder instead of calling this -- this is " +
-      "for a file that already exists somewhere else. Returns the path actually written.",
+      "Copy an existing file into data/vacancies/<slug>/ as <kind>.<extension>. Returns the written path.",
     inputSchema: {
       slug: z.string(),
       kind: z.string(),
@@ -403,10 +367,7 @@ server.registerTool(
   "linkedin_searches",
   {
     description:
-      "Regenerate data/linkedin-searches.md -- ready-to-click LinkedIn Boolean search links (job " +
-      "board, feed posts, people search) built from data/sources.yaml's tracks. Pure URL generation, " +
-      "no fetching or scraping -- the candidate opens the resulting links themselves in their own " +
-      "logged-in browser. Returns the path written.",
+      "Regenerate data/linkedin-searches.md from data/sources.yaml tracks. Returns the written path.",
     inputSchema: {
       sources_path: z.string().optional(),
     },
@@ -422,14 +383,7 @@ server.registerTool(
   "vacancy_list",
   {
     description:
-      "List tracked vacancies (slug/status/company/title/fit_score/track_label/url/updated_at/" +
-      "location/archived/eligibility/files -- `files` is every filename actually present in that vacancy's " +
-      "folder), optionally filtered to one status. Excludes an archived vacancy (see " +
-      "vacancy_set_archived) unless include_archived is true. Doesn't include seen.jsonl's " +
-      "rejected-and-not-tracked entries -- use this for \"what am I actually pursuing,\" not a full " +
-      "history of everything the scout judged. For a human-readable overview, prefer `render_board` " +
-      "over hand-summarizing this list into a table yourself -- same data, real clickable links to " +
-      "every vacancy's files, no token cost.",
+      "List tracked vacancies with status, fit, URL, eligibility, archive flag, and files. Excludes archived vacancies unless requested.",
     inputSchema: {
       status: z.enum(vacancyStore.VALID_STATUSES).optional(),
       include_archived: z.boolean().optional(),
@@ -443,17 +397,7 @@ server.registerTool(
   "render_board",
   {
     description:
-      "Renders data/vacancies/'s current state as one static HTML dashboard -- grouped by status, " +
-      "sorted by fit score, with a clickable link to every file actually present in each vacancy's " +
-      "folder (fitment, posting, CV, cover letter, targeting plan) plus the original posting URL. An " +
-      "archived vacancy (see vacancy_set_archived) is left off the board by default -- pass " +
-      "include_archived to show everything anyway. No server -- the candidate opens the written " +
-      "file directly in a browser. Prefer this over reading every record.yaml yourself and " +
-      "hand-building a summary table: same underlying data as vacancy_list, but deterministic " +
-      "formatting and real navigable links, for free. Also writes a flat data/board.md twin next " +
-      "to it -- one table (status/fit/company/title/updated/slug/url), no embedded document text " +
-      "-- for handing to another agent to reconcile statuses against emails/correspondence. " +
-      "Returns both paths written (data/board.html + data/board.md by default).",
+      "Render data/board.html and data/board.md from current vacancy records. Excludes archived vacancies unless requested.",
     inputSchema: {
       output_path: z.string().optional(),
       include_archived: z.boolean().optional(),

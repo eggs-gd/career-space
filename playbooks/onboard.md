@@ -6,14 +6,16 @@ asks for anything else.
 Goal: produce `data/CV_GENERAL.md` (the Master CV — narrative evidence: achievements, recurring
 pattern, candidate-specific evidence interpretation notes, and voice material), `data/config.yaml`'s
 `shared:` block (professional identity, commercial directions, differentiators, core identity
-thesis, plus concrete facts: contacts, certifications, education, languages), and initial
-`data/role-profiles/*.md` from a conversation. Read
-`policies/generation-rules.md` first — everything you write here is held to it.
+thesis, plus concrete facts: contacts, certifications, education, languages), initial
+`data/role-profiles/*.md`, and a starter `data/strategy.md` (career direction, uncertainty
+included) from a conversation. Read `policies/generation-rules.md` first — everything you write
+here is held to it.
 
 If `data/CV_GENERAL.md` and `data/config.yaml` already exist, don't run onboarding from scratch.
-If `data/role-profiles/` is missing or empty, run only Step 5 from the existing Master CV/config.
-Otherwise ask whether the candidate wants to add something new (a recent role/project) or revise
-positioning, and go straight to that instead of re-interviewing everything.
+If `data/role-profiles/` is missing or empty, run only Step 5 from the existing Master CV/config;
+if `data/strategy.md` is missing, run only Step 5c. Otherwise ask whether the candidate wants to
+add something new (a recent role/project) or revise positioning, and go straight to that instead
+of re-interviewing everything.
 
 ## Step 0 — check your own setup, before asking the candidate anything
 
@@ -68,6 +70,15 @@ can:
   similar title (`shared.differentiators` — 3-6 short phrases, not a paragraph)? Any broader or
   aspirational title they've explicitly decided NOT to claim right now (`shared.
   rejected_broader_titles`)?
+- **Direction, if they don't have a target yet.** "I've got my CV, I don't really know where I
+  want to go" is a valid starting point — don't force a `professional_identity` they can't stand
+  behind. Instead ask what they've actually liked and disliked in past roles, what they'd take
+  vs. walk away from, whether they lean toward more technical depth or more people/delivery
+  ownership, startup vs. established. Uncertainty is a real answer here — "unsure between Tech
+  Lead and Engineering Manager" gets written down as an open question, not resolved by picking
+  the more impressive one. This feeds Step 5c's starter `data/strategy.md`; `shared.
+  professional_identity` can stay a short, honest best-guess list (or be left thin) until they
+  know.
 - **Gaps.** If something in the source material looks incomplete or ambiguous (a role with no
   clear scope, a number with no clear ownership), ask directly rather than filling it in with a
   plausible guess.
@@ -175,6 +186,35 @@ work from an existing one or define a new surface from scratch (`playbooks/surfa
 This is an invitation, not a workflow to start now. Note which surfaces they already have (from
 the `contacts` links and anything they mentioned), offer to pick one up whenever they want, and
 move on. If they only want job applications, that's fine — don't push.
+
+## Step 5c — write a starter `data/strategy.md`
+
+Onboarding produces this now, not `playbooks/prioritize.md` — a fresh candidate shouldn't have to
+stumble into vacancy prioritization for the system to learn where they want to go. Write plain
+prose (see `examples/onboarding/strategy.md` for shape), from what Step 2 gathered: the direction
+they're leaning, what they'd take vs. walk from, preferences to weigh, any hard constraint not
+already in `sources.yaml`.
+
+**Uncertainty is allowed to persist.** A valid starter is:
+
+```
+## Likely direction
+- interested in technical leadership, wants more ownership
+- unsure between Tech Lead and Engineering Manager
+
+## Avoid
+- pure people administration
+- narrow maintenance IC work
+
+## Open questions
+- management vs. technical leadership
+- startup vs. established company
+```
+
+Don't force `target_titles` or a resolved lane the candidate can't stand behind. `prioritize.md`,
+`surface-define.md`, and `reconcile.md` all read this file; an honest "still figuring it out" is
+far more useful to them than an invented certainty. Show it back, confirm, then note it will
+sharpen as real opportunities and market feedback come in.
 
 ## Step 6 — show files, ask for corrections before treating onboarding as done
 

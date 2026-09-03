@@ -34,9 +34,8 @@ For an existing board vacancy, don't call `vacancy_upsert` unless the candidate 
 text or URL that should update the record. If the existing status is `new` and the candidate is
 now asking for a CV or cover letter, call `vacancy_set_status(slug, "tracked")`.
 
-If this call created a record or changed a status, re-render the board (`render_board`) before
-handing back to the calling playbook -- see AGENTS.md's "A status or archive change is finalized
-by re-rendering the board". If nothing changed (existing vacancy, status already past `new`),
+If this call created a record or changed a status, use the returned board paths before handing
+back to the calling playbook. If nothing changed (existing vacancy, status already past `new`),
 leave the board alone.
 
 Never hand-create folders, never write `record.yaml` directly, and never write vacancy-specific

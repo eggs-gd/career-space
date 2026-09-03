@@ -63,6 +63,11 @@ them.
   capability is a graceful skip, not an error.
 - `status-change-renders-board.md` -- a "mark these as X" request; checks the agent re-renders
   the board once at the end without being asked and without asking.
+- `surface-no-leakage.md` -- generating a narrower surface for a broad-range candidate; checks
+  the output subtracts umbrella breadth that doesn't serve the surface's role, without
+  manufacturing artificial difference from siblings.
+- `onboard-unclear-direction.md` -- "I don't know what I want to do"; checks onboarding produces
+  an honest provisional `strategy.md` (open questions and all) that a later agent can use.
 
 ## Run history format
 

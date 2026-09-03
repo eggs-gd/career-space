@@ -5,10 +5,12 @@ any candidate-facing playbook, never read during normal execution; see `AGENTS.m
 split. Keep this current and terse -- a list of what exists and what's next, not a changelog; how
 and why each one was built lives in git history, not here.
 
-## Status as of 2026-09-01
+## Current Status
 
 **Built** (see `_sb/architecture.md` for how any of this actually works):
-- [x] Onboarding -- Master CV, config, and role profiles from a conversation.
+- [x] Onboarding -- Master CV, config, role profiles, and a starter `data/strategy.md` from a
+      conversation. A candidate who doesn't know their direction yet is a valid input -- the
+      strategy file persists the open questions instead of forcing target titles.
 - [x] Fitment check -- private, employer-side fit read against a pasted posting. Candidate-side
       suitability ("do I actually want this") is a separate, independent judgment -- see
       Prioritize below, never inferred from a fit score.
@@ -24,6 +26,10 @@ and why each one was built lives in git history, not here.
       Djinni / Upwork / Fiverr as canonical references; `surface-define.md` handles free-form
       surfaces (portfolio, personal site, GitHub README) and unknown platforms (agent researches
       + defines per-candidate, no code change). `update-surface.md` regenerates from evidence.
+      Projection-is-subtraction invariant: a narrower surface leaves out umbrella breadth that
+      doesn't serve its role (guards the observed leak where every surface converged to one
+      profile). Still open: change-propagation -- when strategy/evidence changes, which surfaces
+      are actually affected.
 - [x] Scout -- auto-fetch/filter/dedup postings from 14 job boards/aggregators (plus 4 supported
       per-company ATS types -- greenhouse/lever/ashby/recruitee, opt-in per company in
       `sources.yaml`), judged the same way as a pasted posting. `scout_fetch`'s `feeds` param can
@@ -80,6 +86,13 @@ and why each one was built lives in git history, not here.
    independently (right now a CV and cover letter for the same vacancy can select different
    evidence for the same requirement), and the framework's vacancy-specific validator criteria
    (retells the resume, no concrete why-this-company, doesn't use the vacancy's own vocabulary).
+2. **Skill hygiene + agent-contract coverage** -- review external agent-skill repos for
+   conventions, not content: short capability playbooks, explicit orchestrators, strict reference
+   routing, and regression prompts that prove a fresh agent follows the repo without chat history.
+   First pass: audit thick playbooks (`cv-targeted.md`, `scout.md`, `cover-letter.md`) for
+   extractable internal capabilities; add agent-contract prompts for the failure modes already
+   seen (`data/` boundary in Developer mode, no blind regeneration, no user-specific example
+   leakage, location-exception scoring).
 
 ## Later / maybe
 

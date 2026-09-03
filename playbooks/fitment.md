@@ -122,7 +122,7 @@ matching `scripts/score_fit.ts`'s documented input shape, then run:
 node scripts/dist/score_fit.js /tmp/fitment-<company>.json
 ```
 
-Either way, show the result to the candidate **verbatim, as the Markdown it already is** — headers,
+Either way, show the returned `markdown` to the candidate **verbatim** — headers,
 bold labels, horizontal rules, grouped by evidence state (Major gaps / Minor gaps / Transferable /
 Strong overlap, then risk/appeal). Paste it directly into your response; don't re-key it into your
 own prose or wrap it in a second, longer narrative underneath — this compact, structured view *is*
