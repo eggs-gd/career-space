@@ -182,14 +182,15 @@ export function renderCoverLetterHtml(draftText: string, title: string): string 
   return renderFlatTemplate("cover-letter/default.html.j2", title, bodyHtml);
 }
 
-// Display order -- most actionable/recent-attention stages first, terminal ones last. Doesn't
-// need to match VALID_STATUSES' own declaration order (that one's about lifecycle logic, this
-// one's about what a candidate scanning the board wants to see first).
+// Display order -- by how much the candidate needs to act on it now, not by pipeline stage.
+// Interview first (act now), then the to-do pile (tracked to apply, new to review), then applied
+// (waiting on them), then the terminal states. Doesn't need to match VALID_STATUSES' own
+// declaration order (that one's about lifecycle logic).
 const BOARD_STATUS_ORDER: ReadonlyArray<readonly [string, string]> = [
   ["interview", "Interview"],
-  ["applied", "Applied"],
   ["tracked", "Tracked"],
   ["new", "New"],
+  ["applied", "Applied"],
   ["rejected", "Rejected"],
   ["offer", "Offer"],
   ["skipped", "Skipped"],
