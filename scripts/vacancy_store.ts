@@ -468,7 +468,13 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   return record;
 }
 
-export function setStatus(slug: string, status: VacancyStatus): Rec {
+/** `note`, when given, is stored on the `status_history` entry for this transition (`{status, at,
+ * note}`) -- an **explicitly observed** reason or context for the move: what a rejection email
+ * actually said, that an interview was scheduled, a recruiter's stated requirement. Not an
+ * inferred cause ("probably too senior", "likely comp mismatch") -- omit inference entirely for
+ * now rather than record a guess as if it were fact. Free text; omit `note` when there's no
+ * stated reason. A no-op transition (status unchanged) records nothing, note or not. */
+export function setStatus(slug: string, status: VacancyStatus, note?: string): Rec {
   if (!isValidStatus(status)) {
     throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(status)}`);
   }
@@ -481,7 +487,9 @@ export function setStatus(slug: string, status: VacancyStatus): Rec {
   if (record.status !== status) {
     record.status = status;
     setdefault(record, "status_history", []);
-    record.status_history.push({ status, at: nowStr });
+    const entry: Rec = { status, at: nowStr };
+    if (note && note.trim()) entry.note = note.trim();
+    record.status_history.push(entry);
     record.updated_at = nowStr;
     writeYamlRecord(rpath, record);
   }
@@ -601,6 +609,7 @@ function cli(): void {
       "eligibility-location-status": { type: "string" },
       "eligibility-location-reason": { type: "string" },
       slug: { type: "string" },
+      note: { type: "string" },
       kind: { type: "string" },
       path: { type: "string" },
       // string, not boolean -- parseArgs's boolean type is presence-only (no way to pass
@@ -665,7 +674,7 @@ function cli(): void {
     if (!values.slug || !values.status || !isValidStatus(values.status)) {
       throw new VacancyStoreError(`set-status requires --slug and --status (one of ${VALID_STATUSES.join(", ")})`);
     }
-    result = setStatus(values.slug, values.status);
+    result = setStatus(values.slug, values.status, values.note);
   } else if (command === "set-archived") {
     if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
       throw new VacancyStoreError("set-archived requires --slug and --archived true|false");

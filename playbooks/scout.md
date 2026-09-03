@@ -66,6 +66,18 @@ for `data/config.yaml`). Ask about:
 Write the file, show it back, confirm before running Step 1. All values get lowercased/trimmed
 by the loader, so casing in the yaml doesn't matter.
 
+## Step 0.5 -- reconcile first, if the capability is there
+
+If an email capability is available (the `gmail` MCP server, or the host's own), run
+`playbooks/reconcile.md` before fetching — automatically, not as a question. It's read-only
+toward Gmail/Calendar and follows the normal status rules toward `record.yaml`, so it's the
+mechanical front of an already-started workflow, not a new decision (same reasoning as the
+renderer — see AGENTS.md's "A deterministic tool call is execution, not a decision"). Ask the
+candidate only where `reconcile.md` itself says to (ambiguous match, unclear transition or
+reason). If reconcile errors out, note it and continue to Step 1 — it never blocks a scout run.
+Skip this step entirely if there's no email capability. New scout finds have no correspondence
+yet, so reconciliation never touches them.
+
 ## Step 1 -- fetch
 
 Call `scout_fetch` (MCP tool, or `node scripts/dist/scout_fetch.js` if the server isn't connected).

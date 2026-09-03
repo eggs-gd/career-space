@@ -58,6 +58,12 @@ and why each one was built lives in git history, not here.
       file. No persisted score -- a live judgment each time, until real repeated use shows a
       stable enough pattern worth formalizing.
 - [x] Rendered CV/cover-letter output -- PDF/HTML with recruiter-facing filenames.
+- [x] Board reconciliation -- `playbooks/reconcile.md`. Reads Gmail/Calendar (Google's official
+      remote MCP servers, declared in the configs, host-composed -- no Google code here) as
+      read-only evidence, moves tracked vacancy statuses to match recruiter correspondence, and
+      stores the why on the `status_history` entry (`setStatus`'s optional `note`). Optional:
+      skips cleanly with no email capability. Offered by `scout.md` before a run. See
+      `docs/workspace.md` for the one-time Google Cloud + OAuth setup.
 
 ## Next steps, in order
 
@@ -77,15 +83,14 @@ and why each one was built lives in git history, not here.
 
 ## Later / maybe
 
-- **Market-feedback loop -- preserve outcomes before automating learning from them.** The model
-  today stops at `application`; the closed loop is `application -> market response -> learn ->
-  strategy / positioning / selection`. Near-term step is small: `record.yaml` has `status` /
-  `status_history` but no field for *why* a transition happened, so a signal like a recruiter
-  opening on a stack the CV doesn't evidence (a fitment miss) is lost. Decide whether status
-  transitions should also capture a known reason/signal (a `feedback:` field per vacancy, or a
-  `data/outcomes.md` log). Analysis/calibration is a later, separate step. Reference: career-ops'
-  `/outcome` + `calibrate.mjs`; full comparison and other prior-art pointers (outreach, posting
-  legitimacy, interview prep, evidence-provenance markers) in `_sb/ideas/career-ops-comparison.md`.
+- **Market-feedback loop -- learn from preserved outcomes.** The closed loop is `application ->
+  market response -> learn -> strategy / positioning / selection`. The capture half is done:
+  `reconcile.md` brings the market response in from email/calendar, and `setStatus`'s `note`
+  records the why on each transition. Still open: the *learn* step -- reading the accumulated
+  `status_history` notes for a pattern (a differentiator that keeps drawing rejections, a track
+  that never converts) and feeding it back into positioning / scout config. Analysis/calibration,
+  a separate step, not started. Reference: career-ops' `/outcome` + `calibrate.mjs`; other
+  prior-art pointers in `_sb/ideas/career-ops-comparison.md`.
 - **Per-company cap on how many postings one scout run surfaces.** One company posting 10+
   near-identical roles in one run burns that many judgment turns on what's really one decision.
   Worked around per-candidate via a `hard_exclude` entry in `data/sources.yaml` (reversible, not a

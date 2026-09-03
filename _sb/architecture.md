@@ -50,6 +50,10 @@ revealed was already `tracked`/`applied`). Both the MCP tool and the CLI default
 `None`, not `"new"` -- they call the exact same `vacancy_store`/`rendering` functions, specifically
 so the two interfaces can't drift the way they once did on this exact default.
 
+`setStatus` takes an optional `note` stored on the `status_history` entry it appends (`{status,
+at, note}`) -- the *why* behind a transition, e.g. a one-line market-feedback summary from
+`playbooks/reconcile.md`. Free text, never invented; a no-op transition records nothing.
+
 ## Scout pipeline
 
 `scout_fetch.ts`: fetch (13 sources, `scout_sources.ts`) -> prefilter (`scout_prefilter.ts`:

@@ -23,3 +23,11 @@ trap and the rule -- not the story.
 - Once content is approved, running a `career-space` renderer/tool is execution, not a new
   decision -- never ask "shall I render / regenerate the PDF now?". Confirm content changes, not
   tool runs.
+- Gmail/Calendar reconciliation is host-composed: the `gmail`/`google-calendar` MCP servers are
+  Google-hosted, never wrapped by a `career-space` tool. Email/calendar are read-only evidence;
+  `record.yaml` stays canonical. No `sync_gmail()`, no Gmail labels / Google Sheets as trackers.
+- `status_history.note` is an explicitly observed transition reason only (what the email said,
+  that an interview was booked). Never an inferred cause ("probably too senior") -- omit
+  inference. Keeps the field usable for the market-feedback loop instead of a speculation dump.
+- Scout auto-runs `reconcile.md` first when an email capability exists -- not a prompt. Reconcile
+  itself asks only on ambiguous matches. A reconcile error never blocks the fetch.
