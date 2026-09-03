@@ -132,3 +132,7 @@ cover-letter.md`, or `playbooks/cv-targeted.md`) rather than assuming which one 
 wants. If the candidate confirms one is worth pursuing (a plain "track this one" / "yes, go for
 it" is enough, no fixed phrase required), call `vacancy_set_status(slug, "tracked")` right then --
 nothing else in this playbook moves a record off `new` on its own.
+
+Then re-render the board (`render_board`) -- this run created new records and possibly moved some
+to `tracked`, so `data/board.html`/`board.md` are stale. Not a question, just the last step (see
+AGENTS.md's "A status or archive change is finalized by re-rendering the board").

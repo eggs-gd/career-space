@@ -23,6 +23,8 @@ trap and the rule -- not the story.
 - Once content is approved, running a `career-space` renderer/tool is execution, not a new
   decision -- never ask "shall I render / regenerate the PDF now?". Confirm content changes, not
   tool runs.
+- Every `vacancy_set_status` / `vacancy_set_archived` is finalized by `render_board` -- the board
+  is stale otherwise. Batch the changes, render once at the end, never ask.
 - Gmail/Calendar reconciliation is host-composed: the `gmail`/`google-calendar` MCP servers are
   Google-hosted, never wrapped by a `career-space` tool. Email/calendar are read-only evidence;
   `record.yaml` stays canonical. No `sync_gmail()`, no Gmail labels / Google Sheets as trackers.

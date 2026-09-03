@@ -54,4 +54,5 @@ never deletes anything and never touches `status`; it only controls whether `ren
 time is the common candidate for this -- worth mentioning as an option when the board's getting
 cluttered with old ones, not something to do unprompted. Unarchive the same way with `archived:
 false`, or pass `include_archived` to either tool to see everything, archived or not, in one
-pass.
+pass. After any archive change, re-render the board -- it's stale otherwise (see AGENTS.md's "A
+status or archive change is finalized by re-rendering the board").

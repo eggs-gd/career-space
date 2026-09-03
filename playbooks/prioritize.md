@@ -104,8 +104,10 @@ strategic bet, worth trying anyway; low fit + low suitability -> skip. When fitm
 Group/rank the answer around what was actually asked (a ranked top-N, "these N are safe to cut,"
 "here's where you're overqualified") — don't dump every judgment unordered and make the candidate
 re-sort it themselves. If the candidate confirms an action on the spot (drop one, prioritize
-another), that's `vacancy_set_status`/`vacancy_set_archived` (see `playbooks/board.md`) — this
-playbook doesn't write those itself, only reasons and recommends.
+another), that's `vacancy_set_status`/`vacancy_set_archived` (see `playbooks/board.md`), then
+`render_board` to finalize it — this playbook doesn't write those itself, only reasons and
+recommends, but once it does move a record the board follows (see AGENTS.md's "A status or
+archive change is finalized by re-rendering the board").
 
 **Don't persist these judgments to a new artifact yet.** This is a live judgment made fresh from
 `strategy.md` + the current board state every time it's asked, not a cache — the whole point of
