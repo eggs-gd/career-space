@@ -335,6 +335,14 @@ already happened, on the content. Ask again only when the content or the decisio
 changing. (A host that pops its own `Allow` prompt for the tool is separate — that's the host's
 sandbox, not something a playbook controls or should pre-empt with a question of its own.)
 
+**A status or archive change is finalized by re-rendering the board.** Any `vacancy_set_status` /
+`vacancy_set_archived` call leaves `data/board.html` and `data/board.md` stale, so regenerating
+them (`render_board`) is the last step of that change — without being asked and without asking, by
+the same rule as above. This holds however the change arose: a playbook (scout, add-from-url,
+reconcile), a direct "mark this one applied" from the candidate, or a batch of them — apply all
+the changes, then render once at the end. The only time not to is when the very next thing you'll
+do is another status change; render after the last one.
+
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `docs/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a change
 to this repo's own files: `docs/development.md`. Optional Gmail/Calendar reconciliation setup:

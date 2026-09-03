@@ -41,7 +41,9 @@ scout-found one -- never jump it straight to `tracked`.
 
 ## Step 4 -- tell the candidate
 
-Show the fitment result the same way `playbooks/fitment.md`'s own Step 3 does. If it matched,
+If it matched, a new `new` record now exists -- re-render the board (`render_board`) as the last
+step (see AGENTS.md's "A status or archive change is finalized by re-rendering the board"), not a
+question. Then show the fitment result the same way `playbooks/fitment.md`'s own Step 3 does, and
 mention the natural next steps (`playbooks/cv-targeted.md`, `playbooks/cover-letter.md`) the same
 way `playbooks/scout.md`'s Step 4 does. If it didn't clear `min_fit_score`, say so plainly -- it's
-logged in `seen.jsonl`, not lost, but no vacancy folder was created.
+logged in `seen.jsonl`, not lost, no vacancy folder was created, and the board is unchanged.

@@ -61,6 +61,8 @@ them.
 - `reconcile-boundary.md` -- a "reconcile my board with email" request; checks Gmail/Calendar
   stay read-only evidence (no labels/Sheets/drafts as trackers), and that a missing email
   capability is a graceful skip, not an error.
+- `status-change-renders-board.md` -- a "mark these as X" request; checks the agent re-renders
+  the board once at the end without being asked and without asking.
 
 ## Run history format
 
