@@ -16,11 +16,17 @@ comp floor, pure maintenance, wrong track); a `4/10` fit on the candidate's prim
 can be worth keeping as a long-shot. Fitment and this playbook are two independent judgments —
 independent enough that this one doesn't need fitment to exist at all; see Step 1.
 
-## Step 0 — `data/strategy.md` doesn't exist yet
+## Step 0 — `data/strategy.md`
 
-If missing, this is the first time this playbook runs — interview the candidate before doing
-anything else, same "ask, don't guess" spirit as `sources.yaml`/`config.yaml`'s own onboarding.
-Ask about, in plain conversation, not a form:
+Onboarding writes a starter `data/strategy.md` (`playbooks/onboard.md`'s Step 5c) — direction,
+preferences, and any open questions the candidate hasn't resolved. If it exists, read it and
+build on it here: fill in the track-level detail below, sharpen the open questions where real
+opportunities now give the candidate something concrete to react to. Don't re-interview from
+scratch.
+
+If it's genuinely missing (an older setup that predates Step 5c), interview the candidate before
+doing anything else, same "ask, don't guess" spirit as `sources.yaml`/`config.yaml`'s own
+onboarding. Ask about, in plain conversation, not a form:
 
 - **Which of their tracks (`data/sources.yaml`'s `tracks:`) actually matter, and how** — primary
   employment target, strong alternative, an asymmetric bet worth keeping regardless of odds, or

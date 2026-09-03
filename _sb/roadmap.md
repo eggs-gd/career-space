@@ -8,7 +8,9 @@ and why each one was built lives in git history, not here.
 ## Status as of 2026-09-01
 
 **Built** (see `_sb/architecture.md` for how any of this actually works):
-- [x] Onboarding -- Master CV, config, and role profiles from a conversation.
+- [x] Onboarding -- Master CV, config, role profiles, and a starter `data/strategy.md` from a
+      conversation. A candidate who doesn't know their direction yet is a valid input -- the
+      strategy file persists the open questions instead of forcing target titles.
 - [x] Fitment check -- private, employer-side fit read against a pasted posting. Candidate-side
       suitability ("do I actually want this") is a separate, independent judgment -- see
       Prioritize below, never inferred from a fit score.
@@ -24,6 +26,10 @@ and why each one was built lives in git history, not here.
       Djinni / Upwork / Fiverr as canonical references; `surface-define.md` handles free-form
       surfaces (portfolio, personal site, GitHub README) and unknown platforms (agent researches
       + defines per-candidate, no code change). `update-surface.md` regenerates from evidence.
+      Projection-is-subtraction invariant: a narrower surface leaves out umbrella breadth that
+      doesn't serve its role (guards the observed leak where every surface converged to one
+      profile). Still open: change-propagation -- when strategy/evidence changes, which surfaces
+      are actually affected.
 - [x] Scout -- auto-fetch/filter/dedup postings from 14 job boards/aggregators (plus 4 supported
       per-company ATS types -- greenhouse/lever/ashby/recruitee, opt-in per company in
       `sources.yaml`), judged the same way as a pasted posting. `scout_fetch`'s `feeds` param can

@@ -17,6 +17,10 @@ trap and the rule -- not the story.
   disagrees with how to build a career.
 - The strategic role a surface plays is user-specific and lives in `data/surfaces/<name>/context.md`
   -- derived from `data/strategy.md` + `shared:`, never assumed from the platform or another user.
+- Projection is subtraction: a narrower surface must leave out true/strong/umbrella-level themes
+  that don't serve its role -- else every surface converges back to one profile. Shared identity
+  recurring is fine; unrelated breadth riding the umbrella is leakage. Don't manufacture
+  differences between surfaces either.
 - Canonical `reference/surfaces/<name>.md` always wins over a private `data/surfaces/<name>/reference.md`.
 - A generated surface identity is checked against the user's direction + `context.md`, never against
   whichever tech cluster the Master CV has most evidence for.

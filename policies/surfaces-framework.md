@@ -98,6 +98,17 @@ selection, emphasis, abstraction level, terminology, and tone to the role this s
 this user. When an existing surface already communicates something well, keep it unless there's a
 concrete reason to change.
 
+**Projection is subtraction, not just emphasis.** A surface that carries everything the umbrella
+identity carries isn't a projection of it, it's a copy. A narrower surface is defined by what it
+deliberately leaves out as much as by what it leads with — content that's true, strong, and part
+of the umbrella identity but doesn't serve *this* surface's assigned role belongs on the surface
+whose role it does serve, not here. The test for a substantial theme on a narrower surface: does
+it serve this surface's role, or is it here only because it's true / strong / umbrella-level?
+Shared professional identity recurring across surfaces is expected and fine — that's not leakage;
+unrelated breadth riding along on the strength of the umbrella is. Don't manufacture differences
+between surfaces for their own sake either; the goal is each surface doing its own job, not
+looking distinct.
+
 ## Cross-surface technique
 
 - **A headline/title on a searchable surface is search positioning first.** Its job is to be
@@ -118,7 +129,9 @@ concrete reason to change.
 ## What `context.md` holds
 
 Committed positioning and content decisions needed to regenerate the surface — its strategic
-role, audience, emphasis, tone, and any pinned wording. Not presentation implementation that
+role, audience, emphasis, tone, any pinned wording, and the themes that deliberately don't belong
+here (at the topic level — "independent-lab and self-hosted-infra work is LinkedIn + portfolio,
+not this hiring surface" — never a sentence-by-sentence outline of the output). Not presentation implementation that
 belongs to the surface artifact itself (layout, fonts, navigation, screenshots, per-section HTML)
 — that lives in `output.md`. If `context.md` starts accumulating fields that describe how the
 artifact is built rather than what it should say, it's turning into a second `output.md`.
