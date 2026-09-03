@@ -348,13 +348,17 @@ server.registerTool(
   {
     description:
       "Move a tracked vacancy to a new pipeline stage, appending one {status, at} entry to its " +
-      "status_history. No-op (no new history entry) if it's already at that status.",
+      "status_history. No-op (no new history entry) if it's already at that status. `note`, if " +
+      "given, is stored on that history entry -- an EXPLICITLY OBSERVED reason/context for the " +
+      "move (what a rejection email said, that an interview was scheduled), never an inferred " +
+      "cause. Omit it when there's no stated reason; do not record a guess.",
     inputSchema: {
       slug: z.string(),
       status: z.enum(vacancyStore.VALID_STATUSES),
+      note: z.string().optional(),
     },
   },
-  async ({ slug, status }): Promise<CallToolResult> => respond(vacancyStore.setStatus(slug, status))
+  async ({ slug, status, note }): Promise<CallToolResult> => respond(vacancyStore.setStatus(slug, status, note))
 );
 
 server.registerTool(

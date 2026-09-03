@@ -58,6 +58,9 @@ them.
   playbook; checks a fresh agent reuses the normal primitives without mutating `sources.yaml`,
   misusing `scout_fetch`, or ledgering rejects. A repeated failure here is what would justify
   formalizing the case.
+- `reconcile-boundary.md` -- a "reconcile my board with email" request; checks Gmail/Calendar
+  stay read-only evidence (no labels/Sheets/drafts as trackers), and that a missing email
+  capability is a graceful skip, not an error.
 
 ## Run history format
 

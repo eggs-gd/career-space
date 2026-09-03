@@ -212,6 +212,7 @@ ask riding along with an operator one) before you act on it.
 | candidate gives a bare vacancy URL, no pasted text | `playbooks/add-from-url.md` |
 | "згенеруй лінки для LinkedIn" / "linkedin search links" | `playbooks/linkedin-search.md` |
 | "покажи дошку" / "show me the board" / "what's the status of everything" | `playbooks/board.md` |
+| "звір дошку з поштою/календарем" / "did I hear back on anything" / "reconcile my board" | `playbooks/reconcile.md` |
 | "що з дошки викинути" / "дай топ 10" / "what should I actually pursue" | `playbooks/prioritize.md` |
 
 Some playbooks are internal capabilities, not direct candidate triggers. Orchestrator playbooks
@@ -245,12 +246,20 @@ setup), how you respond depends on what the message actually says:
   - **Developer** — skip the pitch; point them at `_sb/` and `docs/development.md`, and ask what
     they're here to work on.
 
-On a genuinely fresh setup, `design-patterns`/`ts-language` (see `docs/development.md`) will
-almost always show as failed to connect — nobody has them installed by
-default, and no MCP client offers to install a failed server automatically. If the candidate
-notices and asks, or if it seems worth heading off, say plainly: expected, harmless, dev-only
-tooling this job search doesn't need — `career-space` (after its own one-time setup, see "Scripts
-and the MCP server" below) is the only server that matters here.
+On a genuinely fresh setup, `design-patterns`/`ts-language` (see `docs/development.md`) and
+`gmail`/`google-calendar` (see `docs/workspace.md`) will almost always show as failed to connect
+— nobody has them installed by default, and no MCP client offers to install a failed server
+automatically. If the candidate notices and asks, or if it seems worth heading off, say plainly:
+expected and harmless — `design-patterns`/`ts-language` are dev-only tooling this job search
+doesn't need; `gmail`/`google-calendar` are optional and only power `playbooks/reconcile.md`
+(status reconciliation from recruiter email), skipped cleanly when absent. `career-space` (after
+its own one-time setup, see "Scripts and the MCP server" below) is the only server that matters
+for everything else.
+
+Reconciliation is a capability layered on top, never wired into career-space itself: the `gmail`/
+`google-calendar` MCP servers are Google-hosted and host-composed with `career-space`, not
+wrapped by it — there is no career-space tool that proxies Gmail. Gmail/Calendar are read-only
+evidence; `record.yaml` stays canonical. See `playbooks/reconcile.md`.
 
 ## Data layout
 
@@ -328,4 +337,5 @@ sandbox, not something a playbook controls or should pre-empt with a question of
 
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `docs/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a change
-to this repo's own files: `docs/development.md`.
+to this repo's own files: `docs/development.md`. Optional Gmail/Calendar reconciliation setup:
+`docs/workspace.md`.
