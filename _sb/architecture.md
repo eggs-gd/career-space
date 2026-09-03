@@ -6,8 +6,8 @@ Developer-mode map of the implementation behind that contract.
 ## Runtime Boundary
 
 Playbooks perform judgment and writing. `scripts/` performs deterministic work: fetching,
-filtering, scoring arithmetic, rendering, hashing, vacancy storage, and MCP tool wrapping.
-Runtime candidate data stays under gitignored `data/`.
+filtering, scoring arithmetic, rendering, hashing, vacancy storage, workspace validation, and MCP
+tool wrapping. Runtime candidate data stays under gitignored `data/`.
 
 ## Vacancy Identity
 
@@ -39,8 +39,8 @@ explicitly observed transition reason.
 `scout_fetch.ts` fetches configured public sources, applies deterministic prefiltering
 (`title_exclude`, `hard_exclude`, location gate, track/signals), collapses same-role reposts, and
 drops ids already present in `seen.jsonl`. Returned candidates are judged through
-`fitment.md` + `score_fit.ts`; `scout-record-outcomes.md` writes the seen ledger and creates
-folders for matched postings.
+`fitment.md` + `score_fit.ts`; `record_scout_outcomes` writes the seen ledger and creates folders
+for matched postings.
 
 The prefilter is intentionally cheap. Nuanced eligibility such as
 `location_exception_candidate` is classified during fitment and stored in the vacancy record.
@@ -56,7 +56,13 @@ Output filenames are derived from `data/config.yaml` and sibling `record.yaml` c
   highlighting, archive visibility, copy payloads, and location-exception badges.
 - `data/board.md`: flat table for handing board state to another agent.
 
-Status/archive changes must end by rendering the board once after the final change.
+MCP status/archive changes return fresh board paths.
+
+## Validation
+
+`workspace_validate.ts` reports deterministic `data/` layout and schema issues without generating
+artifacts. It validates config shape, scout source config, vacancy records, artifact placement,
+surface context files, and known enum values.
 
 ## MCP Server
 
@@ -67,7 +73,9 @@ Status/archive changes must end by rendering the board once after the final chan
 - `score_fit`
 - `scout_fetch`
 - `resolve_vacancy_url`
+- `vacancy_resolve`
 - `vacancy_mark_seen`
+- `record_scout_outcomes`
 - `vacancy_upsert`
 - `vacancy_set_status`
 - `vacancy_set_archived`
@@ -75,5 +83,6 @@ Status/archive changes must end by rendering the board once after the final chan
 - `vacancy_list`
 - `linkedin_searches`
 - `render_board`
+- `workspace_validate`
 
 The MCP handlers are thin wrappers over the same functions used by the CLI fallback.

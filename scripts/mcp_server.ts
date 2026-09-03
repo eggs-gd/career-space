@@ -21,6 +21,7 @@ import { generate as generateLinkedinSearches } from "./linkedin_searches";
 import { renderBoard } from "./render_board";
 import { runScout } from "./scout_fetch";
 import { resolveVacancyFromUrl } from "./resolve_vacancy_url";
+import { validateWorkspace } from "./workspace_validate";
 
 /** Expands a leading `~` to the home directory, then resolves to an absolute path. */
 function resolvePath(input: string): string {
@@ -452,6 +453,21 @@ server.registerTool(
     const resolved = output_path ? resolvePath(output_path) : undefined;
     const { htmlPath, mdPath } = renderBoard(resolved, include_archived);
     return respond({ output_path: htmlPath, markdown_path: mdPath });
+  }
+);
+
+server.registerTool(
+  "workspace_validate",
+  {
+    description:
+      "Validate career-space data layout and deterministic record/config schemas. Returns structured issues.",
+    inputSchema: {
+      data_dir: z.string().optional(),
+    },
+  },
+  async ({ data_dir }): Promise<CallToolResult> => {
+    const resolved = data_dir ? resolvePath(data_dir) : undefined;
+    return respond(validateWorkspace({ dataDir: resolved }));
   }
 );
 

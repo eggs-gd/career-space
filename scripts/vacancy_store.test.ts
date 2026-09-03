@@ -6,18 +6,27 @@
  *   every writer of `record.yaml` uses the same timestamp format), so this confirms that shape
  *   parses without throwing. Runs on every clone, including a clean OSS one with no `data/` at
  *   all.
+ * - Against injected temp directories -- stateful write paths without touching real candidate
+ *   data.
  * - Against the real `data/vacancies/` (gitignored, personal, only present on a maintainer's own
- *   machine) -- generic structural checks only (parses, every entry has the expected shape) so
- *   this file never needs a real company/vacancy name baked into committed source to stay useful
- *   -- skipped entirely when `data/` doesn't exist, same as a fresh clone/CI would see.
+ *   machine) -- generic structural checks only, skipped entirely when `data/` doesn't exist.
  */
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import * as yaml from "js-yaml";
-import { DATA_DIR, listVacancies } from "./vacancy_store";
+import {
+  DATA_DIR,
+  listVacancies,
+  readVacancyContext,
+  recordScoutOutcome,
+  resolveVacancy,
+  seenPath,
+  vacancyDir,
+} from "./vacancy_store";
 import { REPO_ROOT } from "./repo_paths";
 
 // Not `__dirname` -- at runtime that's `scripts/dist` (where this test itself compiles to), but
@@ -45,5 +54,152 @@ test("listVacancies reads real on-disk data without throwing, when present", { s
     // Same blanket timestamp-shape check as the synthetic fixture above, just against whatever
     // real records actually exist on this machine.
     if (v.updated_at) assert.match(v.updated_at, /^\d{4}-\d{2}-\d{2}T/);
+  }
+});
+
+function tempVacanciesDir(): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "career-space-vacancies-"));
+}
+
+function seenRows(root: string): Record<string, any>[] {
+  const file = seenPath({ dataDir: root });
+  if (!fs.existsSync(file)) return [];
+  return fs
+    .readFileSync(file, "utf-8")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as Record<string, any>);
+}
+
+function candidate(id: string) {
+  return {
+    posting_id: `posting-${id}`,
+    content_id: `content-${id}`,
+    company: "Acme",
+    title: `Platform Engineer ${id}`,
+    job_post_text: `Platform Engineer ${id}\n\nBuild internal platform systems.`,
+    url: `https://example.com/jobs/${id}`,
+    source: "fixture",
+    track_label: "technical",
+  };
+}
+
+test("resolveVacancy creates a tracked vacancy and returns artifact flags from an injected data dir", () => {
+  const root = tempVacanciesDir();
+  const created = resolveVacancy({
+    dataDir: root,
+    company: "Acme",
+    title: "Staff Engineer",
+    postingText: "Staff Engineer\n\nBuild platform systems.",
+    url: "https://example.com/jobs/staff",
+    status: "tracked",
+  });
+
+  assert.equal(created.changed, true);
+  assert.equal(created.context.record.status, "tracked");
+  assert.equal(created.context.posting_text, "Staff Engineer\n\nBuild platform systems.");
+  assert.equal(created.context.artifacts.posting, true);
+  assert.equal(created.context.artifacts.targeting_plan, false);
+  assert.ok(created.context.paths.record.startsWith(root));
+
+  fs.writeFileSync(created.context.paths.targeting_plan, "# Targeting plan\n", "utf-8");
+  const reread = readVacancyContext(created.context.slug, { dataDir: root });
+  assert.equal(reread.artifacts.targeting_plan, true);
+
+  const resolved = resolveVacancy({ dataDir: root, company: "Acme", title: "Staff Engineer" });
+  assert.equal(resolved.changed, false);
+  assert.equal(resolved.context.slug, created.context.slug);
+});
+
+test("recordScoutOutcome creates matched vacancies without duplicate seen rows", () => {
+  const root = tempVacanciesDir();
+  const result = recordScoutOutcome({
+    dataDir: root,
+    minFitScore: 4,
+    candidate: candidate("matched"),
+    fit: {
+      score: 8,
+      fit_category: "stretch_fit",
+      reason: "Strong enough to track.",
+      markdown: "## Match: 8/10\n",
+      eligibility: { location: { status: "open_remote" } },
+    },
+  });
+
+  assert.equal(result.outcome, "matched");
+  assert.ok(result.slug);
+  assert.equal(fs.existsSync(path.join(vacancyDir(result.slug!, { dataDir: root }), "fitment.md")), true);
+  assert.equal(seenRows(root).length, 1);
+  assert.equal(seenRows(root)[0]!.outcome, "matched");
+});
+
+test("recordScoutOutcome keeps rejected scout outcomes out of vacancy folders", () => {
+  const root = tempVacanciesDir();
+  const result = recordScoutOutcome({
+    dataDir: root,
+    minFitScore: 4,
+    candidate: candidate("rejected"),
+    fit: {
+      score: 3,
+      fit_category: "context_gap",
+      reason: "Too thin.",
+      markdown: "## Match: 3/10\n",
+      eligibility: { location: { status: "open_remote" } },
+    },
+  });
+
+  assert.equal(result.outcome, "rejected");
+  assert.equal(result.slug, null);
+  assert.equal(seenRows(root).length, 1);
+  assert.deepEqual(
+    fs.readdirSync(root).filter((entry) => entry !== "seen.jsonl"),
+    []
+  );
+});
+
+test("recordScoutOutcome applies deterministic match blockers and location exception rule", () => {
+  const cases = [
+    {
+      id: "craft",
+      fit: {
+        score: 9,
+        fit_category: "craft_mismatch",
+        markdown: "## Match: 9/10\n",
+        eligibility: { location: { status: "open_remote" as const } },
+      },
+      outcome: "rejected",
+    },
+    {
+      id: "hard-location",
+      fit: {
+        score: 8,
+        fit_category: "clean_fit",
+        markdown: "## Match: 8/10\n",
+        eligibility: { location: { status: "hard_location_block" as const } },
+      },
+      outcome: "rejected",
+    },
+    {
+      id: "location-exception",
+      fit: {
+        score: 8,
+        fit_category: "clean_fit",
+        markdown: "## Match: 8/10\n",
+        eligibility: { location: { status: "location_exception_candidate" as const } },
+      },
+      outcome: "matched",
+    },
+  ];
+
+  for (const item of cases) {
+    const root = tempVacanciesDir();
+    const result = recordScoutOutcome({
+      dataDir: root,
+      minFitScore: 4,
+      candidate: candidate(item.id),
+      fit: item.fit,
+    });
+    assert.equal(result.outcome, item.outcome);
   }
 });

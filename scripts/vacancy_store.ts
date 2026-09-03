@@ -16,6 +16,10 @@ import { REPO_ROOT } from "./repo_paths";
 
 export const DATA_DIR = path.join(REPO_ROOT, "data", "vacancies");
 
+export interface VacancyStoreScope {
+  dataDir?: string;
+}
+
 // A vacancy record's lifecycle -- see playbooks/scout.md for what triggers each transition.
 // `new` -> just surfaced by the scout, not yet reviewed by the candidate.
 // `tracked` -> candidate confirmed it's worth pursuing.
@@ -60,17 +64,21 @@ export function makeSlug(company: string, title: string, postingId: string): str
   return `${base.slice(0, 60)}-${postingId.slice(0, 8)}`;
 }
 
-export function vacancyDir(slug: string): string {
-  return path.join(DATA_DIR, slug);
+function dataDir(scope: VacancyStoreScope = {}): string {
+  return scope.dataDir ?? DATA_DIR;
 }
-export function recordPath(slug: string): string {
-  return path.join(vacancyDir(slug), "record.yaml");
+
+export function vacancyDir(slug: string, scope: VacancyStoreScope = {}): string {
+  return path.join(dataDir(scope), slug);
 }
-export function postingPath(slug: string): string {
-  return path.join(vacancyDir(slug), "posting.md");
+export function recordPath(slug: string, scope: VacancyStoreScope = {}): string {
+  return path.join(vacancyDir(slug, scope), "record.yaml");
 }
-export function seenPath(): string {
-  return path.join(DATA_DIR, "seen.jsonl");
+export function postingPath(slug: string, scope: VacancyStoreScope = {}): string {
+  return path.join(vacancyDir(slug, scope), "posting.md");
+}
+export function seenPath(scope: VacancyStoreScope = {}): string {
+  return path.join(dataDir(scope), "seen.jsonl");
 }
 
 function readYamlRecord(filePath: string): Rec {
@@ -88,8 +96,8 @@ function setdefault(obj: Rec, key: string, value: unknown): void {
 }
 
 /** Returns [postingIds, contentIds] already judged. Missing ids are skipped. */
-export function readSeenIds(): [Set<string>, Set<string>] {
-  const filePath = seenPath();
+export function readSeenIds(scope: VacancyStoreScope = {}): [Set<string>, Set<string>] {
+  const filePath = seenPath(scope);
   if (!fs.existsSync(filePath)) return [new Set(), new Set()];
   const postingIdSet = new Set<string>();
   const contentIdSet = new Set<string>();
@@ -115,12 +123,13 @@ export function markSeen(
     fitScore?: number | null;
     fitCategory?: string | null;
     reason?: string | null;
-  }
+  },
+  scope: VacancyStoreScope = {}
 ): void {
   if (opts.outcome !== "matched" && opts.outcome !== "rejected") {
     throw new VacancyStoreError(`outcome must be 'matched' or 'rejected', got ${JSON.stringify(opts.outcome)}`);
   }
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.mkdirSync(dataDir(scope), { recursive: true });
   const record: Rec = {
     posting_id: postingId,
     content_id: contentId,
@@ -132,7 +141,7 @@ export function markSeen(
   if (opts.fitScore !== undefined && opts.fitScore !== null) record.fit_score = opts.fitScore;
   if (opts.fitCategory !== undefined && opts.fitCategory !== null) record.fit_category = opts.fitCategory;
   if (opts.reason !== undefined && opts.reason !== null) record.reason = opts.reason;
-  fs.appendFileSync(seenPath(), JSON.stringify(record) + "\n", "utf-8");
+  fs.appendFileSync(seenPath(scope), JSON.stringify(record) + "\n", "utf-8");
 }
 
 export interface VacancySummary {
@@ -182,22 +191,23 @@ function summaryToDict(s: VacancySummary): Rec {
 }
 
 /** One level of `<slug>` directories under DATA_DIR, each checked for a `record.yaml`. */
-function listRecordPaths(): string[] {
-  if (!fs.existsSync(DATA_DIR)) return [];
+function listRecordPaths(scope: VacancyStoreScope = {}): string[] {
+  const root = dataDir(scope);
+  if (!fs.existsSync(root)) return [];
   const out: string[] = [];
-  for (const entry of fs.readdirSync(DATA_DIR, { withFileTypes: true })) {
+  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
     if (!entry.isDirectory()) continue;
-    const rpath = path.join(DATA_DIR, entry.name, "record.yaml");
+    const rpath = path.join(root, entry.name, "record.yaml");
     if (fs.existsSync(rpath)) out.push(rpath);
   }
   return out;
 }
 
 /** Find an existing vacancy by normalized company+title. Used only as an upsert fallback. */
-export function findByCompanyTitle(company: string, title: string): string | null {
-  if (!fs.existsSync(DATA_DIR)) return null;
+export function findByCompanyTitle(company: string, title: string, scope: VacancyStoreScope = {}): string | null {
+  if (!fs.existsSync(dataDir(scope))) return null;
   const target = `${slugify(company)}\0${slugify(title)}`;
-  for (const rpath of listRecordPaths()) {
+  for (const rpath of listRecordPaths(scope)) {
     const record = readYamlRecord(rpath);
     const key = `${slugify(record.company ?? "")}\0${slugify(record.title ?? "")}`;
     if (key === target) return record.slug ?? path.basename(path.dirname(rpath));
@@ -206,6 +216,7 @@ export function findByCompanyTitle(company: string, title: string): string | nul
 }
 
 export interface UpsertVacancyOptions {
+  dataDir?: string;
   postingId?: string;
   contentId?: string;
   company: string;
@@ -250,6 +261,7 @@ export interface ScoutOutcomeFit {
 }
 
 export interface RecordScoutOutcomeOptions {
+  dataDir?: string;
   candidate: ScoutOutcomeCandidate;
   fit: ScoutOutcomeFit;
   minFitScore: number;
@@ -293,6 +305,7 @@ export interface VacancyContext {
 }
 
 export interface ResolveVacancyOptions {
+  dataDir?: string;
   slug?: string;
   postingId?: string;
   contentId?: string;
@@ -317,6 +330,7 @@ export interface ResolveVacancyResult {
 /** Create or update a vacancy folder. Omitted enrichment fields mean "no opinion"; existing
  * values are preserved. `status: "new"` only applies to a new record. */
 export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
+  const scope: VacancyStoreScope = { dataDir: opts.dataDir };
   if (opts.status !== undefined && !isValidStatus(opts.status)) {
     throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(opts.status)}`);
   }
@@ -327,20 +341,20 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
 
   if (pid === undefined || cid === undefined) {
     idSource = "manual";
-    const existingSlug = findByCompanyTitle(opts.company, opts.title);
+    const existingSlug = findByCompanyTitle(opts.company, opts.title, scope);
     if (existingSlug !== null) {
-      const existing = readYamlRecord(recordPath(existingSlug));
+      const existing = readYamlRecord(recordPath(existingSlug, scope));
       pid = existing.posting_id ?? pid;
       cid = existing.content_id ?? cid;
     }
     if (pid === undefined || cid === undefined) {
       [pid, cid] = postingIds.manualIds(opts.company, opts.title, opts.postingText ?? "", opts.url ?? "");
     }
-  } else if (!fs.existsSync(recordPath(makeSlug(opts.company, opts.title, pid)))) {
+  } else if (!fs.existsSync(recordPath(makeSlug(opts.company, opts.title, pid), scope))) {
     // Explicit ids do not merge onto records already known to be scout-created.
-    const existingSlug = findByCompanyTitle(opts.company, opts.title);
+    const existingSlug = findByCompanyTitle(opts.company, opts.title, scope);
     if (existingSlug !== null) {
-      const existing = readYamlRecord(recordPath(existingSlug));
+      const existing = readYamlRecord(recordPath(existingSlug, scope));
       if (existing.id_source !== "scout") {
         pid = existing.posting_id ?? pid;
         cid = existing.content_id ?? cid;
@@ -354,8 +368,8 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   }
 
   const slug = makeSlug(opts.company, opts.title, pid);
-  const vdir = vacancyDir(slug);
-  const rpath = recordPath(slug);
+  const vdir = vacancyDir(slug, scope);
+  const rpath = recordPath(slug, scope);
   const nowStr = now();
 
   let record: Rec;
@@ -382,14 +396,19 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
     };
     // New tracked vacancies are also scout-seen for future dedup.
     if (opts.markSeenOnCreate ?? true) {
-      markSeen(pid, cid, {
-        outcome: "matched",
-        company: opts.company,
-        title: opts.title,
-        fitScore: opts.fitScore,
-        fitCategory: opts.fitCategory,
-        reason: opts.fitReason,
-      });
+      markSeen(
+        pid,
+        cid,
+        {
+          outcome: "matched",
+          company: opts.company,
+          title: opts.title,
+          fitScore: opts.fitScore,
+          fitCategory: opts.fitCategory,
+          reason: opts.fitReason,
+        },
+        scope
+      );
     }
   }
 
@@ -430,7 +449,7 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   setdefault(record, "archived", false);
 
   fs.mkdirSync(vdir, { recursive: true });
-  if (opts.postingText) fs.writeFileSync(postingPath(slug), opts.postingText, "utf-8");
+  if (opts.postingText) fs.writeFileSync(postingPath(slug, scope), opts.postingText, "utf-8");
   writeYamlRecord(rpath, record);
   return record;
 }
@@ -441,19 +460,25 @@ function scoutOutcomeMatched(fit: ScoutOutcomeFit, minFitScore: number): boolean
 }
 
 export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedScoutOutcome {
+  const scope: VacancyStoreScope = { dataDir: opts.dataDir };
   const candidate = opts.candidate;
   const fit = opts.fit;
   const reason = fit.reason ?? "";
   const outcome = scoutOutcomeMatched(fit, opts.minFitScore) ? "matched" : "rejected";
 
-  markSeen(candidate.posting_id, candidate.content_id, {
-    outcome,
-    company: candidate.company,
-    title: candidate.title,
-    fitScore: fit.score,
-    fitCategory: fit.fit_category,
-    reason,
-  });
+  markSeen(
+    candidate.posting_id,
+    candidate.content_id,
+    {
+      outcome,
+      company: candidate.company,
+      title: candidate.title,
+      fitScore: fit.score,
+      fitCategory: fit.fit_category,
+      reason,
+    },
+    scope
+  );
 
   if (outcome === "rejected") {
     return {
@@ -487,9 +512,10 @@ export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedSco
     fitReason: reason,
     eligibility: fit.eligibility,
     markSeenOnCreate: false,
+    dataDir: opts.dataDir,
   });
   const slug = String(record.slug);
-  const fitmentPath = path.join(vacancyDir(slug), "fitment.md");
+  const fitmentPath = path.join(vacancyDir(slug, scope), "fitment.md");
   fs.writeFileSync(fitmentPath, fit.markdown, "utf-8");
 
   return {
@@ -504,12 +530,12 @@ export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedSco
   };
 }
 
-function vacancyPaths(slug: string): VacancyPaths {
-  const dir = vacancyDir(slug);
+function vacancyPaths(slug: string, scope: VacancyStoreScope = {}): VacancyPaths {
+  const dir = vacancyDir(slug, scope);
   return {
     dir,
-    record: recordPath(slug),
-    posting: postingPath(slug),
+    record: recordPath(slug, scope),
+    posting: postingPath(slug, scope),
     targeting_plan: path.join(dir, "targeting-plan.md"),
     cv: path.join(dir, "cv.md"),
     cover_letter: path.join(dir, "cover-letter.md"),
@@ -517,8 +543,8 @@ function vacancyPaths(slug: string): VacancyPaths {
   };
 }
 
-export function readVacancyContext(slug: string): VacancyContext {
-  const paths = vacancyPaths(slug);
+export function readVacancyContext(slug: string, scope: VacancyStoreScope = {}): VacancyContext {
+  const paths = vacancyPaths(slug, scope);
   if (!fs.existsSync(paths.record)) {
     throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)} at ${paths.record}`);
   }
@@ -539,13 +565,14 @@ export function readVacancyContext(slug: string): VacancyContext {
 }
 
 export function resolveVacancy(opts: ResolveVacancyOptions): ResolveVacancyResult {
+  const scope: VacancyStoreScope = { dataDir: opts.dataDir };
   let slug = opts.slug;
   let existing: Rec | null = null;
   if (slug !== undefined) {
-    existing = readYamlRecord(recordPath(slug));
+    existing = readYamlRecord(recordPath(slug, scope));
   } else if (opts.company && opts.title) {
-    slug = findByCompanyTitle(opts.company, opts.title) ?? undefined;
-    if (slug !== undefined) existing = readYamlRecord(recordPath(slug));
+    slug = findByCompanyTitle(opts.company, opts.title, scope) ?? undefined;
+    if (slug !== undefined) existing = readYamlRecord(recordPath(slug, scope));
   }
 
   let changed = false;
@@ -575,14 +602,15 @@ export function resolveVacancy(opts: ResolveVacancyOptions): ResolveVacancyResul
         postingText: opts.postingText ?? "",
         status: opts.status,
         trackLabel: opts.trackLabel ?? existing.track_label ?? undefined,
+        dataDir: opts.dataDir,
       });
       slug = String(record.slug);
       changed = true;
     } else if (opts.status !== undefined && opts.status !== "new" && existing.status !== opts.status) {
-      setStatus(slug, opts.status);
+      setStatus(slug, opts.status, undefined, scope);
       changed = true;
     }
-    return { context: readVacancyContext(slug), changed };
+    return { context: readVacancyContext(slug, scope), changed };
   }
 
   if (!opts.company || !opts.title || !opts.postingText) {
@@ -603,16 +631,17 @@ export function resolveVacancy(opts: ResolveVacancyOptions): ResolveVacancyResul
     postingText: opts.postingText,
     status: opts.status,
     trackLabel: opts.trackLabel,
+    dataDir: opts.dataDir,
   });
-  return { context: readVacancyContext(String(record.slug)), changed: true };
+  return { context: readVacancyContext(String(record.slug), scope), changed: true };
 }
 
 /** `note` is stored only on a real status transition, and only for an explicitly observed reason. */
-export function setStatus(slug: string, status: VacancyStatus, note?: string): Rec {
+export function setStatus(slug: string, status: VacancyStatus, note?: string, scope: VacancyStoreScope = {}): Rec {
   if (!isValidStatus(status)) {
     throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(status)}`);
   }
-  const rpath = recordPath(slug);
+  const rpath = recordPath(slug, scope);
   if (!fs.existsSync(rpath)) {
     throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)} at ${rpath}`);
   }
@@ -631,8 +660,8 @@ export function setStatus(slug: string, status: VacancyStatus, note?: string): R
 }
 
 /** Archive visibility is orthogonal to pipeline status. */
-export function setArchived(slug: string, archived: boolean): Rec {
-  const rpath = recordPath(slug);
+export function setArchived(slug: string, archived: boolean, scope: VacancyStoreScope = {}): Rec {
+  const rpath = recordPath(slug, scope);
   if (!fs.existsSync(rpath)) {
     throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)} at ${rpath}`);
   }
@@ -646,19 +675,19 @@ export function setArchived(slug: string, archived: boolean): Rec {
 }
 
 /** Copy an existing artifact into a vacancy folder. Fresh generated artifacts should be written there directly. */
-export function attachArtifact(slug: string, kind: string, sourcePathStr: string): { path: string } {
-  if (!fs.existsSync(recordPath(slug))) {
+export function attachArtifact(slug: string, kind: string, sourcePathStr: string, scope: VacancyStoreScope = {}): { path: string } {
+  if (!fs.existsSync(recordPath(slug, scope))) {
     throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)}`);
   }
   const source = path.resolve(sourcePathStr.replace(/^~/, process.env.HOME ?? "~"));
   if (!fs.existsSync(source)) {
     throw new VacancyStoreError(`No file at ${source}`);
   }
-  const dest = path.join(vacancyDir(slug), `${kind}${path.extname(source)}`);
+  const dest = path.join(vacancyDir(slug, scope), `${kind}${path.extname(source)}`);
   fs.copyFileSync(source, dest);
-  const record = readYamlRecord(recordPath(slug));
+  const record = readYamlRecord(recordPath(slug, scope));
   record.updated_at = now();
-  writeYamlRecord(recordPath(slug), record);
+  writeYamlRecord(recordPath(slug, scope), record);
   return { path: dest };
 }
 
@@ -666,14 +695,15 @@ export function attachArtifact(slug: string, kind: string, sourcePathStr: string
  * every normal listing/board render unless a caller explicitly asks to see it too. This is the
  * one place that default lives; `render_board.ts` relies on it rather than filtering again
  * itself. */
-export function listVacancies(status?: string, opts: { includeArchived?: boolean } = {}): Rec[] {
+export function listVacancies(status?: string, opts: { includeArchived?: boolean; dataDir?: string } = {}): Rec[] {
   if (status !== undefined && !isValidStatus(status)) {
     throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(status)}`);
   }
   const includeArchived = opts.includeArchived ?? false;
-  if (!fs.existsSync(DATA_DIR)) return [];
+  const scope: VacancyStoreScope = { dataDir: opts.dataDir };
+  if (!fs.existsSync(dataDir(scope))) return [];
   const summaries: VacancySummary[] = [];
-  for (const rpath of listRecordPaths().sort()) {
+  for (const rpath of listRecordPaths(scope).sort()) {
     const record = readYamlRecord(rpath);
     if (status !== undefined && record.status !== status) continue;
     if (!includeArchived && record.archived) continue;

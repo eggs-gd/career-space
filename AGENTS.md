@@ -212,6 +212,7 @@ ask riding along with an operator one) before you act on it.
 | candidate gives a bare vacancy URL, no pasted text | `playbooks/add-from-url.md` |
 | "згенеруй лінки для LinkedIn" / "linkedin search links" | `playbooks/linkedin-search.md` |
 | "покажи дошку" / "show me the board" / "what's the status of everything" | `playbooks/board.md` |
+| "перевір workspace/data" / "validate workspace" / "is my data layout ok" | `playbooks/workspace-validate.md` |
 | "звір дошку з поштою/календарем" / "did I hear back on anything" / "reconcile my board" | `playbooks/reconcile.md` |
 | "що з дошки викинути" / "дай топ 10" / "what should I actually pursue" | `playbooks/prioritize.md` |
 
@@ -322,10 +323,10 @@ facts as facts about the current candidate; runtime workflows read `data/`.
 The deterministic, non-LLM steps in this repo — real code, not something a playbook should ask
 you to eyeball or improvise: rendering a CV/cover letter to HTML/PDF, the fitment score's fixed
 weighted formula, the scout's fetch/dedup pipeline, vacancy resolving, scout outcome recording,
-vacancy record read/write, and board rendering. Prefer the MCP tools when the `career-space` server is connected
-(typed arguments, no shell-escaping a JSON blob). If it isn't, use the CLI fallback documented in
-each script's own docstring. Don't hand-produce a styled document, fit score, board, or scout
-ledger write instead of calling the relevant tool/script.
+vacancy record read/write, board rendering, and workspace validation. Prefer the MCP tools when
+the `career-space` server is connected (typed arguments, no shell-escaping a JSON blob). If it
+isn't, use the CLI fallback documented in each script's own docstring. Don't hand-produce a styled
+document, fit score, board, or scout ledger write instead of calling the relevant tool/script.
 
 **A deterministic tool call is execution, not a decision.** Once the candidate has approved the
 content, or asked for a workflow whose output is an artifact, running the renderer — or any other

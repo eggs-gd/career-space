@@ -43,6 +43,10 @@ fitment/CV score is a signal, not a bug, ...) exist because a real generation on
 wrong — they're not aspirational. If its output contradicts one of them, say so directly; that's
 a bug in how it followed its own instructions, not a matter of taste.
 
+If the workspace itself looks inconsistent — broken vacancy records, odd `data/` layout, missing
+surface context, or config shape problems — ask the agent to validate the workspace. It runs the
+deterministic checker and reports concrete paths and schema issues.
+
 ---
 
 ## Contributing
