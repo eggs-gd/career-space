@@ -50,7 +50,8 @@ and why each one was built lives in git history, not here.
       application. Each row has a "Copy"
       button -- header only (title/company/URL/status/fit/slug), not the posting text, meant for
       pasting into a new chat so an agent can resolve the rest itself. Status chips double as
-      jump-to-section nav when JavaScript runs.
+      jump-to-section nav when JavaScript runs. A flat `board.md` twin is written alongside (one
+      table, no embedded doc text) for handing to another agent.
 - [x] Prioritize -- `playbooks/prioritize.md`. Candidate-side "do I actually want this," reasoned
       against `data/strategy.md` (plain prose -- blockers/preferences/strategic-alignment/
       exceptions). Independent of fitment in both directions -- works with or without a fitment on

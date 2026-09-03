@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Renders the current state of `data/vacancies/` as one static HTML dashboard -- grouped by
+ * Renders the current state of `data/vacancies/` as a static HTML dashboard -- grouped by
  * status, sorted by fit score, with a real clickable link to every file present in each
  * vacancy's folder (fitment, posting, CV, cover letter, targeting plan) plus the original
  * posting URL. No server: open the written file directly in a browser. Deterministic formatting
@@ -9,10 +9,14 @@
  * thing this already does in one call, and produces plain text, not something with real
  * clickable links to the rest of what's in each vacancy's folder).
  *
+ * Also writes a flat `board.md` twin next to it -- one table (status/fit/company/title/updated/
+ * slug/url), no embedded document text -- for handing to another agent to reconcile statuses
+ * against emails/correspondence.
+ *
  * Usage: node scripts/dist/render_board.js [--output data/board.html] [--include-archived]
  *
- * Writes `data/board.html` by default -- right next to `data/vacancies/`, so its links to
- * `vacancies/<slug>/<file>` resolve without any path juggling.
+ * Writes `data/board.html` (and `data/board.md`) by default -- right next to `data/vacancies/`,
+ * so the HTML's links to `vacancies/<slug>/<file>` resolve without any path juggling.
  */
 
 import * as fs from "fs";
@@ -41,20 +45,24 @@ function loadLocalKeywords(): string[] {
 
 /** `includeArchived` defaults to false, matching `vacancyStore.listVacancies`'s own default --
  * an archived vacancy (see `vacancy_store.setArchived`) stays off the board unless explicitly
- * asked for. */
-export function renderBoard(outputPath?: string, includeArchived = false): string {
+ * asked for. Writes both `board.html` and its flat `board.md` twin; `mdPath` is `htmlPath` with
+ * a `.md` extension (so `--output foo.html` also writes `foo.md`). */
+export function renderBoard(outputPath?: string, includeArchived = false): { htmlPath: string; mdPath: string } {
   const vacancies = vacancyStore.listVacancies(undefined, { includeArchived });
   const html = rendering.renderBoardHtml(vacancies, { localKeywords: loadLocalKeywords() });
-  const resolvedOutput = outputPath ?? DEFAULT_OUTPUT_PATH;
-  fs.mkdirSync(path.dirname(resolvedOutput), { recursive: true });
-  fs.writeFileSync(resolvedOutput, html, "utf-8");
-  return resolvedOutput;
+  const md = rendering.renderBoardMd(vacancies);
+  const htmlPath = outputPath ?? DEFAULT_OUTPUT_PATH;
+  const mdPath = htmlPath.replace(/\.html?$/i, "") + ".md";
+  fs.mkdirSync(path.dirname(htmlPath), { recursive: true });
+  fs.writeFileSync(htmlPath, html, "utf-8");
+  fs.writeFileSync(mdPath, md, "utf-8");
+  return { htmlPath, mdPath };
 }
 
 function main(): void {
   const { values } = parseArgs({ options: { output: { type: "string" }, "include-archived": { type: "boolean" } } });
-  const outPath = renderBoard(values.output ? path.resolve(values.output) : undefined, values["include-archived"]);
-  console.log(`Wrote ${outPath}`);
+  const { htmlPath, mdPath } = renderBoard(values.output ? path.resolve(values.output) : undefined, values["include-archived"]);
+  console.log(`Wrote ${htmlPath} and ${mdPath}`);
 }
 
 if (require.main === module) {

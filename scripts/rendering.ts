@@ -231,6 +231,48 @@ function formatGeneratedAt(d: Date): string {
 
 type Rec = Record<string, any>;
 
+/** A flat Markdown twin of the board -- one table, no embedded document bodies. Built for handing
+ * to another agent (or pasting into a chat): it can match a vacancy by company + title and
+ * reconcile status against the candidate's own emails/correspondence, without the HTML board's
+ * inline posting/CV/fitment text. Same `listVacancies()` input and the same status-order /
+ * fit-desc / company sort as `renderBoardHtml`. */
+export function renderBoardMd(vacancies: Rec[]): string {
+  const order = new Map(BOARD_STATUS_ORDER.map(([status], i) => [status, i] as const));
+  const rows = [...vacancies].sort((a, b) => {
+    const oa = order.get(a.status ?? "new") ?? BOARD_STATUS_ORDER.length;
+    const ob = order.get(b.status ?? "new") ?? BOARD_STATUS_ORDER.length;
+    if (oa !== ob) return oa - ob;
+    const fa = -(a.fit_score ?? 0);
+    const fb = -(b.fit_score ?? 0);
+    if (fa !== fb) return fa - fb;
+    return String(a.company ?? "").localeCompare(String(b.company ?? ""));
+  });
+
+  const cell = (v: unknown): string => String(v ?? "").replace(/\s*\n\s*/g, " ").replace(/\|/g, "\\|").trim();
+
+  const lines = [
+    "# Vacancy board",
+    "",
+    `${rows.length} vacancies · generated ${formatGeneratedAt(new Date())}`,
+    "",
+    "Flat list for handing to another agent: match a row by company + title, then reconcile its",
+    "status against your own emails and correspondence. No posting / CV / cover-letter / fitment",
+    "text here -- those stay in each vacancy's own folder (`data/vacancies/<slug>/`).",
+    "",
+    "| Status | Fit | Company | Title | Updated | Slug | URL |",
+    "|---|---|---|---|---|---|---|",
+  ];
+  for (const v of rows) {
+    const status = cell(v.status ?? "new") + (v.archived ? " · archived" : "");
+    const fit = v.fit_score !== null && v.fit_score !== undefined ? String(v.fit_score) : "–";
+    lines.push(
+      `| ${status} | ${fit} | ${cell(v.company)} | ${cell(v.title)} | ${cell(boardUpdatedShort(v.updated_at ?? ""))} | ${cell(v.slug)} | ${cell(v.url)} |`
+    );
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
 /** Renders `data/vacancies/`'s current state -- grouped by status, sorted by fit score within
  * each group (ties broken by company name, not fetch order -- this is a human-scanned view,
  * alphabetical-within-a-score-tier is more useful than "whatever order the filesystem listing

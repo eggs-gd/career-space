@@ -446,8 +446,10 @@ server.registerTool(
       "include_archived to show everything anyway. No server -- the candidate opens the written " +
       "file directly in a browser. Prefer this over reading every record.yaml yourself and " +
       "hand-building a summary table: same underlying data as vacancy_list, but deterministic " +
-      "formatting and real navigable links, for free. Returns the path written (data/board.html by " +
-      "default).",
+      "formatting and real navigable links, for free. Also writes a flat data/board.md twin next " +
+      "to it -- one table (status/fit/company/title/updated/slug/url), no embedded document text " +
+      "-- for handing to another agent to reconcile statuses against emails/correspondence. " +
+      "Returns both paths written (data/board.html + data/board.md by default).",
     inputSchema: {
       output_path: z.string().optional(),
       include_archived: z.boolean().optional(),
@@ -455,7 +457,8 @@ server.registerTool(
   },
   async ({ output_path, include_archived }): Promise<CallToolResult> => {
     const resolved = output_path ? resolvePath(output_path) : undefined;
-    return respond({ output_path: renderBoard(resolved, include_archived) });
+    const { htmlPath, mdPath } = renderBoard(resolved, include_archived);
+    return respond({ output_path: htmlPath, markdown_path: mdPath });
   }
 );
 

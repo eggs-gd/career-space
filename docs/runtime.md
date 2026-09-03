@@ -44,10 +44,11 @@ interface over it or over `score_fit.ts`'s scoring formula:
 - `scripts/linkedin_searches.ts` — writes `data/linkedin-searches.md`: LinkedIn Boolean search
   deep-links built from `data/sources.yaml`'s `tracks`. No fetching, no network call at all --
   see `playbooks/linkedin-search.md` for why this is deliberately not part of the scout.
-- `scripts/render_board.ts` — writes `data/board.html`: every vacancy grouped by status, sorted
-  by fit score, with real clickable links into each vacancy's folder. Static file, no server,
-  open it directly in a browser. Don't hand-summarize `data/vacancies/` into a table yourself
-  instead of calling this -- see `playbooks/board.md`.
+- `scripts/render_board.ts` — writes `data/board.html` (every vacancy grouped by status, sorted
+  by fit score, with real clickable links into each vacancy's folder) plus a flat `data/board.md`
+  twin (one table, no embedded doc text, for handing to another agent). Static files, no server.
+  Don't hand-summarize `data/vacancies/` into a table yourself instead of calling this -- see
+  `playbooks/board.md`.
 
 ## MCP vs. CLI
 

@@ -67,13 +67,15 @@ so scout and manual paths can't drift on what counts as "in scope."
 ## Dashboard rendering
 
 `render_board_html()` embeds every vacancy file's rendered content directly in the page inside
-native `<details>`/`<summary>` per file, not a real `<a href>` and not JavaScript. Both alternatives
-were tried first and both failed silently when opened inside a coding agent's own sandboxed
-local-file preview pane: that pane serves local HTML under a CSP of `script-src 'none'` (strips
-`<script>` entirely) and refuses even a same-page `#fragment` anchor as a disallowed top-frame
-navigation (confirmed directly via the exact CSP string and a console error naming the blocked
-navigation, not assumed). `<details>` needs neither a script nor a navigation to toggle, so
-there's nothing left for that sandbox to strip or block.
+native `<details>`/`<summary>` per file, not a real `<a href>` and not JavaScript. A coding
+agent's sandboxed local-file preview pane serves local HTML under a CSP of `script-src 'none'`
+(strips `<script>` entirely) and refuses even a same-page `#fragment` anchor as a disallowed
+top-frame navigation, so a JS toggle or an anchor link silently does nothing there; `<details>`
+needs neither a script nor a navigation to toggle.
+
+`render_board_md()` is the flat twin -- one Markdown table (status/fit/company/title/updated/slug/
+url), no embedded document text -- written alongside `board.html` for handing to another agent.
+`render_board.ts` writes both; `mdPath` is the html path with a `.md` extension.
 
 Raw HTML in a rendered file's source (e.g. a candidate-pasted posting that happened to include
 markup) is neutralized before embedding -- `<`/`&` get escaped, deliberately not `>` too, since

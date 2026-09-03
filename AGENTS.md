@@ -292,6 +292,8 @@ data/                           # gitignored, personal
                                  # linkedin-search.md -- regenerated, not hand-edited
   board.html                    # every vacancy, grouped by status, sorted by fit, with real
                                  # links into vacancies/ -- see playbooks/board.md, regenerated
+  board.md                      # flat one-table twin of board.html (no embedded doc text) --
+                                 # for handing to another agent; regenerated alongside board.html
 ```
 
 Nothing outside a playbook you're actively running should read or write under `data/` — don't

@@ -6,8 +6,9 @@ everything" -- the candidate wants an overview of every tracked vacancy, not one
 ## Step 1 -- render
 
 Call `render_board` (MCP tool, or `node scripts/dist/render_board.js` if the server isn't
-connected). It writes `data/board.html` -- every non-archived vacancy (see "Archiving" below),
-grouped by status, sorted by fit score. Each row shows: whatever files actually exist in that
+connected). It writes `data/board.html` and a flat `data/board.md` twin -- every non-archived
+vacancy (see "Archiving" below), grouped by status, sorted by fit score. Each HTML row shows:
+whatever files actually exist in that
 vacancy's folder (`fitment.md`, `posting.md`, `cv.md`, `cover-letter.md`, `targeting-plan.md`)
 behind a click-to-expand badge; a `📁 Folder` panel with `file://` links to every file in that
 vacancy's directory (for grabbing the CV/cover-letter files to attach to an application); a link
@@ -31,11 +32,13 @@ data without writing a file.
 
 ## Step 2 -- hand it back
 
-Tell the candidate the path and that it's a plain file -- open it directly in any browser, no
-server involved. Pull out one or two headline numbers in your own reply too (how many `new`, how
-many `applied` with no movement in a while, anything that jumps out) rather than just pointing at
-the file and stopping -- the page is for browsing/clicking through, the chat reply is for the
-one-sentence "here's what's going on."
+Tell the candidate both paths and that they're plain files -- `board.html` opens directly in any
+browser (no server), `board.md` is a flat one-table version (status/fit/company/title/updated/
+slug/url, no embedded document text) meant for pasting into another agent to reconcile statuses
+against emails/correspondence. Pull out one or two headline numbers in your own reply too (how
+many `new`, how many `applied` with no movement in a while, anything that jumps out) rather than
+just pointing at the file and stopping -- the page is for browsing/clicking through, the chat
+reply is for the one-sentence "here's what's going on."
 
 If the board's grown large enough that "what's tracked" stops answering "what's actually worth
 pursuing," mention `playbooks/prioritize.md` as the next step rather than assuming the candidate
