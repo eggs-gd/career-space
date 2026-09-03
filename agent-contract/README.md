@@ -54,6 +54,10 @@ them.
   density.
 - `render-is-execution.md` -- an approved artifact plus one exact edit; checks the agent
   re-renders through the MCP tool as execution, without asking permission to run it.
+- `ad-hoc-themed-hunt.md` -- a one-off themed search request, deliberately with no dedicated
+  playbook; checks a fresh agent reuses the normal primitives without mutating `sources.yaml`,
+  misusing `scout_fetch`, or ledgering rejects. A repeated failure here is what would justify
+  formalizing the case.
 
 ## Run history format
 

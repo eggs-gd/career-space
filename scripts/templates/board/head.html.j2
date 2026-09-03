@@ -238,6 +238,13 @@
     details.file > summary::-webkit-details-marker { display: none; }
     details.file > summary:hover { border-color: var(--accent); background: var(--bg-alt); }
     details.file[open] > summary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+    /* The "📁 Folder" badge, when a CV for this vacancy exists (rendered resume or cv.md). Only
+       the closed state is recoloured; open state keeps the shared dark styling above. */
+    details.file.has-cv:not([open]) > summary {
+      border-color: var(--doc);
+      color: var(--doc);
+      font-weight: 600;
+    }
     .vrow-files a.posting-link {
       padding: 2px 8px;
       border: 1px solid var(--line);

@@ -336,6 +336,9 @@ export function renderBoardHtml(
       const folderFiles = folderUrl
         ? files.map((name) => ({ name, url: pathToFileURL(path.join(vdir, name)).href }))
         : [];
+      // Highlight the Folder badge when a CV for this vacancy exists -- a rendered resume file
+      // (the attachable artifact) or, failing that, the `cv.md` source it came from.
+      const folderHasCv = files.some((f) => /_resume.*\.(pdf|html)$/i.test(f)) || files.includes("cv.md");
       const isLocal = matchesLocalKeywords(`${v.location ?? ""} ${postingRaw}`, localKeywords);
       const locationEligibility = v.eligibility?.location ?? null;
       const requiresLocationException = locationEligibility?.status === "location_exception_candidate";
@@ -354,7 +357,7 @@ export function renderBoardHtml(
         `Fitment: ${v.fit_score !== null && v.fit_score !== undefined ? `${v.fit_score}/10` : "not yet assessed"}`,
         `Vacancy ID: ${slug}`,
       ].join("\n");
-      const result: Rec = { ...v, slug, fileButtons, folderUrl, folderFiles, copyPayload, updatedShort: boardUpdatedShort(v.updated_at ?? ""), isLocal };
+      const result: Rec = { ...v, slug, fileButtons, folderUrl, folderFiles, folderHasCv, copyPayload, updatedShort: boardUpdatedShort(v.updated_at ?? ""), isLocal };
       result.requiresLocationException = requiresLocationException;
       result.locationExceptionReason = requiresLocationException ? locationEligibility.reason ?? "" : "";
       return result;
@@ -374,6 +377,7 @@ export function renderBoardHtml(
         const fitDisplay = v.fit_score !== null && v.fit_score !== undefined ? String(v.fit_score) : "–";
         const folderUrl: string = v.folderUrl ?? "";
         const folderFiles: Array<{ name: string; url: string }> = v.folderFiles ?? [];
+        const folderClass = v.folderHasCv ? "file has-cv" : "file";
         const fileButtonsHtml = (v.fileButtons as Array<{ label: string; contentHtml: string }>)
           .map(
             (f) =>
@@ -386,7 +390,7 @@ export function renderBoardHtml(
         // Same `<details class="file">` widget and per-row accordion group (`name="panel-<slug>"`)
         // as the Markdown badges. Links open in a new tab. See folderUrl's comment for the rest.
         const folderLinksHtml = folderUrl
-          ? `<details class="file" name="panel-${escapeHtml(String(v.slug))}"><summary>📁&nbsp;Folder</summary>` +
+          ? `<details class="${folderClass}" name="panel-${escapeHtml(String(v.slug))}"><summary>📁&nbsp;Folder</summary>` +
             `<div class="file-content folder-list">` +
             `<a href="${escapeHtml(folderUrl)}" target="_blank" rel="noopener">📂&nbsp;open folder&nbsp;&#8599;</a>` +
             folderFiles
