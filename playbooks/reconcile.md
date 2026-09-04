@@ -13,11 +13,29 @@ if the same evidence arrives another way later.
 evidence — never labelled, drafted into, or otherwise mutated here (those are separate, explicit
 asks).
 
-## Step 0 — is the capability there?
+## Step 0 — how are the observations arriving?
 
-Check for an email-search capability (the `gmail` MCP server, or whatever the host provides).
-Calendar is a bonus, not required. If there's no email capability: say reconciliation isn't set
-up (point to `docs/workspace.md`), and stop — this isn't a failure, just an unavailable option.
+An email/calendar capability being *visible* is not the same as it being *usable*. Sort out which
+case you're in before doing anything:
+
+- **A working email-read tool** — whatever the host provides: a built-in Gmail/Calendar
+  connector, a plugin or app source (`@Gmail`), a host extension, or an MCP server the candidate
+  added themselves. Tool names vary; reason about "search email for X" abstractly and call
+  whatever's there. Confirm it's usable by a call *succeeding*, not by its name appearing.
+  → go to Step 1, gathering evidence yourself.
+- **Present but not authorized** — a connector/plugin is listed but calls fail with `Auth
+  required`, or `@Gmail` is mentioned with no account linked. Don't treat this as "no capability"
+  and don't try to authorize it yourself. Tell the candidate plainly: link the account in their
+  host's own connector/plugin settings (`docs/workspace.md`), then re-run. Stop until then.
+- **The candidate pasted a summary** — they had another agent (e.g. Gemini with its own mailbox
+  access) go through recent correspondence and hand back a list of "company X → heard back, looks
+  like Y". Treat that text as the observations: skip the gathering in Step 2, go straight to Step
+  3 (match and judge) against it. It's second-hand, so lean toward "needs confirmation" for
+  anything not spelled out.
+- **Nothing at all** — no email capability, no pasted summary. Say reconciliation isn't set up
+  (point to `docs/workspace.md`) and stop. Not a failure, just unavailable.
+
+Calendar is always a bonus, never required.
 
 ## Step 1 — the vacancies to reconcile
 
@@ -28,7 +46,9 @@ asks. Each record already gives you `slug`, `company`, `title`, `status`, `url`.
 
 ## Step 2 — gather evidence, bounded
 
-For each vacancy, search email with **targeted** queries only — never a broad inbox scan:
+Skip this step entirely if the candidate pasted a summary (Step 0) — you already have the
+observations. Otherwise, for each vacancy, search email with **targeted** queries only — never a
+broad inbox scan:
 
 - the company name, plus the role title or an obvious short form;
 - likely senders: the company's own domain, common ATS domains (greenhouse, lever, ashby,

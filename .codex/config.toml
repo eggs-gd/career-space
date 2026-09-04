@@ -9,13 +9,3 @@ args = ["-c", "AGENTS_TOOLS_DIR=\"${AGENTS_TOOLS_DIR:-$HOME/.agents}\"; exec env
 [mcp_servers.ts-language]
 command = "npx"
 args = ["-y", "ts-language-mcp", "."]
-
-# Remote Google Workspace MCP servers (Gmail, Calendar) for board reconciliation -- see
-# docs/workspace.md. Optional: needs the operator's own Google Cloud project + OAuth setup.
-# Remote HTTP MCP + OAuth support in Codex is version-dependent (may need
-# experimental_use_rmcp_client); check current Codex docs if it won't connect.
-[mcp_servers.gmail]
-url = "https://gmailmcp.googleapis.com/mcp/v1"
-
-[mcp_servers.google-calendar]
-url = "https://calendarmcp.googleapis.com/mcp/v1"

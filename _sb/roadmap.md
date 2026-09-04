@@ -64,12 +64,12 @@ and why each one was built lives in git history, not here.
       file. No persisted score -- a live judgment each time, until real repeated use shows a
       stable enough pattern worth formalizing.
 - [x] Rendered CV/cover-letter output -- PDF/HTML with recruiter-facing filenames.
-- [x] Board reconciliation -- `playbooks/reconcile.md`. Reads Gmail/Calendar (Google's official
-      remote MCP servers, declared in the configs, host-composed -- no Google code here) as
-      read-only evidence, moves tracked vacancy statuses to match recruiter correspondence, and
-      stores the why on the `status_history` entry (`setStatus`'s optional `note`). Optional:
-      skips cleanly with no email capability. Offered by `scout.md` before a run. See
-      `docs/workspace.md` for the one-time Google Cloud + OAuth setup.
+- [x] Board reconciliation -- `playbooks/reconcile.md`. Uses whatever email/calendar capability
+      the host already has (connector, plugin, or a user-added MCP server -- career-space wires
+      and mandates none) as read-only evidence, moves tracked vacancy statuses to match recruiter
+      correspondence, stores the why on the `status_history` entry (`setStatus`'s optional
+      `note`). Falls back to a pasted summary; skips cleanly when nothing's connected. Offered by
+      `scout.md` before a run. See `docs/workspace.md`.
 
 ## Next steps, in order
 

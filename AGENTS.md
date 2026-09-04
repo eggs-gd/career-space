@@ -247,20 +247,19 @@ setup), how you respond depends on what the message actually says:
   - **Developer** — skip the pitch; point them at `_sb/` and `docs/development.md`, and ask what
     they're here to work on.
 
-On a genuinely fresh setup, `design-patterns`/`ts-language` (see `docs/development.md`) and
-`gmail`/`google-calendar` (see `docs/workspace.md`) will almost always show as failed to connect
-— nobody has them installed by default, and no MCP client offers to install a failed server
-automatically. If the candidate notices and asks, or if it seems worth heading off, say plainly:
-expected and harmless — `design-patterns`/`ts-language` are dev-only tooling this job search
-doesn't need; `gmail`/`google-calendar` are optional and only power `playbooks/reconcile.md`
-(status reconciliation from recruiter email), skipped cleanly when absent. `career-space` (after
-its own one-time setup, see "Scripts and the MCP server" below) is the only server that matters
-for everything else.
+On a genuinely fresh setup, `design-patterns`/`ts-language` (see `docs/development.md`) will
+almost always show as failed to connect — nobody has them installed by default, and no MCP
+client offers to install a failed server automatically. If the candidate notices and asks, or if
+it seems worth heading off, say plainly: expected, harmless, dev-only tooling this job search
+doesn't need — `career-space` (after its own one-time setup, see "Scripts and the MCP server"
+below) is the only server that matters here.
 
-Reconciliation is a capability layered on top, never wired into career-space itself: the `gmail`/
-`google-calendar` MCP servers are Google-hosted and host-composed with `career-space`, not
-wrapped by it — there is no career-space tool that proxies Gmail. Gmail/Calendar are read-only
-evidence; `record.yaml` stays canonical. See `playbooks/reconcile.md`.
+`playbooks/reconcile.md` (bringing vacancy statuses in line with recruiter email) uses whatever
+email/calendar capability the *host* already has — a built-in connector, a plugin/app source, or
+an MCP server the candidate added themselves. career-space wires none of this and mandates no
+account or cloud project; if nothing is connected, reconcile skips cleanly. It's host-composed,
+never wrapped — there is no career-space tool that proxies email. Email/calendar are read-only
+evidence; `record.yaml` stays canonical. See `docs/workspace.md`.
 
 ## Data layout
 
