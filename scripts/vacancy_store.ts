@@ -238,8 +238,12 @@ export interface UpsertVacancyOptions {
 }
 
 export interface ScoutOutcomeCandidate {
-  posting_id: string;
-  content_id: string;
+  // Omit both for a manually-obtained posting (a URL `resolve_vacancy_url` returned
+  // `matched: false` for, then read by hand) -- `recordScoutOutcome` computes them via
+  // `posting_ids.manualIds`, the same path `upsertVacancy` uses for a hand-pasted posting.
+  // Scout-fetched candidates always carry real ids and pass them through.
+  posting_id?: string;
+  content_id?: string;
   company: string;
   title: string;
   job_post_text: string;
@@ -466,9 +470,16 @@ export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedSco
   const reason = fit.reason ?? "";
   const outcome = scoutOutcomeMatched(fit, opts.minFitScore) ? "matched" : "rejected";
 
+  // Scout-fetched candidates carry real ids; a manually-obtained one (unsupported URL) has
+  // neither -- compute them the same way `upsertVacancy`'s manual-paste path does.
+  const [postingId, contentId] =
+    candidate.posting_id && candidate.content_id
+      ? [candidate.posting_id, candidate.content_id]
+      : postingIds.manualIds(candidate.company, candidate.title, candidate.job_post_text, candidate.url ?? "");
+
   markSeen(
-    candidate.posting_id,
-    candidate.content_id,
+    postingId,
+    contentId,
     {
       outcome,
       company: candidate.company,
@@ -494,8 +505,8 @@ export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedSco
   }
 
   const record = upsertVacancy({
-    postingId: candidate.posting_id,
-    contentId: candidate.content_id,
+    postingId,
+    contentId,
     company: candidate.company,
     title: candidate.title,
     url: candidate.url ?? "",

@@ -44,6 +44,10 @@ trap and the rule -- not the story.
   distinct from "no capability". Scout skips silently either way -- no setup nagging per run.
 - Reconcile also accepts a pasted summary from another agent that has mailbox access -- treat it
   as the observations, lean toward "needs confirmation".
+- `score_fit`'s `render()` returns markdown with no `score`; `evaluate()` returns the structured
+  result. `record_scout_outcomes` needs `evaluate()`. Don't drop to the local `posting_ids` /
+  `score_fit` modules to hand-record an unsupported-URL vacancy -- `record_scout_outcomes` takes a
+  candidate with no `posting_id`/`content_id` and computes them.
 - Skill stacking is not free: route to the smallest needed playbook/reference, compose instead of
   copying semantics, and move deterministic checks into scripts/MCP.
 - MCP server type-check slowness often means SDK/zod compatibility trouble -- check dependency

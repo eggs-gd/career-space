@@ -264,15 +264,16 @@ server.registerTool(
   "record_scout_outcomes",
   {
     description:
-      "Record judged scout/add-from-url outcomes: append seen ledger entries, create matched vacancy folders, write fitment.md, and render the board if changed.",
+      "Record judged scout/add-from-url outcomes: append seen ledger entries, create matched vacancy folders, write fitment.md, and render the board if changed. Per candidate, `posting_id`/`content_id` are optional -- omit both for a manually-obtained posting (a URL resolve_vacancy_url returned matched:false for) and the tool computes them. For a large batch, write the items array to a JSON file and pass `items_file` instead of inline `items`.",
     inputSchema: {
       min_fit_score: z.number().int().default(4),
       render_board: z.boolean().default(true),
+      items_file: z.string().optional(),
       items: z.array(
         z.object({
           candidate: z.object({
-            posting_id: z.string(),
-            content_id: z.string(),
+            posting_id: z.string().optional(),
+            content_id: z.string().optional(),
             company: z.string(),
             title: z.string(),
             job_post_text: z.string(),
@@ -292,11 +293,17 @@ server.registerTool(
             eligibility: eligibilitySchema,
           }),
         })
-      ),
+      ).optional(),
     },
   },
-  async ({ min_fit_score, render_board, items }): Promise<CallToolResult> => {
-    const results = items.map((item) =>
+  async ({ min_fit_score, render_board, items, items_file }): Promise<CallToolResult> => {
+    const resolvedItems = items_file
+      ? (JSON.parse(fs.readFileSync(resolvePath(items_file), "utf-8")) as typeof items)
+      : items;
+    if (!resolvedItems || resolvedItems.length === 0) {
+      throw new Error("record_scout_outcomes needs `items` or a non-empty `items_file`");
+    }
+    const results = resolvedItems.map((item) =>
       vacancyStore.recordScoutOutcome({
         candidate: item.candidate,
         fit: item.fit,
