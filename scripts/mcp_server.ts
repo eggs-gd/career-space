@@ -51,6 +51,36 @@ const eligibilitySchema = z
   })
   .optional();
 
+/** One `record_scout_outcomes` item -- shared by the inline `items` array and the `items_file`
+ * path so a file-loaded batch is validated exactly like an inline one, not just cast. */
+const recordScoutItemSchema = z.object({
+  candidate: z
+    .object({
+      posting_id: z.string().optional(),
+      content_id: z.string().optional(),
+      company: z.string(),
+      title: z.string(),
+      job_post_text: z.string(),
+      url: z.string().optional(),
+      apply_url: z.string().optional(),
+      location: z.string().optional(),
+      remote: z.boolean().optional(),
+      source: z.string().optional(),
+      posted_at: z.string().optional(),
+      track_label: z.string().nullable().optional(),
+    })
+    .refine((c) => Boolean(c.posting_id) === Boolean(c.content_id), {
+      message: "posting_id and content_id must be provided together (omit both for a manually-obtained posting)",
+    }),
+  fit: z.object({
+    score: z.number().int(),
+    fit_category: z.string(),
+    reason: z.string().optional(),
+    markdown: z.string(),
+    eligibility: eligibilitySchema,
+  }),
+});
+
 function renderBoardResult(): { output_path: string; markdown_path: string } {
   const { htmlPath, mdPath } = renderBoard();
   return { output_path: htmlPath, markdown_path: mdPath };
@@ -264,39 +294,25 @@ server.registerTool(
   "record_scout_outcomes",
   {
     description:
-      "Record judged scout/add-from-url outcomes: append seen ledger entries, create matched vacancy folders, write fitment.md, and render the board if changed.",
+      "Record judged scout/add-from-url outcomes: append seen ledger entries, create matched vacancy folders, write fitment.md, and render the board if changed. Per candidate, `posting_id`/`content_id` are optional but must be given together -- omit both for a manually-obtained posting (a URL resolve_vacancy_url returned matched:false for) and the tool computes them. For a large batch, pass `items_file` (a JSON file with either a bare items array or `{\"items\": [...]}`) instead of inline `items`.",
     inputSchema: {
       min_fit_score: z.number().int().default(4),
       render_board: z.boolean().default(true),
-      items: z.array(
-        z.object({
-          candidate: z.object({
-            posting_id: z.string(),
-            content_id: z.string(),
-            company: z.string(),
-            title: z.string(),
-            job_post_text: z.string(),
-            url: z.string().optional(),
-            apply_url: z.string().optional(),
-            location: z.string().optional(),
-            remote: z.boolean().optional(),
-            source: z.string().optional(),
-            posted_at: z.string().optional(),
-            track_label: z.string().nullable().optional(),
-          }),
-          fit: z.object({
-            score: z.number().int(),
-            fit_category: z.string(),
-            reason: z.string().optional(),
-            markdown: z.string(),
-            eligibility: eligibilitySchema,
-          }),
-        })
-      ),
+      items_file: z.string().optional(),
+      items: z.array(recordScoutItemSchema).optional(),
     },
   },
-  async ({ min_fit_score, render_board, items }): Promise<CallToolResult> => {
-    const results = items.map((item) =>
+  async ({ min_fit_score, render_board, items, items_file }): Promise<CallToolResult> => {
+    let resolvedItems = items;
+    if (items_file) {
+      const parsed: unknown = JSON.parse(fs.readFileSync(resolvePath(items_file), "utf-8"));
+      const arr = Array.isArray(parsed) ? parsed : (parsed as { items?: unknown } | null)?.items;
+      resolvedItems = z.array(recordScoutItemSchema).parse(arr);
+    }
+    if (!resolvedItems || resolvedItems.length === 0) {
+      throw new Error("record_scout_outcomes needs `items` or a non-empty `items_file`");
+    }
+    const results = resolvedItems.map((item) =>
       vacancyStore.recordScoutOutcome({
         candidate: item.candidate,
         fit: item.fit,

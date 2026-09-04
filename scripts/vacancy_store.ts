@@ -238,8 +238,12 @@ export interface UpsertVacancyOptions {
 }
 
 export interface ScoutOutcomeCandidate {
-  posting_id: string;
-  content_id: string;
+  // Omit both for a manually-obtained posting (a URL `resolve_vacancy_url` returned
+  // `matched: false` for, then read by hand) -- `recordScoutOutcome` computes them via
+  // `posting_ids.manualIds`, the same path `upsertVacancy` uses for a hand-pasted posting.
+  // Scout-fetched candidates always carry real ids and pass them through.
+  posting_id?: string;
+  content_id?: string;
   company: string;
   title: string;
   job_post_text: string;
@@ -466,9 +470,26 @@ export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedSco
   const reason = fit.reason ?? "";
   const outcome = scoutOutcomeMatched(fit, opts.minFitScore) ? "matched" : "rejected";
 
+  // Scout-fetched candidates carry both real ids; a manually-obtained one (unsupported URL) has
+  // neither. One-of-two is a malformed request -- a surviving real id would be silently dropped.
+  if (Boolean(candidate.posting_id) !== Boolean(candidate.content_id)) {
+    throw new VacancyStoreError(
+      "recordScoutOutcome: posting_id and content_id must be provided together, or both omitted"
+    );
+  }
+  // For markSeen (which needs concrete ids) compute the manual pair when the candidate has none,
+  // the same way `upsertVacancy`'s manual-paste path does. The upsert call below is left to
+  // resolve ids itself from `candidate.posting_id`/`content_id` (undefined for a manual one), so
+  // it classifies `id_source` correctly and still merges onto an existing company+title record
+  // instead of creating a duplicate folder.
+  const [postingId, contentId] =
+    candidate.posting_id && candidate.content_id
+      ? [candidate.posting_id, candidate.content_id]
+      : postingIds.manualIds(candidate.company, candidate.title, candidate.job_post_text, candidate.url ?? "");
+
   markSeen(
-    candidate.posting_id,
-    candidate.content_id,
+    postingId,
+    contentId,
     {
       outcome,
       company: candidate.company,
@@ -841,11 +862,17 @@ function cli(): void {
     if (!values.input) {
       throw new VacancyStoreError("record-scout-outcomes requires --input <json>");
     }
-    const payload = JSON.parse(fs.readFileSync(values.input, "utf-8")) as {
-      min_fit_score?: number;
-      items?: { candidate: ScoutOutcomeCandidate; fit: ScoutOutcomeFit }[];
-    };
-    result = (payload.items ?? []).map((item) =>
+    type OutcomeItems = { candidate: ScoutOutcomeCandidate; fit: ScoutOutcomeFit }[];
+    const parsed = JSON.parse(fs.readFileSync(values.input, "utf-8")) as unknown;
+    // Accept either a bare items array or a { min_fit_score?, items } wrapper.
+    const payload: { min_fit_score?: number; items?: OutcomeItems } = Array.isArray(parsed)
+      ? { items: parsed as OutcomeItems }
+      : (parsed as { min_fit_score?: number; items?: OutcomeItems });
+    const items = payload.items ?? [];
+    if (items.length === 0) {
+      throw new VacancyStoreError("record-scout-outcomes: --input file has no items");
+    }
+    result = items.map((item) =>
       recordScoutOutcome({
         candidate: item.candidate,
         fit: item.fit,

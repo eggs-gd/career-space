@@ -1011,10 +1011,10 @@ export type UrlResolveResult =
 
 /** Given one vacancy URL (not a feed to search), checks it against the handful of job-board/ATS
  * URL shapes this file already knows precisely -- greenhouse.io, lever.co, ashbyhq.com,
- * recruitee.com, jobico.io -- and if it matches, fetches that EXACT posting via that platform's
- * own single-item API, the same reliability as anything scout_fetch finds. `matched: false` means
- * genuinely unrecognized (not an error) -- the caller falls back to its own general fetch/read
- * capability for that case, see `playbooks/add-from-url.md`.
+ * recruitee.com, jobico.io, jobs.workable.com -- and if it matches, fetches that EXACT posting
+ * via that platform's own single-item API, the same reliability as anything scout_fetch finds.
+ * `matched: false` means genuinely unrecognized (not an error) -- the caller falls back to its
+ * own general fetch/read capability for that case, see `playbooks/add-from-url.md`.
  *
  * Every URL shape and endpoint below confirmed live against a real posting before writing this,
  * same discipline as every other fetcher in this file -- not assumed from API docs alone.
@@ -1180,6 +1180,39 @@ export async function resolvePostingFromUrl(rawUrl: string): Promise<UrlResolveR
       };
     } catch (error) {
       return { matched: true, posting: null, error: `ashby (${company}): ${errorMessage(error)}` };
+    }
+  }
+
+  if (host === "jobs.workable.com") {
+    // jobs.workable.com/view/<shortcode>/<slug> -- the single-job endpoint returns the same job
+    // shape fetchWorkable's search endpoint does, so parse it identically.
+    const m = /^\/view\/([A-Za-z0-9_-]+)/.exec(path);
+    if (!m) return { matched: false };
+    const shortcode = m[1]!;
+    try {
+      const job = await getJson(`https://jobs.workable.com/api/v1/jobs/${shortcode}`);
+      const loc = job.location ?? {};
+      let location = [loc.city, loc.subregion, loc.countryName].filter((x: unknown) => x).map(String).join(", ");
+      const workplace = String(job.workplace ?? "").toLowerCase();
+      if (workplace === "remote") location = location ? `Remote, ${location}` : "Remote";
+      const description = stripHtml(
+        [job.description, job.requirementsSection, job.benefitsSection].filter((x: unknown) => x).join(" ")
+      );
+      return {
+        matched: true,
+        posting: makePosting({
+          source: "workable",
+          company: (job.company ?? {}).title ?? "?",
+          title: job.title ?? "",
+          location,
+          url: job.url ?? rawUrl,
+          description,
+          postedAt: String(job.published ?? job.created ?? ""),
+          remoteOverride: workplace === "remote" ? true : null,
+        }),
+      };
+    } catch (error) {
+      return { matched: true, posting: null, error: `workable (${shortcode}): ${errorMessage(error)}` };
     }
   }
 

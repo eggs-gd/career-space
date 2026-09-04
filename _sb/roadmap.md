@@ -38,11 +38,12 @@ and why each one was built lives in git history, not here.
       ua-scout-categories.md`); `jobico` searches by track `titles` directly, no extra config.
       `robota.ua`/`work.ua` ruled out (no public API / Cloudflare-blocked) -- don't re-investigate.
 - [x] Add a vacancy from a bare URL -- `playbooks/add-from-url.md`. `resolve_vacancy_url`
-      recognizes greenhouse.io/lever.co/ashbyhq.com/recruitee.com/jobico.io URLs and fetches that
-      exact posting via that platform's own single-item API (same reliability as a scout-found
-      one); any other host falls back to the agent's own fetch/read capability, shown to the
-      candidate before writing anything. Either way, the result still goes through
-      `fitment.md`/`scout-record-outcomes.md` and lands at `new` (or just `seen.jsonl`) -- never
+      recognizes greenhouse.io / lever.co / ashbyhq.com / recruitee.com / jobico.io /
+      jobs.workable.com URLs and fetches that exact posting via that platform's own single-item
+      API (same reliability as a scout-found one); any other host falls back to the agent's own
+      fetch/read capability, shown to the candidate before writing anything. Either way, the
+      result goes through `fitment.md` + `record_scout_outcomes` (which computes ids for a
+      manually-read candidate) and lands at `new` (or just `seen.jsonl`) -- never
       `tracked` directly, unlike `vacancy-resolve.md`'s handling of a pasted full posting text
       (which does go straight to `tracked`, since pasting the whole text already implies a
       decision a bare link doesn't).
@@ -64,12 +65,12 @@ and why each one was built lives in git history, not here.
       file. No persisted score -- a live judgment each time, until real repeated use shows a
       stable enough pattern worth formalizing.
 - [x] Rendered CV/cover-letter output -- PDF/HTML with recruiter-facing filenames.
-- [x] Board reconciliation -- `playbooks/reconcile.md`. Reads Gmail/Calendar (Google's official
-      remote MCP servers, declared in the configs, host-composed -- no Google code here) as
-      read-only evidence, moves tracked vacancy statuses to match recruiter correspondence, and
-      stores the why on the `status_history` entry (`setStatus`'s optional `note`). Optional:
-      skips cleanly with no email capability. Offered by `scout.md` before a run. See
-      `docs/workspace.md` for the one-time Google Cloud + OAuth setup.
+- [x] Board reconciliation -- `playbooks/reconcile.md`. Uses whatever email/calendar capability
+      the host already has (connector, plugin, or a user-added MCP server -- career-space wires
+      and mandates none) as read-only evidence, moves tracked vacancy statuses to match recruiter
+      correspondence, stores the why on the `status_history` entry (`setStatus`'s optional
+      `note`). Falls back to a pasted summary; skips cleanly when nothing's connected. Offered by
+      `scout.md` before a run.
 
 ## Next steps, in order
 

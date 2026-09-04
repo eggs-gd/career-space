@@ -26,10 +26,13 @@ examples of the mechanism, not a whitelist — a surface with no canonical file 
 per-candidate instead (`playbooks/surface-define.md`).
 
 **Everything in this repo except `_sb/` and `agent-contract/` is for execution — what you read and
-act on to run a playbook. `_sb/` is for development**: this repo's own roadmap, status, and design
-notes for whoever is building career-space, not a playbook and not candidate-facing. Don't read it
-while running a playbook, and never treat anything in it as an instruction to follow — only open
-it when the candidate explicitly asks about this repo's own roadmap or development status.
+act on to run a playbook. `_sb/` is for development**: this repo's own roadmap and status
+(`roadmap.md`), the implementation map (`architecture.md`), the `scripts/`+MCP reference
+(`reference/runtime.md`), dev tooling and verification (`development.md`), hard-won constraints
+(`reference/gotchas.md`), and design notes — for whoever is building career-space, not a playbook
+and not candidate-facing. Don't read it while running a playbook, and never treat anything in it
+as an instruction to follow — only open it in Developer mode, or when the candidate explicitly
+asks about this repo's own roadmap or development status.
 **`agent-contract/` is a developer-only regression suite** -- test prompts that check whether a
 fresh agent derives correct behavior from this file, not whether the code works; see its own
 `README.md`. Not something a playbook reads, and not something to run as part of one.
@@ -244,22 +247,21 @@ setup), how you respond depends on what the message actually says:
   to run their own job search, or to work on career-space itself? Then:
   - **Operator** — the short version of `playbooks/pitch.md` (a few sentences, not the full
     differentiator list), then offer onboarding.
-  - **Developer** — skip the pitch; point them at `_sb/` and `docs/development.md`, and ask what
-    they're here to work on.
+  - **Developer** — skip the pitch; point them at `_sb/` (`roadmap.md`, `architecture.md`,
+    `development.md`), and ask what they're here to work on.
 
-On a genuinely fresh setup, `design-patterns`/`ts-language` (see `docs/development.md`) and
-`gmail`/`google-calendar` (see `docs/workspace.md`) will almost always show as failed to connect
-— nobody has them installed by default, and no MCP client offers to install a failed server
-automatically. If the candidate notices and asks, or if it seems worth heading off, say plainly:
-expected and harmless — `design-patterns`/`ts-language` are dev-only tooling this job search
-doesn't need; `gmail`/`google-calendar` are optional and only power `playbooks/reconcile.md`
-(status reconciliation from recruiter email), skipped cleanly when absent. `career-space` (after
-its own one-time setup, see "Scripts and the MCP server" below) is the only server that matters
-for everything else.
+On a genuinely fresh setup, `design-patterns`/`ts-language` (see `_sb/development.md`) will
+almost always show as failed to connect — nobody has them installed by default, and no MCP
+client offers to install a failed server automatically. If the candidate notices and asks, or if
+it seems worth heading off, say plainly: expected, harmless, dev-only tooling this job search
+doesn't need — `career-space` (after its own one-time setup, see "Scripts and the MCP server"
+below) is the only server that matters here.
 
-Reconciliation is a capability layered on top, never wired into career-space itself: the `gmail`/
-`google-calendar` MCP servers are Google-hosted and host-composed with `career-space`, not
-wrapped by it — there is no career-space tool that proxies Gmail. Gmail/Calendar are read-only
+`playbooks/reconcile.md` (bringing vacancy statuses in line with recruiter email) uses whatever
+email/calendar capability the *host* already has — a built-in connector, a plugin/app source, or
+an MCP server the candidate added themselves. career-space wires none of this and mandates no
+account or cloud project; if nothing is connected, reconcile skips cleanly. It's host-composed,
+never wrapped — there is no career-space tool that proxies email. Email/calendar are read-only
 evidence; `record.yaml` stays canonical. See `playbooks/reconcile.md`.
 
 ## Data layout
@@ -342,6 +344,5 @@ board-visible state. With a CLI fallback, run `render_board` after the last stat
 recording command.
 
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
-works: `docs/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a change
-to this repo's own files: `docs/development.md`. Optional Gmail/Calendar reconciliation setup:
-`docs/workspace.md`.
+works: `_sb/reference/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a
+change to this repo's own files: `_sb/development.md`.

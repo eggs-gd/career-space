@@ -4,20 +4,45 @@ Trigger: "звір дошку з поштою / календарем", "reconcil
 anything", "оновись по відповідях" — the candidate wants tracked vacancy statuses brought in line
 with real recruiter correspondence. Also offered by `playbooks/scout.md` before a scout run.
 
-Methodology: **external observations → reconcile against Career Space state.** Today the
-observations come from Gmail and Calendar; the reasoning below is written against *capabilities*
-(search email, read a thread, search the calendar), not a specific host or tool name, so it holds
-if the same evidence arrives another way later.
+Methodology: **external observations → reconcile against Career Space state.** The observations
+come from email and calendar; the reasoning below is written against *capabilities* (search
+email, read a thread, search the calendar), not a specific host or tool name, so it holds
+whatever provides them.
 
-`data/vacancies/*/record.yaml` stays the one source of truth. Gmail and Calendar are read-only
-evidence — never labelled, drafted into, or otherwise mutated here (those are separate, explicit
-asks).
+career-space ships **no** email integration and needs **no** account or cloud project — it uses
+whatever the host already has (a built-in connector, a plugin/app source, or an MCP server the
+candidate added themselves). The host composes email with `career-space`; there's no
+`career-space` tool that proxies email. `data/vacancies/*/record.yaml` stays the one source of
+truth; email and calendar are read-only evidence, never labelled, drafted into, or otherwise
+mutated here (those are separate, explicit asks).
 
-## Step 0 — is the capability there?
+## Step 0 — how are the observations arriving?
 
-Check for an email-search capability (the `gmail` MCP server, or whatever the host provides).
-Calendar is a bonus, not required. If there's no email capability: say reconciliation isn't set
-up (point to `docs/workspace.md`), and stop — this isn't a failure, just an unavailable option.
+An email/calendar capability being *visible* is not the same as it being *usable*. Sort out which
+case you're in before doing anything:
+
+- **A working email-read tool** — whatever the host provides: a built-in Gmail/Calendar
+  connector, a plugin or app source (`@Gmail`), a host extension, or an MCP server the candidate
+  added themselves. Tool names vary; reason about "search email for X" abstractly and call
+  whatever's there. Confirm it's usable by a call *succeeding*, not by its name appearing.
+  → go to Step 1, gathering evidence yourself.
+- **Present but not authorized** — a connector/plugin is listed but calls fail with `Auth
+  required`, or `@Gmail` is mentioned with no account linked. Don't treat this as "no capability"
+  and don't try to authorize it yourself. Tell the candidate to link the account in their host's
+  own connector/plugin settings (in Claude, Settings → Connectors; elsewhere, the app's account
+  settings), then re-run. Stop until then.
+- **The candidate pasted a summary** — they had another agent (e.g. Gemini with its own mailbox
+  access) go through recent correspondence and hand back a list of "company X → heard back, looks
+  like Y". Treat that text as the observations: skip the gathering in Step 2, go straight to Step
+  3 (match and judge) against it. It's second-hand, so lean toward "needs confirmation" for
+  anything not spelled out.
+- **Nothing at all** — no email capability, no pasted summary. Say reconciliation needs an email
+  connector/plugin in their host (or a pasted summary), and stop. Not a failure, just unavailable.
+
+Calendar is always a bonus, never required. If the candidate specifically wants to wire Google's
+own remote MCP servers (`gmailmcp.googleapis.com` / `calendarmcp.googleapis.com`), that's a
+personal-config choice needing their own Google Cloud project + OAuth client — Google's docs
+cover it; it never goes in this repo's committed files.
 
 ## Step 1 — the vacancies to reconcile
 
@@ -28,7 +53,9 @@ asks. Each record already gives you `slug`, `company`, `title`, `status`, `url`.
 
 ## Step 2 — gather evidence, bounded
 
-For each vacancy, search email with **targeted** queries only — never a broad inbox scan:
+Skip this step entirely if the candidate pasted a summary (Step 0) — you already have the
+observations. Otherwise, for each vacancy, search email with **targeted** queries only — never a
+broad inbox scan:
 
 - the company name, plus the role title or an obvious short form;
 - likely senders: the company's own domain, common ATS domains (greenhouse, lever, ashby,

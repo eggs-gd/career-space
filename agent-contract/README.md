@@ -68,6 +68,9 @@ them.
   manufacturing artificial difference from siblings.
 - `onboard-unclear-direction.md` -- "I don't know what I want to do"; checks onboarding produces
   an honest provisional `strategy.md` (open questions and all) that a later agent can use.
+- `add-from-unsupported-url.md` -- a URL `resolve_vacancy_url` doesn't recognise; checks the
+  agent records it via `record_scout_outcomes` (ids computed by the tool), not by dropping to
+  local id/scoring modules.
 
 ## Run history format
 

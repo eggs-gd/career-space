@@ -3,8 +3,8 @@
 Not something you need to read to run a playbook -- `AGENTS.md`'s own "Scripts and the MCP
 server" section already has the behavioral rule (prefer the MCP tools, never hand-produce a
 document or score yourself). This file is what you need once you're actually calling one of these
-tools/scripts directly, debugging a connection, or setting things up manually. See `docs/
-development.md` instead for `design-patterns`/`ts-language` (editing this repo's own
+tools/scripts directly, debugging a connection, or setting things up manually. See
+`_sb/development.md` for `design-patterns`/`ts-language` (editing this repo's own
 playbooks/scripts) and how to verify a change to this repo.
 
 ## The scripts
@@ -27,8 +27,10 @@ interface over it or over `score_fit.ts`'s scoring formula:
   `scout_sources.ts`/`scout_prefilter.ts` are its supporting modules (config shape, per-source
   fetchers, filter/dedup logic respectively) — `playbooks/scout.md` is the only caller.
 - `scripts/resolve_vacancy_url.ts` — resolves one vacancy URL into a scout-shaped candidate via
-  `scout_sources.ts`'s `resolvePostingFromUrl` (the same per-source fetchers scout_fetch uses,
-  matched by URL shape instead of searched) — `playbooks/add-from-url.md` is the caller.
+  `scout_sources.ts`'s `resolvePostingFromUrl` (greenhouse / lever / ashby / recruitee / jobico /
+  `jobs.workable.com` URL shapes, matched by shape not searched) — `playbooks/add-from-url.md` is
+  the caller. `matched: false` for any other URL: the agent reads the page itself and records the
+  candidate with no ids (`record_scout_outcomes` computes them).
 - `scripts/vacancy_store.ts` — the seen-log ledger and each vacancy's own `<slug>/` folder's
   *metadata*: slug generation, vacancy resolving, scout outcome recording, `record.yaml`,
   `posting.md`, status transitions, fit indexes, and eligibility flags. Called by
@@ -59,6 +61,12 @@ wraps the same functions: `render_resume`, `render_cover_letter`, `score_fit`, `
 `resolve_vacancy_url`, `vacancy_resolve`, `vacancy_mark_seen`, `record_scout_outcomes`,
 `vacancy_upsert`, `vacancy_set_status`, `vacancy_set_archived`, `vacancy_attach_artifact`,
 `vacancy_list`, `linkedin_searches`, `render_board`, and `workspace_validate`.
+
+`record_scout_outcomes`: per candidate, `posting_id`/`content_id` are optional but both-or-neither
+(omit both for a manually-obtained posting — ids computed via `posting_ids.manualIds`, and the
+upsert still merges onto an existing company+title record rather than duplicating). `items_file`
+(MCP) / `--input` (CLI) reads the batch from a JSON file — a bare array or `{ min_fit_score?, items }`
+— and validates every item the same as an inline call before writing anything.
 
 If the server isn't connected, fall back to the CLI form documented in each script's own docstring:
 `node scripts/dist/render_resume.js <file>.md`, `node scripts/dist/render_cover_letter.js

@@ -17,12 +17,6 @@
     "ts-language": {
       "command": "npx",
       "args": ["-y", "ts-language-mcp", "."]
-    },
-    "gmail": {
-      "httpUrl": "https://gmailmcp.googleapis.com/mcp/v1"
-    },
-    "google-calendar": {
-      "httpUrl": "https://calendarmcp.googleapis.com/mcp/v1"
     }
   }
 }

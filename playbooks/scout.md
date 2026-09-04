@@ -68,15 +68,18 @@ by the loader, so casing in the yaml doesn't matter.
 
 ## Step 0.5 -- reconcile first, if the capability is there
 
-If an email capability is available (the `gmail` MCP server, or the host's own), run
-`playbooks/reconcile.md` before fetching — automatically, not as a question. It's read-only
-toward Gmail/Calendar and follows the normal status rules toward `record.yaml`, so it's the
-mechanical front of an already-started workflow, not a new decision (same reasoning as the
-renderer — see AGENTS.md's "A deterministic tool call is execution, not a decision"). Ask the
-candidate only where `reconcile.md` itself says to (ambiguous match, unclear transition or
-reason). If reconcile errors out, note it and continue to Step 1 — it never blocks a scout run.
-Skip this step entirely if there's no email capability. New scout finds have no correspondence
-yet, so reconciliation never touches them.
+If a **working** email-read capability is available — whatever the host provides (a connector, a
+plugin, an MCP server), confirmed by a call succeeding, not just its name being visible (see
+`playbooks/reconcile.md`'s Step 0) — run `playbooks/reconcile.md` before fetching, automatically,
+not as a question. It's read-only toward
+Gmail/Calendar and follows the normal status rules toward `record.yaml`, so it's the mechanical
+front of an already-started workflow, not a new decision (same reasoning as the renderer — see
+AGENTS.md's "A deterministic tool call is execution, not a decision"). Ask the candidate only
+where `reconcile.md` itself says to. If reconcile errors out, note it and continue to Step 1 — it
+never blocks a scout run. If the capability is missing, or present but unauthorized, skip this
+step silently and just go to Step 1 — don't nag about setup on every scout run (that's for when
+the candidate asks to reconcile directly). New scout finds have no correspondence yet, so
+reconciliation never touches them.
 
 ## Step 1 -- fetch
 
