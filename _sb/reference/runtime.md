@@ -3,8 +3,8 @@
 Not something you need to read to run a playbook -- `AGENTS.md`'s own "Scripts and the MCP
 server" section already has the behavioral rule (prefer the MCP tools, never hand-produce a
 document or score yourself). This file is what you need once you're actually calling one of these
-tools/scripts directly, debugging a connection, or setting things up manually. See `docs/
-development.md` instead for `design-patterns`/`ts-language` (editing this repo's own
+tools/scripts directly, debugging a connection, or setting things up manually. See
+`_sb/development.md` for `design-patterns`/`ts-language` (editing this repo's own
 playbooks/scripts) and how to verify a change to this repo.
 
 ## The scripts

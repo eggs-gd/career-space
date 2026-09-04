@@ -69,7 +69,7 @@ and why each one was built lives in git history, not here.
       and mandates none) as read-only evidence, moves tracked vacancy statuses to match recruiter
       correspondence, stores the why on the `status_history` entry (`setStatus`'s optional
       `note`). Falls back to a pasted summary; skips cleanly when nothing's connected. Offered by
-      `scout.md` before a run. See `docs/workspace.md`.
+      `scout.md` before a run.
 
 ## Next steps, in order
 

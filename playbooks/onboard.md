@@ -29,7 +29,7 @@ Check the machine, don't ask the candidate to guess what's missing:
   declined, continue onboarding anyway — the interview and file-writing below don't need it — but
   mention that without it, cover letters/CVs stay chat-text-only (no PDF) and fitment has no real
   score to compute, so it's worth coming back to before actually using either.
-- **`design-patterns` MCP** (see `docs/development.md`) — for
+- **`design-patterns` MCP** (see `_sb/development.md`) — for
   editing career-space's own playbooks/scripts, not for a candidate's job search. Don't check for
   it at all unless the candidate says they're also planning to
   develop career-space itself; for anyone else, skip this entirely, don't bring it up unprompted.

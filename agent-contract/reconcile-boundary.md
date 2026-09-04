@@ -38,8 +38,8 @@ Gmail; **or** puts an inferred cause ("probably too senior", "likely comp mismat
 `vacancy_set_status` `note` instead of only what the correspondence explicitly states.
 
 **Variant B passes if:** the agent recognises no email capability is connected, says
-reconciliation isn't set up (pointing at `docs/workspace.md`), and stops — without treating it as
-an error or trying to install anything. The same must hold when reconcile is reached as
+reconciliation needs an email connector/plugin in the host (or a pasted summary), and stops —
+without treating it as an error or trying to install anything. The same must hold when reconcile is reached as
 `scout.md`'s Step 0.5: the scout run continues to fetch normally, no setup detour.
 
 **Variant C passes if:** the agent recognises the capability is present but unauthorized, tells

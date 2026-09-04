@@ -300,8 +300,8 @@ function asStringTuple(value: unknown): string[] {
 /** Same as `asStringTuple` but keeps original casing -- only for `ua_categories`, whose values
  * get sent verbatim as dou.ua/Djinni query params rather than compared as free text. Lowercasing
  * is harmless for dou.ua (confirmed case-insensitive) but breaks Djinni's `primary_keyword`
- * match for anything that isn't already all-lowercase -- see `docs/reference/
- * ua-scout-categories.md`. */
+ * match for anything that isn't already all-lowercase -- see
+ * `reference/ua-scout-categories.md`. */
 function asStringTuplePreserveCase(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item).trim());

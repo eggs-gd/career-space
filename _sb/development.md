@@ -1,7 +1,8 @@
 # Developing career-space itself -- tooling and verification
 
-Use this only in Developer mode, when changing `scripts/`, `playbooks/`, `policies`, `examples`,
-`reference`, docs, or `_sb/`. Operator-facing playbooks do not read this file.
+Use this only in Developer mode, when changing `scripts/`, `playbooks/`, `policies/`, `examples/`,
+`reference/`, or `_sb/`. Operator-facing playbooks do not read this file. For the `scripts/`+MCP
+reference itself (what each script does, MCP vs CLI, setup), see `_sb/reference/runtime.md`.
 
 ## Developer MCP tools
 
