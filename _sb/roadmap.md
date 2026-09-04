@@ -87,13 +87,13 @@ and why each one was built lives in git history, not here.
    independently (right now a CV and cover letter for the same vacancy can select different
    evidence for the same requirement), and the framework's vacancy-specific validator criteria
    (retells the resume, no concrete why-this-company, doesn't use the vacancy's own vocabulary).
-2. **Skill hygiene + agent-contract coverage** -- review external agent-skill repos for
-   conventions, not content: short capability playbooks, explicit orchestrators, strict reference
-   routing, and regression prompts that prove a fresh agent follows the repo without chat history.
-   First pass: audit thick playbooks (`cv-targeted.md`, `scout.md`, `cover-letter.md`) for
-   extractable internal capabilities; add agent-contract prompts for the failure modes already
-   seen (`data/` boundary in Developer mode, no blind regeneration, no user-specific example
-   leakage, location-exception scoring).
+2. **Skill hygiene** -- review external agent-skill repos for conventions, not content: short
+   capability playbooks, explicit orchestrators, strict reference routing. First pass: audit thick
+   playbooks (`cv-targeted.md`, `scout.md`, `cover-letter.md`) for extractable internal
+   capabilities. The agent-contract half of this item is done -- `no-blind-regeneration.md`,
+   `example-data-leakage.md`, `location-exception-classification.md` cover the previously-untested
+   failure modes (`data/` boundary was already covered by `developer-tries-to-touch-data.md`); run
+   all three before the next round of `AGENTS.md`/playbook edits.
 
 ## Later / maybe
 

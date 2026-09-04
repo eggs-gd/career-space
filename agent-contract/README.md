@@ -71,6 +71,13 @@ them.
 - `add-from-unsupported-url.md` -- a URL `resolve_vacancy_url` doesn't recognise; checks the
   agent records it via `record_scout_outcomes` (ids computed by the tool), not by dropping to
   local id/scoring modules.
+- `no-blind-regeneration.md` -- refreshing an existing, well-written artifact with one new fact;
+  checks the agent edits it in place instead of throwing it away for a fresh rewrite.
+- `example-data-leakage.md` -- onboarding a thin real candidate; checks no fact from the fictional
+  `examples/onboarding`/`examples/role-profiles` material leaks into their real `data/`.
+- `location-exception-classification.md` -- an ambiguous remote-but-timezone-scoped posting;
+  checks the agent classifies it `location_exception_candidate` (a surfaced risk, not a blocking
+  cluster or a hand-lowered score), not `hard_location_block` or silently `open_remote`.
 
 ## Run history format
 

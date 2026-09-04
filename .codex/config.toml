@@ -2,6 +2,21 @@
 command = "node"
 args = ["scripts/mcp_bootstrap.js"]
 
+[mcp_servers.career-space.tools.resolve_vacancy_url]
+approval_mode = "approve"
+
+[mcp_servers.career-space.tools.score_fit]
+approval_mode = "approve"
+
+[mcp_servers.career-space.tools.vacancy_set_archived]
+approval_mode = "approve"
+
+[mcp_servers.career-space.tools.vacancy_set_status]
+approval_mode = "approve"
+
+[mcp_servers.career-space.tools.vacancy_list]
+approval_mode = "approve"
+
 [mcp_servers.design-patterns]
 command = "sh"
 args = ["-c", "AGENTS_TOOLS_DIR=\"${AGENTS_TOOLS_DIR:-$HOME/.agents}\"; exec env DATABASE_PATH=\"$AGENTS_TOOLS_DIR/design_patterns_mcp/data/design-patterns.db\" node \"$AGENTS_TOOLS_DIR/design_patterns_mcp/dist/mcp-server.js\""]
