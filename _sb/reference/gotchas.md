@@ -48,6 +48,10 @@ trap and the rule -- not the story.
   result. `record_scout_outcomes` needs `evaluate()`. Don't drop to the local `posting_ids` /
   `score_fit` modules to hand-record an unsupported-URL vacancy -- `record_scout_outcomes` takes a
   candidate with no `posting_id`/`content_id` and computes them.
+- `record_scout_outcomes` candidate ids are both-or-neither (one alone throws). On the no-ids
+  path `recordScoutOutcome` passes `undefined` through to `upsertVacancy` (not the computed pair)
+  so the record gets `id_source: manual` and still merges onto an existing company+title record
+  instead of duplicating -- `markSeen` gets the computed ids, the upsert resolves its own.
 - Skill stacking is not free: route to the smallest needed playbook/reference, compose instead of
   copying semantics, and move deterministic checks into scripts/MCP.
 - MCP server type-check slowness often means SDK/zod compatibility trouble -- check dependency

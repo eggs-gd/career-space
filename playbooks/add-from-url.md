@@ -23,8 +23,9 @@ Call `resolve_vacancy_url` (MCP tool, or `node scripts/dist/resolve_vacancy_url.
   found -- title, company, the posting text -- before doing anything else; don't silently trust a
   generic fetch the way a verified source's own API is trusted. If you can't get a clean read
   (JS-rendered page, paywall, bot-block), say so and ask the candidate to paste the text instead.
-  Build a candidate object with just `company`, `title`, `url`, `job_post_text` -- **no**
-  `posting_id`/`content_id`, `record_scout_outcomes` computes those. Don't drop to the local
+  Build a candidate object with just `company`, `title`, `url`, `job_post_text` -- omit
+  `posting_id`/`content_id` entirely (both or neither; `record_scout_outcomes` computes them and
+  still merges onto an existing record for the same company/title). Don't drop to the local
   `posting_ids`/`score_fit` modules to do this by hand.
 
 ## Step 2 -- judge it, same as a scout candidate

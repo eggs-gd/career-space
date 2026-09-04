@@ -62,10 +62,11 @@ wraps the same functions: `render_resume`, `render_cover_letter`, `score_fit`, `
 `vacancy_upsert`, `vacancy_set_status`, `vacancy_set_archived`, `vacancy_attach_artifact`,
 `vacancy_list`, `linkedin_searches`, `render_board`, and `workspace_validate`.
 
-`record_scout_outcomes`: per candidate, `posting_id`/`content_id` are optional (omit both for a
-manually-obtained posting — the tool computes them via `posting_ids.manualIds`, same as
-`vacancy_upsert`). `items_file` (MCP) / `--input` (CLI) takes the `items` array from a JSON file,
-for a batch too big to pass inline.
+`record_scout_outcomes`: per candidate, `posting_id`/`content_id` are optional but both-or-neither
+(omit both for a manually-obtained posting — ids computed via `posting_ids.manualIds`, and the
+upsert still merges onto an existing company+title record rather than duplicating). `items_file`
+(MCP) / `--input` (CLI) reads the batch from a JSON file — a bare array or `{ min_fit_score?, items }`
+— and validates every item the same as an inline call before writing anything.
 
 If the server isn't connected, fall back to the CLI form documented in each script's own docstring:
 `node scripts/dist/render_resume.js <file>.md`, `node scripts/dist/render_cover_letter.js
