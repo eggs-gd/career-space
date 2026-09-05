@@ -1,4 +1,4 @@
-# Cover letter & resume framework -- job applications (ported from career-wizard, not yet wired)
+# Cover letter & resume framework -- job applications (ported from career-wizard)
 
 Ported verbatim (content, not the career-wizard-specific integration notes) from career-wizard's
 `docs/frameworks/apply-cv-cover.en.md` on 2026-08-29, after confirming it was never actually
@@ -23,7 +23,7 @@ reconciling the two remains open, a separate decision from the cover-letter shap
 > functional, hybrid, and a senior/"6-figure" template with worked examples).
 >
 > Scope: this is about **job-application cover letters** (applying to a specific vacancy), a
-> different genre from the freelance/Upwork-proposal framework `cover-letter.md`'s current
+> different genre from the freelance/Upwork-proposal framework `cover-letter-shape-a.md`'s
 > Problem/Differentiator/Evidence/Scope/Core Message structure is built on -- different reader,
 > different goal, different validator criteria. Don't merge the two; cross-reference instead.
 

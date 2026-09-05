@@ -54,6 +54,10 @@ terminology, niche tech names — so you don't accidentally reach for them while
 
 ## Self-check
 
-The shared checks in `cover-letter-writing-policy.md` are enough for this shape — no additions.
-Task/direct-engagement readers respond to whether the hook is genuinely specific and provable,
-which those already cover.
+Run the shared checks in `cover-letter-writing-policy.md`, plus this shape-specific one:
+
+- **Genericness** — could this exact letter be sent to another client/company unchanged and still
+  read as plausible? A hook can be fully factual, correctly owned, and defensible and still be
+  interchangeable boilerplate — the shared checks catch invented or inflated claims, not a
+  generic-but-true one. If the Problem/Differentiator/Core message would fit any similar posting,
+  tie it back to something specific in *this* posting or *this* engagement.

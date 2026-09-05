@@ -86,10 +86,8 @@ and why each one was built lives in git history, not here.
 1. **Skill hygiene** -- review external agent-skill repos for conventions, not content: short
    capability playbooks, explicit orchestrators, strict reference routing. First pass: audit thick
    playbooks (`cv-targeted.md`, `scout.md`, `cover-letter.md`) for extractable internal
-   capabilities. The agent-contract half of this item is done -- `no-blind-regeneration.md`,
-   `example-data-leakage.md`, `location-exception-classification.md` cover the previously-untested
-   failure modes (`data/` boundary was already covered by `developer-tries-to-touch-data.md`); run
-   all three before the next round of `AGENTS.md`/playbook edits.
+   capabilities. Run `no-blind-regeneration.md`, `example-data-leakage.md`, and
+   `location-exception-classification.md` before the next round of `AGENTS.md`/playbook edits.
 
 ## Later / maybe
 
