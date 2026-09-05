@@ -338,10 +338,12 @@ already happened, on the content. Ask again only when the content or the decisio
 changing. (A host that pops its own `Allow` prompt for the tool is separate — that's the host's
 sandbox, not something a playbook controls or should pre-empt with a question of its own.)
 
-**A status or archive change returns a fresh board.** `vacancy_set_status`,
-`vacancy_set_archived`, and `record_scout_outcomes` return board paths when they change
-board-visible state. With a CLI fallback, run `render_board` after the last status/archive/scout
-recording command.
+**A status or archive change returns a fresh board, automatically, MCP or CLI.**
+`vacancy_resolve`, `vacancy_set_status`, `vacancy_set_archived`, and `record_scout_outcomes` all
+re-render the board themselves when they change board-visible state — the MCP tools and their CLI
+forms call the exact same render step, so there's nothing left for a playbook to remember here
+either way. `vacancy_upsert` (the lower-level primitive those four are usually built on) does
+*not* auto-render — a playbook that calls it directly still owns rendering after.
 
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `_sb/reference/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a

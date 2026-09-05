@@ -27,8 +27,11 @@ trap and the rule -- not the story.
 - Once content is approved, running a `career-space` renderer/tool is execution, not a new
   decision -- never ask "shall I render / regenerate the PDF now?". Confirm content changes, not
   tool runs.
-- Every `vacancy_set_status` / `vacancy_set_archived` is finalized by `render_board` -- the board
-  is stale otherwise. Batch the changes, render once at the end, never ask.
+- `vacancy_resolve` / `vacancy_set_status` / `vacancy_set_archived` / `record_scout_outcomes` all
+  re-render the board themselves when board-visible state changes, MCP or CLI -- don't add a
+  manual `render_board` call after them. `vacancy_upsert` is the exception: it doesn't auto-render
+  (it's the lower-level primitive the others are built on), so a playbook calling it directly still
+  owns rendering after.
 - Reconciliation consumes whatever email/calendar capability the host has (connector, plugin, or
   a user-added MCP server) -- career-space ships and wires none of it, and mandates no account or
   cloud project (that would break "no server, no app, no account"). Host-composed, never wrapped
@@ -56,3 +59,7 @@ trap and the rule -- not the story.
   copying semantics, and move deterministic checks into scripts/MCP.
 - MCP server type-check slowness often means SDK/zod compatibility trouble -- check dependency
   versions before blaming tool schemas.
+- Cover letter mode (task/long-term, emphasis) and shape (human-read vs ATS-likely, structure) are
+  independent judgment calls -- a long-term role can be either shape, don't conflate them. Never
+  force-create `targeting-plan.md` just to write a cover letter; reuse it only when it already
+  exists.
