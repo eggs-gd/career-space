@@ -753,6 +753,18 @@ export function listVacancies(status?: string, opts: { includeArchived?: boolean
   return summaries.map(summaryToDict);
 }
 
+/** Re-renders the board, matching what the `vacancy_resolve`/`vacancy_set_status`/
+ * `vacancy_set_archived`/`record_scout_outcomes` MCP tools already do automatically -- the CLI
+ * form of those same commands needs to do it too, or a candidate on the CLI fallback path sees a
+ * stale board with no instruction telling them so. `require` here, not a top-level import: this
+ * file is `render_board.ts`'s own dependency (via `listVacancies`), so a top-level import back
+ * would cycle. Safe as a lazy require because it only ever runs from `cli()` below, after this
+ * file has fully finished loading as the entrypoint. */
+function renderBoardFromCli(): void {
+  const { renderBoard } = require("./render_board") as typeof import("./render_board");
+  renderBoard();
+}
+
 /** CLI fallback for agents without MCP support. Prefer the MCP tools when connected. */
 function cli(): void {
   const { values, positionals } = parseArgs({
@@ -846,11 +858,13 @@ function cli(): void {
       throw new VacancyStoreError(`set-status requires --slug and --status (one of ${VALID_STATUSES.join(", ")})`);
     }
     result = setStatus(values.slug, values.status, values.note);
+    renderBoardFromCli();
   } else if (command === "set-archived") {
     if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
       throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
     }
     result = setArchived(values.slug, values.archived === "true");
+    renderBoardFromCli();
   } else if (command === "attach-artifact") {
     if (!values.slug || !values.kind || !values.path) {
       throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
@@ -879,6 +893,7 @@ function cli(): void {
         minFitScore: payload.min_fit_score ?? 4,
       })
     );
+    if ((result as RecordedScoutOutcome[]).some((r) => r.outcome === "matched")) renderBoardFromCli();
   } else if (command === "resolve") {
     const status = values.status;
     if (status !== undefined && !isValidStatus(status)) {
@@ -901,6 +916,7 @@ function cli(): void {
       status,
       trackLabel: presentString(values["track-label"]),
     });
+    if ((result as ResolveVacancyResult).changed) renderBoardFromCli();
   } else {
     throw new VacancyStoreError(
       `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, attach-artifact, list, record-scout-outcomes, resolve`

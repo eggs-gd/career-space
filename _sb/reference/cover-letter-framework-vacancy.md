@@ -7,14 +7,16 @@ is entirely grounded in its `freelance-proposal.en.md` framework; this vacancy-s
 only as a captured design doc, marked "reference framework only" in its own header. It had never
 been ported into career-space at all until now.
 
-**Status here: reference only, same as it was in career-wizard.** `playbooks/cover-letter.md`
-currently uses one structure (Problem/Differentiator/Evidence/Scope/Core Message) for both
-task-mode and long-term-mode letters, weighting emphasis differently per mode but not switching
-structure. This file's Blocks 1-4 (below) are a genuinely different, vacancy-specific shape.
-Whether/how `cover-letter.md` should switch between the two structures by mode is an open decision
-tracked outside this candidate-facing reference. Some of this file's resume-structure guidance
-(header fields, bullet framing) already overlaps with `policies/cv-writing-policy.md`;
-reconciling the two is part of that same open decision, not resolved by this file's existence.
+**Status here: the captured design doc for the whole system this was ported from, not the
+operational instructions.** Section 6's Blocks 1-4 and Section 7's validator are now operationalized
+as `policies/cover-letter-shape-b.md`, which `playbooks/cover-letter.md` actually calls (chosen by
+a per-posting judgment call — human-read-likely vs ATS/formal-pipeline-likely, independent of
+task/long-term mode; the other shape is `cover-letter-shape-a.md`, shared rules for both in
+`cover-letter-writing-policy.md`). This file stays as the fuller reference — read it for the
+whole shared model (Section 8) and the reasoning behind the shape, not as something a playbook
+reads directly. The resume-structure guidance (Sections 1-5: header fields, bullet framing, ATS
+contract) still isn't wired anywhere and still overlaps with `policies/cv-writing-policy.md`;
+reconciling the two remains open, a separate decision from the cover-letter shape one.
 
 > Original source note (career-wizard): a job-search course lesson on modern resume/CV formatting
 > ("Урок 3"), cross-checked against 8 attached resume template `.docx` files (chronological,
@@ -170,5 +172,5 @@ which 5-10 pieces of evidence are strongest? (4) what evidence is missing? (5) w
 to appear naturally? -- only then: Resume packs the evidence densely; Cover Letter builds a hiring
 argument from that *same* evidence. Retrieval should be requirement-driven (does this evidence
 prove requirement X?), not similarity-driven (does this text look like the JD's words?) --
-`cover-letter.md`'s own Step 2 (Evidence) already does this by decomposing requirements into
+`cover-letter-shape-a.md`'s own Evidence step already does this by decomposing requirements into
 underlying capabilities first, not searching by keyword overlap.

@@ -78,6 +78,9 @@ them.
 - `location-exception-classification.md` -- an ambiguous remote-but-timezone-scoped posting;
   checks the agent classifies it `location_exception_candidate` (a surfaced risk, not a blocking
   cluster or a hand-lowered score), not `hard_location_block` or silently `open_remote`.
+- `cover-letter-shape-choice.md` -- a clear-signal and an ambiguous-signal posting; checks the
+  agent picks Shape A/B confidently and visibly on clear signal, and asks rather than silently
+  guessing when the signal is genuinely mixed.
 
 ## Run history format
 

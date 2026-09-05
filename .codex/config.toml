@@ -17,6 +17,24 @@ approval_mode = "approve"
 [mcp_servers.career-space.tools.vacancy_list]
 approval_mode = "approve"
 
+[mcp_servers.career-space.tools.record_scout_outcomes]
+approval_mode = "approve"
+
+[mcp_servers.career-space.tools.vacancy_resolve]
+approval_mode = "approve"
+
+[mcp_servers.career-space.tools.render_resume]
+approval_mode = "approve"
+
+[mcp_servers.career-space.tools.render_cover_letter]
+approval_mode = "approve"
+
+[mcp_servers.career-space.tools.render_board]
+approval_mode = "approve"
+
+[mcp_servers.career-space.tools.scout_fetch]
+approval_mode = "approve"
+
 [mcp_servers.design-patterns]
 command = "sh"
 args = ["-c", "AGENTS_TOOLS_DIR=\"${AGENTS_TOOLS_DIR:-$HOME/.agents}\"; exec env DATABASE_PATH=\"$AGENTS_TOOLS_DIR/design_patterns_mcp/data/design-patterns.db\" node \"$AGENTS_TOOLS_DIR/design_patterns_mcp/dist/mcp-server.js\""]

@@ -14,7 +14,16 @@ and why each one was built lives in git history, not here.
 - [x] Fitment check -- private, employer-side fit read against a pasted posting. Candidate-side
       suitability ("do I actually want this") is a separate, independent judgment -- see
       Prioritize below, never inferred from a fit score.
-- [x] Cover letter generation.
+- [x] Cover letter generation -- `playbooks/cover-letter.md` orchestrates, technique split by
+      shape so a generation only ever loads one: `policies/cover-letter-writing-policy.md` (shared
+      rules, always read) + `cover-letter-shape-a.md` (Problem/Differentiator/Evidence/Scope/Core
+      Message, human-read-likely) or `cover-letter-shape-b.md` (Blocks 1-4: What/Why me/Why
+      them/CTA, ATS/formal-pipeline-likely, operationalized from `_sb/reference/
+      cover-letter-framework-vacancy.md`). Two independent judgment calls: mode (task-bid vs
+      long-term role, controls emphasis) and shape (controls structure) -- ask the candidate when
+      either is genuinely unclear. Reuses a vacancy's `targeting-plan.md` for evidence when one
+      already exists (never force-created just for a letter). Still open, separate decision: the
+      framework's resume-structure guidance (header/ATS-contract) vs `policies/cv-writing-policy.md`.
 - [x] CV generation -- universal (by role profile) and targeted (per vacancy). A targeted CV
       echoes the vacancy's own posted title when the Master CV honestly supports it, for ATS
       matching -- see `policies/cv-writing-policy.md`'s title rule.
@@ -74,20 +83,7 @@ and why each one was built lives in git history, not here.
 
 ## Next steps, in order
 
-1. **`cover-letter.md` structure decision** -- brainstorm-stage, product question not just an
-   engineering gap. `_sb/reference/cover-letter-framework-vacancy.md` has a genuinely different
-   vacancy-application shape (Blocks 1-4: What/Why me/Why them/CTA, plus its own validator
-   criteria) vs. the freelance-proposal shape (Problem/Differentiator/Evidence/Scope/Core Message)
-   the playbook currently always uses for both modes. Real open question is UX, not mechanical: a
-   real sent batch (current shape) reads as genuinely engaging/triggering to a human reader; the
-   framework's Blocks 1-4 is more formal and flatter -- likely the better bet for an ATS keyword
-   scan, worse for a human reader. May end up needing both, chosen per posting, rather than one
-   replacing the other. If/when this gets picked up, bundle in: wiring `cover-letter.md` to reuse
-   `playbooks/requirement-evidence-plan.md`'s `targeting-plan.md` instead of re-deriving evidence
-   independently (right now a CV and cover letter for the same vacancy can select different
-   evidence for the same requirement), and the framework's vacancy-specific validator criteria
-   (retells the resume, no concrete why-this-company, doesn't use the vacancy's own vocabulary).
-2. **Skill hygiene** -- review external agent-skill repos for conventions, not content: short
+1. **Skill hygiene** -- review external agent-skill repos for conventions, not content: short
    capability playbooks, explicit orchestrators, strict reference routing. First pass: audit thick
    playbooks (`cv-targeted.md`, `scout.md`, `cover-letter.md`) for extractable internal
    capabilities. The agent-contract half of this item is done -- `no-blind-regeneration.md`,
@@ -133,7 +129,8 @@ and why each one was built lives in git history, not here.
   Some playbook steps are structured extraction, not real judgment -- small, classification-shaped,
   bounded input/output, no need for the full Master CV or conversation history. Two candidates
   worth evaluating on that basis when this gets picked up: `fitment.md`'s Step 1
-  (requirement-cluster extraction) and cover-letter's task/long-term mode inference (Step 1).
+  (requirement-cluster extraction) and cover-letter's mode inference (Step 2 -- now bundled with
+  the shape judgment, which asks the candidate when unsure, so less purely mechanical than it was).
   Worth trying on a cheaper model with a smaller, focused context instead of the full conversation
   -- spawned as a subagent (Claude Code's `Agent`/Task tool with a pinned cheap model), not a
   direct API call from a script, to stay agent-native rather than adding a separate LLM-calling
