@@ -2,8 +2,8 @@
 /**
  * Renders the current state of `data/vacancies/` as a static HTML dashboard -- grouped by
  * status, sorted by fit score, with a real clickable link to every file present in each
- * vacancy's folder (fitment, posting, CV, cover letter, targeting plan) plus the original
- * posting URL. No server: open the written file directly in a browser. Deterministic formatting
+ * vacancy's folder (fitment, posting, CV, cover letter, interview prep, targeting plan) plus the
+ * original posting URL. No server: open the written file directly in a browser. Deterministic formatting
  * over `vacancy_store.listVacancies()`'s own data -- not something a playbook should
  * hand-summarize into a table itself (that means re-reading every record.yaml to do the same
  * thing this already does in one call, and produces plain text, not something with real

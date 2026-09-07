@@ -218,6 +218,7 @@ ask riding along with an operator one) before you act on it.
 | "перевір workspace/data" / "validate workspace" / "is my data layout ok" | `playbooks/workspace-validate.md` |
 | "звір дошку з поштою/календарем" / "did I hear back on anything" / "reconcile my board" | `playbooks/reconcile.md` |
 | "що з дошки викинути" / "дай топ 10" / "what should I actually pursue" | `playbooks/prioritize.md` |
+| "готуй мене до співбесіди" / "prep me for this interview" / "що спитають на співбесіді" | `playbooks/interview-prep.md` |
 
 Some playbooks are internal capabilities, not direct candidate triggers. Orchestrator playbooks
 call these to avoid copying the same procedure into every workflow:
@@ -297,9 +298,9 @@ data/                           # gitignored, personal
                                  # starts "new") or candidate-pasted via cover-letter.md/cv-targeted.md
                                  # (status starts "tracked" -- already past "found it, not reviewed").
                                  # record.yaml (status/status_history/fit/eligibility/track_label/archived/metadata) + posting.md
-                                 # always; cv.md / cover-letter.md / fitment.md / targeting-plan.md live
-                                 # here too once generated -- never in cv/ above or a separate
-                                 # cover-letters/ (that folder is retired)
+                                 # always; cv.md / cover-letter.md / fitment.md / targeting-plan.md /
+                                 # interview-prep.md live here too once generated -- never in cv/ above
+                                 # or a separate cover-letters/ (that folder is retired)
   linkedin-searches.md          # LinkedIn Boolean search deep-links, see playbooks/
                                  # linkedin-search.md -- regenerated, not hand-edited
   board.html                    # every vacancy, grouped by status, sorted by fit, with real

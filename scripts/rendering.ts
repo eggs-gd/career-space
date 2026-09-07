@@ -183,13 +183,21 @@ const BOARD_FILE_LABELS: Record<string, string> = {
   "fitment.md": "fitment",
   "cv.md": "CV",
   "cover-letter.md": "cover",
+  "interview-prep.md": "prep",
   "targeting-plan.md": "plan",
   "record.yaml": "record",
 };
 // record.yaml is real and openable but rarely what a candidate wants a quick link to (it's the
 // machine-facing metadata file, everything in it worth a glance at a distance is already a
 // column in the table) -- link every other file present, skip this one.
-const BOARD_FILE_ORDER = ["fitment.md", "posting.md", "cv.md", "cover-letter.md", "targeting-plan.md"] as const;
+const BOARD_FILE_ORDER = [
+  "fitment.md",
+  "posting.md",
+  "cv.md",
+  "cover-letter.md",
+  "interview-prep.md",
+  "targeting-plan.md",
+] as const;
 
 const MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

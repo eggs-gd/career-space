@@ -80,6 +80,17 @@ and why each one was built lives in git history, not here.
       correspondence, stores the why on the `status_history` entry (`setStatus`'s optional
       `note`). Falls back to a pasted summary; skips cleanly when nothing's connected. Offered by
       `scout.md` before a run.
+- [x] Interview preparation -- `playbooks/interview-prep.md`. One `interview-prep.md` artifact per
+      vacancy, on request only (no status-change trigger). An interview thesis (positioning
+      continued into the interview phase), "what they're actually hiring for" with confidence +
+      evidence, likely questions + evidence ammunition grouped by audience (recruiter /
+      hiring-manager / technical) and derived from `score_fit.ts`'s scored clusters (gap probes
+      flagged expect-early; a probe the recruiter already made reads from `status_history`),
+      categorized questions to ask them (diagnostic / positioning / decision), and a 5-minute
+      cheat sheet. Re-runs for later rounds keep the stable blocks and regenerate the
+      round-sensitive ones. No voice/mock infra, no persistent story bank, no post-interview
+      answer-grading -- design rationale and the career-ops prior-art scan in
+      `_sb/ideas/interview-prep.md`.
 
 ## Next steps, in order
 
@@ -91,14 +102,24 @@ and why each one was built lives in git history, not here.
 
 ## Later / maybe
 
+- **Post-interview capture.** Deferred by choice (see `_sb/ideas/interview-prep.md`). If ever
+  built: only the questions actually asked, the facts the interview corrected (comp, team size,
+  stack, remote policy), and the outcome -- never a grade on the candidate's own answers, which
+  depends on recall they usually don't have. Needs round-level board sub-states, which don't
+  exist. Converges with the market-feedback loop below.
 - **Market-feedback loop -- learn from preserved outcomes.** The closed loop is `application ->
   market response -> learn -> strategy / positioning / selection`. The capture half is done:
   `reconcile.md` brings the market response in from email/calendar, and `setStatus`'s `note`
   records the why on each transition. Still open: the *learn* step -- reading the accumulated
   `status_history` notes for a pattern (a differentiator that keeps drawing rejections, a track
-  that never converts) and feeding it back into positioning / scout config. Analysis/calibration,
-  a separate step, not started. Reference: career-ops' `/outcome` + `calibrate.mjs`; other
-  prior-art pointers in `_sb/ideas/career-ops-comparison.md`.
+  that never converts) and feeding it back into positioning / scout config. Trigger it proactively
+  on negative status transitions (`rejected`, `skipped`) and on a chronic `applied -> silence`
+  track -- offer the review, don't force it; the repo author already does this by hand. Discipline:
+  one rejection is a data point, a pattern across a dimension is the signal (career-ops' `calibrate`
+  "n too small" rule); positive transitions (`interview`, `offer`) are a weaker secondary input so
+  the loop isn't only learning from failure. Analysis/calibration, a separate step, not started.
+  Reference: career-ops' `/outcome` + `calibrate.mjs`; other prior-art pointers in
+  `_sb/ideas/career-ops-comparison.md`.
 - **Per-company cap on how many postings one scout run surfaces.** One company posting 10+
   near-identical roles in one run burns that many judgment turns on what's really one decision.
   Worked around per-candidate via a `hard_exclude` entry in `data/sources.yaml` (reversible, not a

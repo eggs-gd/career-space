@@ -39,3 +39,30 @@ test("board renders location-exception metadata as a visible badge", () => {
   assert.match(html, /Location exception/);
   assert.match(html, /Remote scope lists nearby markets but no hard legal blocker/);
 });
+
+test("board renders an interview-prep.md file as a 'prep' badge with its content", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "career-space-board-"));
+  const slug = "acme-principal-engineer-a1b2c3d4";
+  fs.mkdirSync(path.join(root, slug), { recursive: true });
+  fs.writeFileSync(path.join(root, slug, "interview-prep.md"), "# Interview thesis\n\nRemember this candidate as the one who restructures ambiguous systems.\n");
+
+  const html = renderBoardHtml(
+    [
+      {
+        slug,
+        status: "interview",
+        company: "Acme",
+        title: "Principal Engineer",
+        fit_score: 8,
+        url: "https://example.com/jobs/1",
+        updated_at: "2026-09-02T10:00:00Z",
+        archived: false,
+        files: ["interview-prep.md"],
+      },
+    ],
+    { vacancyDirFn: (s) => path.join(root, s) }
+  );
+
+  assert.match(html, /<summary>prep<\/summary>/);
+  assert.match(html, /Remember this candidate as the one who restructures ambiguous systems/);
+});
