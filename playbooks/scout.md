@@ -112,6 +112,14 @@ subroutine, but don't paste the rendered result to the candidate yet. `candidate
 is already shaped like a pasted posting. Keep `fitment.md` as the only place that defines detailed
 scoring semantics; scout only batches judgments and routes outcomes.
 
+Batching invites a shallower per-posting read than a standalone fitment — the one part not to
+skimp on is `fitment.md`'s `eligibility.location` classification and the mandatory-language
+`blocking` check. A buried "must have the right to work in [country] / no visa sponsorship",
+"fluent [non-English language] required", or a "remote" that turns out region-scoped a paragraph
+later is exactly what a fast batch pass misses, and it lands a hard-gated posting on the board at
+a 9-10 score. Read the sentence, not the keyword — same as `fitment.md` says, it just matters more
+here because nobody's reading each posting closely a second time.
+
 Keep `score_fit`'s structured result around for Step 3, including its rendered Markdown.
 
 Do this for every candidate before moving to Step 3 -- batching the judgments first, then the
