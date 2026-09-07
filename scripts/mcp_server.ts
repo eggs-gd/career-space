@@ -16,9 +16,12 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import * as rendering from "./rendering";
 import * as scoreFit from "./score_fit";
 import * as vacancyStore from "./vacancy_store";
+import * as engagementStore from "./engagement_store";
 import { LOCATION_ELIGIBILITY_STATUSES } from "./eligibility";
 import { generate as generateLinkedinSearches } from "./linkedin_searches";
 import { renderBoard } from "./render_board";
+import { renderEngagements } from "./render_engagement";
+import { rescore } from "./rescore";
 import { runScout } from "./scout_fetch";
 import { resolveVacancyFromUrl } from "./resolve_vacancy_url";
 import { validateWorkspace } from "./workspace_validate";
@@ -78,11 +81,19 @@ const recordScoutItemSchema = z.object({
     reason: z.string().optional(),
     markdown: z.string(),
     eligibility: eligibilitySchema,
+    // The structured score_fit input (job_summary/clusters/risk/appeal/...). When present,
+    // fitment.json is written alongside fitment.md so rescore.js can replay a formula change.
+    assessment: z.record(z.string(), z.unknown()).optional(),
   }),
 });
 
 function renderBoardResult(): { output_path: string; markdown_path: string } {
   const { htmlPath, mdPath } = renderBoard();
+  return { output_path: htmlPath, markdown_path: mdPath };
+}
+
+function renderEngagementResult(): { output_path: string; markdown_path: string } {
+  const { htmlPath, mdPath } = renderEngagements();
   return { output_path: htmlPath, markdown_path: mdPath };
 }
 
@@ -161,7 +172,7 @@ server.registerTool(
   "score_fit",
   {
     description:
-      "Score a structured fitment assessment and return score, fit_category, eligibility, and rendered Markdown.",
+      "Score a structured fitment assessment and return score, fit_category, eligibility, and rendered Markdown. With out_dir set, also writes fitment.json + fitment.md into that folder (pass the vacancy/order folder).",
     inputSchema: {
       job_summary: z.string(),
       clusters: z.array(z.record(z.string(), z.unknown())),
@@ -169,9 +180,10 @@ server.registerTool(
       appeal: z.string().default(""),
       fit_category: z.string().default("unclear"),
       eligibility: eligibilitySchema,
+      out_dir: z.string().optional(),
     },
   },
-  async ({ job_summary, clusters, risk, appeal, fit_category, eligibility }): Promise<CallToolResult> => {
+  async ({ job_summary, clusters, risk, appeal, fit_category, eligibility, out_dir }): Promise<CallToolResult> => {
     const assessment = {
       job_summary,
       clusters: clusters as scoreFit.Assessment["clusters"],
@@ -180,7 +192,12 @@ server.registerTool(
       fit_category,
       eligibility,
     };
-    return respond(scoreFit.evaluate(assessment));
+    const result = scoreFit.evaluate(assessment);
+    if (out_dir) {
+      const { jsonPath, mdPath } = scoreFit.persistFitment(assessment, resolvePath(out_dir));
+      return respond({ ...result, fitment_json: jsonPath, fitment_md: mdPath });
+    }
+    return respond(result);
   }
 );
 
@@ -315,7 +332,7 @@ server.registerTool(
     const results = resolvedItems.map((item) =>
       vacancyStore.recordScoutOutcome({
         candidate: item.candidate,
-        fit: item.fit,
+        fit: { ...item.fit, assessment: item.fit.assessment as scoreFit.Assessment | undefined },
         minFitScore: min_fit_score,
       })
     );
@@ -485,6 +502,114 @@ server.registerTool(
     const resolved = data_dir ? resolvePath(data_dir) : undefined;
     return respond(validateWorkspace({ dataDir: resolved }));
   }
+);
+
+// --- Engagements (data/engagements/) -- sibling of the vacancy_* tools for the Engagement opportunity type. Orders share VALID_STATUSES with vacancies (see _sb/concept.md).
+
+server.registerTool(
+  "engagement_upsert",
+  {
+    description:
+      "Create or update data/engagements/<slug>/ record.yaml and posting.md for a commercial engagement (a marketplace job, a client project). Renders the engagements board.",
+    inputSchema: {
+      client: z.string().default(""),
+      title: z.string(),
+      url: z.string().default(""),
+      source: z.string().default(""),
+      posting_text: z.string().default(""),
+      judged_at: z.string().optional(),
+      status: z.enum(vacancyStore.VALID_STATUSES).optional(),
+      fit_score: z.number().int().optional(),
+      fit_category: z.string().optional(),
+      fit_reason: z.string().optional(),
+    },
+  },
+  async (args): Promise<CallToolResult> => {
+    const record = engagementStore.upsertEngagement({
+      client: args.client,
+      title: args.title,
+      url: args.url,
+      source: args.source,
+      postingText: args.posting_text,
+      judgedAt: args.judged_at,
+      status: args.status,
+      fitScore: args.fit_score,
+      fitCategory: args.fit_category,
+      fitReason: args.fit_reason,
+    });
+    return respond({ record, board: renderEngagementResult() });
+  }
+);
+
+server.registerTool(
+  "engagement_set_status",
+  {
+    description: "Set an engagement pipeline status, append status_history on real transitions, and render the engagements board.",
+    inputSchema: {
+      slug: z.string(),
+      status: z.enum(vacancyStore.VALID_STATUSES),
+      note: z.string().optional(),
+    },
+  },
+  async ({ slug, status, note }): Promise<CallToolResult> => {
+    const record = engagementStore.setEngagementStatus(slug, status, note);
+    return respond({ record, board: renderEngagementResult() });
+  }
+);
+
+server.registerTool(
+  "engagement_set_archived",
+  {
+    description: "Set an engagement archive flag and render the engagements board.",
+    inputSchema: { slug: z.string(), archived: z.boolean() },
+  },
+  async ({ slug, archived }): Promise<CallToolResult> => {
+    const record = engagementStore.setEngagementArchived(slug, archived);
+    return respond({ record, board: renderEngagementResult() });
+  }
+);
+
+server.registerTool(
+  "engagement_attach_artifact",
+  {
+    description: "Copy an existing file into data/engagements/<slug>/ as <kind>.<extension>. Returns the written path.",
+    inputSchema: { slug: z.string(), kind: z.string(), path: z.string() },
+  },
+  async ({ slug, kind, path: sourcePath }): Promise<CallToolResult> =>
+    respond(engagementStore.attachEngagementArtifact(slug, kind, sourcePath))
+);
+
+server.registerTool(
+  "engagement_list",
+  {
+    description: "List engagements with status, fit, category, URL, archive flag, and files. Excludes archived unless requested.",
+    inputSchema: { include_archived: z.boolean().optional() },
+  },
+  async ({ include_archived }): Promise<CallToolResult> =>
+    respond(engagementStore.listEngagements({ includeArchived: include_archived }))
+);
+
+server.registerTool(
+  "render_engagement",
+  {
+    description: "Render data/engagements.html and data/engagements.md from current order records. Excludes archived unless requested.",
+    inputSchema: { output_path: z.string().optional(), include_archived: z.boolean().optional() },
+  },
+  async ({ output_path, include_archived }): Promise<CallToolResult> => {
+    const resolved = output_path ? resolvePath(output_path) : undefined;
+    const { htmlPath, mdPath } = renderEngagements(resolved, include_archived);
+    return respond({ output_path: htmlPath, markdown_path: mdPath });
+  }
+);
+
+server.registerTool(
+  "rescore",
+  {
+    description:
+      "Re-apply score_fit's formula to every saved fitment.json under data/vacancies/ and data/engagements/ without re-running the model -- use after a scoring-formula change. Dry run unless write:true (which updates record.yaml fit.score/fit.category, rewrites fitment.md, re-renders both boards).",
+    inputSchema: { write: z.boolean().default(false) },
+  },
+  async ({ write }): Promise<CallToolResult> => respond(rescore({ write }))
 );
 
 async function main(): Promise<void> {

@@ -189,6 +189,58 @@ function validateVacancies(dataDir: string, issues: ValidationIssue[]): void {
   }
 }
 
+/** Engagements (`data/engagements/<slug>/`) -- the vacancy record's leaner sibling: `client`
+ * instead of `company`, no `posting_id`/`content_id`/`eligibility`, shared `status` enum. */
+function validateEngagementRecord(folder: string, filePath: string, issues: ValidationIssue[]): void {
+  const record = loadYaml(filePath, issues);
+  if (record === null) return;
+  const slug = path.basename(folder);
+
+  if (record.slug !== slug) {
+    issues.push(issue("error", "engagement_slug_mismatch", filePath, `record slug must match folder name ${slug}.`));
+  }
+  for (const required of ["title", "status", "status_history"]) {
+    if (!(required in record)) {
+      issues.push(issue("error", "engagement_required_key", filePath, `record.yaml missing ${required}.`));
+    }
+  }
+  if (typeof record.status === "string" && !(VALID_STATUSES as readonly string[]).includes(record.status)) {
+    issues.push(issue("error", "engagement_status", filePath, `Invalid status ${record.status}.`));
+  }
+  if (!Array.isArray(record.status_history)) {
+    issues.push(issue("error", "engagement_status_history", filePath, "status_history must be an array."));
+  }
+  const fit = record.fit;
+  if (fit !== undefined) {
+    if (!isRecord(fit)) {
+      issues.push(issue("error", "engagement_fit_shape", filePath, "fit must be a mapping."));
+    } else if (fit.score !== undefined && fit.score !== null) {
+      const score = Number(fit.score);
+      if (!Number.isInteger(score) || score < 1 || score > 10) {
+        issues.push(issue("error", "engagement_fit_score", filePath, "fit.score must be an integer from 1 to 10."));
+      }
+    }
+  }
+  if (!fs.existsSync(path.join(folder, "posting.md"))) {
+    issues.push(issue("error", "engagement_missing_posting", path.join(folder, "posting.md"), "Order folder must contain posting.md."));
+  }
+}
+
+function validateEngagements(dataDir: string, issues: ValidationIssue[]): void {
+  const engagementsDir = path.join(dataDir, "engagements");
+  if (!fs.existsSync(engagementsDir)) return;
+  for (const entry of fs.readdirSync(engagementsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const folder = path.join(engagementsDir, entry.name);
+    const record = path.join(folder, "record.yaml");
+    if (!fs.existsSync(record)) {
+      issues.push(issue("error", "engagement_missing_record", record, "Order folder must contain record.yaml."));
+      continue;
+    }
+    validateEngagementRecord(folder, record, issues);
+  }
+}
+
 function validateCvDir(dataDir: string, issues: ValidationIssue[]): void {
   const cvDir = path.join(dataDir, "cv");
   if (!fs.existsSync(cvDir)) return;
@@ -218,6 +270,7 @@ export function validateWorkspace(opts: { dataDir?: string } = {}): ValidationRe
   validateConfig(dataDir, issues);
   validateSources(dataDir, issues);
   validateVacancies(dataDir, issues);
+  validateEngagements(dataDir, issues);
   validateCvDir(dataDir, issues);
   validateSurfaces(dataDir, issues);
   return {

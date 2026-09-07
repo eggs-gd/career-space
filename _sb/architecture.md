@@ -34,6 +34,33 @@ Omitted enrichment fields mean "no opinion"; existing values are preserved. `new
 status, not a regression target for an existing record. `status_history.note` is only for an
 explicitly observed transition reason.
 
+## Engagements
+
+`engagement_store.ts` is the vacancy store's sibling for the Engagement opportunity type (see
+`_sb/concept.md`). Engagements live in `data/engagements/<slug>/` (a flat sibling of `data/vacancies/`,
+never nested). `record.yaml` carries `client` / `title` / `url` / `status` / `status_history` /
+`fit` / `judged_at` — leaner than a vacancy record (no `posting_id`/`content_id`/`eligibility`/
+`track_label`). Engagements share `VALID_STATUSES` with vacancies: `setEngagementStatus`/`setEngagementArchived`
+are `vacancy_store`'s own `setStatus`/`setArchived` pointed at `data/engagements/` via the
+`scope: { dataDir }` seam. `upsertEngagement` and `listEngagements` are engagement-specific. `render_engagement.ts`
+writes `data/engagements.html` + `data/engagements.md`, sharing the head template and nav with the
+vacancy board. No seen ledger yet (there is no automated engagement source yet).
+
+## Fitment persistence and re-scoring
+
+The agent's structured judgement (`job_summary` / `clusters` / evidence levels / `risk` / `appeal`
+/ `fit_category`) is the model half; `score_fit.ts`'s weighted formula + caps + Markdown render is
+the deterministic half. `score_fit.persistFitment(assessment, dir)` writes both `fitment.json`
+(the input, verbatim) and `fitment.md` (the render) into a vacancy/engagement folder — invoked by the
+`score_fit` tool's `out_dir`, and by `vacancy_store.recordScoutOutcome` on the scout path (where
+the folder doesn't exist at judge time). An agent never hand-writes a fitment file.
+
+`rescore.ts` walks every `data/{vacancies,engagements}/*/fitment.json`, re-runs `score_fit.evaluate`,
+and (with `--write`) updates `record.yaml`'s `fit.score`/`fit.category`, rewrites `fitment.md`, and
+re-renders both boards. This is how a scoring-formula change propagates to existing records without
+re-running the model. Folders without a `fitment.json` (older records, or ones tracked via
+cover-letter/cv-targeted without a fitment run) are reported as not replayable.
+
 ## Scout Pipeline
 
 `scout_fetch.ts` fetches configured public sources, applies deterministic prefiltering
@@ -84,5 +111,12 @@ surface context files, and known enum values.
 - `linkedin_searches`
 - `render_board`
 - `workspace_validate`
+- `rescore`
+- `engagement_upsert`
+- `engagement_set_status`
+- `engagement_set_archived`
+- `engagement_attach_artifact`
+- `engagement_list`
+- `render_engagement`
 
 The MCP handlers are thin wrappers over the same functions used by the CLI fallback.

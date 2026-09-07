@@ -81,6 +81,13 @@ them.
 - `cover-letter-shape-choice.md` -- a clear-signal and an ambiguous-signal posting; checks the
   agent picks Shape A/B confidently and visibly on clear signal, and asks rather than silently
   guessing when the signal is genuinely mixed.
+- `engagement-routing.md` -- a commercial-work posting and (mirror) a standard vacancy; checks
+  the engagement routes to `engagement-fitment.md` / `engagement_*` / `data/engagements/`, and the
+  vacancy stays on the `fitment.md` / `data/vacancies/` path.
+- `pedigree-requirement-cluster.md` -- a posting whose vocabulary matches the candidate's
+  positioning but whose "who we're looking for" section names a background they lack; checks the
+  agent scores that as its own honest cluster instead of folding it into "strong overlap".
+  **Found a real miss this way** -- see run history.
 
 ## Run history format
 

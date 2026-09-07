@@ -13,6 +13,7 @@ import { parseArgs } from "util";
 import { Eligibility, isLocationEligibilityStatus, normalizeEligibility } from "./eligibility";
 import * as postingIds from "./posting_ids";
 import { REPO_ROOT } from "./repo_paths";
+import { Assessment, persistFitment } from "./score_fit";
 
 export const DATA_DIR = path.join(REPO_ROOT, "data", "vacancies");
 
@@ -262,6 +263,11 @@ export interface ScoutOutcomeFit {
   reason?: string;
   markdown: string;
   eligibility?: Eligibility;
+  /** The structured `score_fit` input (clusters etc.). When present, `fitment.json` + `fitment.md`
+   * are written via `score_fit.persistFitment` so a later scoring-formula change can be replayed
+   * by `rescore.ts` without re-judging. When absent, only `fitment.md` is written, from
+   * `markdown`. */
+  assessment?: Assessment;
 }
 
 export interface RecordScoutOutcomeOptions {
@@ -536,8 +542,16 @@ export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedSco
     dataDir: opts.dataDir,
   });
   const slug = String(record.slug);
-  const fitmentPath = path.join(vacancyDir(slug, scope), "fitment.md");
-  fs.writeFileSync(fitmentPath, fit.markdown, "utf-8");
+  const dir = vacancyDir(slug, scope);
+  const fitmentPath = path.join(dir, "fitment.md");
+  // With the structured assessment, write both fitment.json and fitment.md through the one
+  // deterministic writer (so a scoring-formula change is replayable by rescore.ts); without it,
+  // just the rendered markdown, as before.
+  if (fit.assessment) {
+    persistFitment(fit.assessment, dir);
+  } else {
+    fs.writeFileSync(fitmentPath, fit.markdown, "utf-8");
+  }
 
   return {
     outcome,

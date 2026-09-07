@@ -18,12 +18,11 @@ and why each one was built lives in git history, not here.
       shape so a generation only ever loads one: `policies/cover-letter-writing-policy.md` (shared
       rules, always read) + `cover-letter-shape-a.md` (Problem/Differentiator/Evidence/Scope/Core
       Message, human-read-likely) or `cover-letter-shape-b.md` (Blocks 1-4: What/Why me/Why
-      them/CTA, ATS/formal-pipeline-likely, operationalized from `_sb/reference/
-      cover-letter-framework-vacancy.md`). Two independent judgment calls: mode (task-bid vs
+      them/CTA, ATS/formal-pipeline-likely). Two independent judgment calls: mode (task-bid vs
       long-term role, controls emphasis) and shape (controls structure) -- ask the candidate when
       either is genuinely unclear. Reuses a vacancy's `targeting-plan.md` for evidence when one
-      already exists (never force-created just for a letter). Still open, separate decision: the
-      framework's resume-structure guidance (header/ATS-contract) vs `policies/cv-writing-policy.md`.
+      already exists (never force-created just for a letter). Still open, separate decision:
+      resume-structure guidance (header / ATS contract) vs `policies/cv-writing-policy.md`.
 - [x] CV generation -- universal (by role profile) and targeted (per vacancy). A targeted CV
       echoes the vacancy's own posted title when the Master CV honestly supports it, for ATS
       matching -- see `policies/cv-writing-policy.md`'s title rule.
@@ -89,8 +88,7 @@ and why each one was built lives in git history, not here.
       categorized questions to ask them (diagnostic / positioning / decision), and a 5-minute
       cheat sheet. Re-runs for later rounds keep the stable blocks and regenerate the
       round-sensitive ones. No voice/mock infra, no persistent story bank, no post-interview
-      answer-grading -- design rationale and the career-ops prior-art scan in
-      `_sb/ideas/interview-prep.md`.
+      answer-grading -- design rationale kept in local notes.
 
 ## Next steps, in order
 
@@ -102,7 +100,7 @@ and why each one was built lives in git history, not here.
 
 ## Later / maybe
 
-- **Post-interview capture.** Deferred by choice (see `_sb/ideas/interview-prep.md`). If ever
+- **Post-interview capture.** Deferred by choice. If ever
   built: only the questions actually asked, the facts the interview corrected (comp, team size,
   stack, remote policy), and the outcome -- never a grade on the candidate's own answers, which
   depends on recall they usually don't have. Needs round-level board sub-states, which don't
@@ -114,46 +112,31 @@ and why each one was built lives in git history, not here.
   `status_history` notes for a pattern (a differentiator that keeps drawing rejections, a track
   that never converts) and feeding it back into positioning / scout config. Trigger it proactively
   on negative status transitions (`rejected`, `skipped`) and on a chronic `applied -> silence`
-  track -- offer the review, don't force it; the repo author already does this by hand. Discipline:
+  track -- offer the review, don't force it. Discipline:
   one rejection is a data point, a pattern across a dimension is the signal (career-ops' `calibrate`
   "n too small" rule); positive transitions (`interview`, `offer`) are a weaker secondary input so
-  the loop isn't only learning from failure. Analysis/calibration, a separate step, not started.
-  Reference: career-ops' `/outcome` + `calibrate.mjs`; other prior-art pointers in
-  `_sb/ideas/career-ops-comparison.md`.
+  the loop isn't only learning from failure. Analysis/calibration, a separate step, not started. Prior art: career-ops' `/outcome` + `calibrate.mjs`.
 - **Per-company cap on how many postings one scout run surfaces.** One company posting 10+
   near-identical roles in one run burns that many judgment turns on what's really one decision.
   Worked around per-candidate via a `hard_exclude` entry in `data/sources.yaml` (reversible, not a
   code change); the real fix would be a `max_postings_per_company_per_run`-shaped config in
   `scout_domain.ts`/`scout_prefilter.ts`'s dedup step. Not started, not urgent while the
   workaround holds.
-- **Freelance (Upwork) as an opportunity source.** Extend the pipeline past vacancies to Upwork
-  orders, in two decoupled phases. **Phase 1 -- startable now, manual-fed:** paste an order, judge
-  it through a reasoning-weight-inverted fitment (`can deliver -> economics -> useful experience
-  -> strategy`, vs employment's `strategy -> role fit -> evidence -> economics`), record it under
-  its own `data/` root (not mixed into `data/vacancies/`; room left for a `data/opportunities/`
-  parent, no rename now). More hand-work on purpose -- it's how the order record shape, criteria,
-  and statuses get learned before committing to code, and before the key lands. **Phase 2 --
-  later:** a read-only Upwork GraphQL API fetcher (`marketplaceJobPostingsSearch`; auth + client
-  plumbing already sketched) that plugs into the proven Phase 1 flow -- gated on a selective
-  dev-key requested 2026-09-07, disabled pending review. UI stays sibling static views, no server.
-  Fiverr / productized offers / outbound leads out of scope. Full context:
-  `_sb/ideas/freelance-opportunity-source.md`.
-- **A.Team, if/when Upwork/Fiverr/freelance-network platforms get more active attention.** Not a
-  real job posting source -- a freelance-talent-network platform that promotes itself by posting
-  through aggregators like Remotive; "Apply" leads to registering for A.Team's own service, not an
-  actual application. Worth a manual look alongside Upwork/Fiverr whenever that effort picks up,
-  not as a scout source.
-- **Lead-gen / outreach extension** -- extend scout's vacancy -> company -> fit chain one hop
-  further: contact discovery + drafted outreach for top-fit vacancies. Not started. Principles
-  agreed in advance for when it's picked up: (a) LinkedIn contact lookup/browser control stays an
-  external capability (Claude in Chrome or similar), never scraping built into career-space
-  itself; (b) agent researches + drafts, candidate approves/sends, no bulk automation; (c) no new
-  root entity needed to start -- add `contacts.md`/`outreach.md` to the existing `<slug>/` folder,
-  or a differently-shaped slug for a non-vacancy signal, in the same flat `data/vacancies/` list;
-  only worth an `Opportunity`-root rename once a concrete non-vacancy signal actually needs it.
-  Vacancy slug sorting (folder names don't sort by recency) folds in here rather than being its
-  own item -- `render_board` already removes the need to eyeball raw folder order, so it's a
-  machine/collision concern only, worth solving alongside this if at all.
+- **Engagement pipeline (built) + an automated source (later).** The Engagement half of the
+  entity model (`_sb/concept.md`) is built: `engagement_store.ts`, `render_engagement.ts`,
+  `engagement_*` MCP/CLI, `workspace_validate` coverage, `playbooks/engagement-fitment.md`
+  (deliverability + economics + win-probability clusters, on the shared `score_fit.ts`). It is
+  manual-fed today -- paste an engagement, judge it, record it. Not built: an automated source
+  (a read-only adapter for a commercial-work platform's API), a seen ledger for it, and the
+  settled engagement judgment schema (which enrichment fields deserve to be structured, learned
+  from real runs). Engagement judgment fields beyond the lean core (budget, counterparty quality,
+  competition) stay in `risk` prose until then.
+- **Lead-gen / outreach extension** -- extend the vacancy -> company -> fit chain one hop
+  further: contact discovery + drafted outreach for top-fit vacancies. Not started. Principles for
+  when it's picked up: (a) contact lookup / browser control stays an external capability (Claude
+  in Chrome or similar), never scraping built into career-space itself; (b) agent researches +
+  drafts, the person approves and sends, no bulk automation; (c) no new root entity to start --
+  `contacts.md` / `outreach.md` in the existing vacancy `<slug>/` folder.
 - **Packaging + flows-in-MCP.** Ship the deterministic layer, the flow resolver, and the
   bundled actions/policies as a prebuilt npm package run as a local subprocess -- not a server.
   `data/` stays local; the resolver reads only shallow state (file exists? status field? hash?),
@@ -163,8 +146,7 @@ and why each one was built lives in git history, not here.
   workspace to `data/` + `.mcp.json`. Its stage 2 (label every playbook action-or-flow) is the
   same work as "Skill hygiene" in Next Steps, and the resolver delivers the input-slicing lever
   the cheaper-model item below wants. Staged plan, the hard part (judgment branches in flows),
-  and why a server isn't the shape in `_sb/ideas/packaging-and-runtime.md`; resolver mechanics in
-  `_sb/ideas/workflow-resolver.md`. Not started.
+  and why a server is not the shape are in local design notes. Not started.
 - **Dashboard, expensive path** -- only if the cheap board proves insufficient. SvelteKit +
   static adapter. Not started, not clearly needed yet.
 - **Offload narrow, mechanical LLM sub-steps to a cheaper model, host-capability-gated.**
@@ -175,8 +157,7 @@ and why each one was built lives in git history, not here.
   the shape judgment, which asks the candidate when unsure, so less purely mechanical than it was).
   The "smaller, focused context" this needs is exactly what the flows resolver (Packaging item
   above) hands back per action, so this is downstream of that -- the only open question left is
-  which model runs it. `_sb/ideas/local-inference-capability.md` refines the mechanism: an
-  optional local model the MCP discovers, not a host-specific subagent (which the note below
+  which model runs it. Local design notes refine the mechanism: an optional local model the MCP discovers, not a host-specific subagent (which the note below
   flags as non-portable). The subagent form (Claude Code's `Agent`/Task tool with a pinned cheap
   model) stays the fallback where no local model is configured.
 

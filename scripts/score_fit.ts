@@ -3,7 +3,8 @@
  * Deterministic fit score + rendering. The score is a fixed weighted formula over requirement
  * clusters -- each cluster's evidence level (direct_strong/direct_partial/transferable/none)
  * scored against its importance tier (critical/important/nice_to_have), with a hard cap when a
- * real blocking requirement has zero evidence. See `computeScore` below for the exact weights.
+ * real blocking requirement has zero evidence and a softer cap when a non-blocking `critical`
+ * cluster does. See `computeScore` below for the exact weights and caps.
  * The rendering is Markdown (headers, bold, horizontal rules), because this repo's output is
  * read in a chat client that renders Markdown -- grouped by evidence state (Major gaps / Minor
  * gaps / Transferable / Strong overlap, then risk/appeal).
@@ -16,7 +17,9 @@
  * requirement clusters and judging evidence for each), writes it as JSON, and this script turns
  * that judgment into the scored, formatted result.
  *
- * Usage: node scripts/dist/score_fit.js <input.json>
+ * Usage: node scripts/dist/score_fit.js <input.json> [--out-dir <folder>]
+ *   With --out-dir, also writes `fitment.json` (this input, verbatim) and `fitment.md` (the
+ *   render) into that folder -- pass the vacancy/order folder so the agent never hand-writes them.
  *
  * Input JSON shape:
  * {
@@ -51,6 +54,8 @@
  */
 
 import * as fs from "fs";
+import * as path from "path";
+import { parseArgs } from "util";
 import { Eligibility, normalizeEligibility } from "./eligibility";
 
 interface Requirement {
@@ -93,6 +98,13 @@ const EVIDENCE_VALUE: Record<string, number> = {
 const TIER_WEIGHT: Record<string, number> = { critical: 0.6, important: 0.3, nice_to_have: 0.1 };
 const SECONDARY_EVIDENCE_DISCOUNT = 0.7;
 const BLOCKING_SCORE_CAP = 3;
+// A `critical` cluster (the role/bid "probably fails without it") whose own primary requirement
+// has zero evidence caps the score here -- softer than BLOCKING_SCORE_CAP because it's not a hard
+// disqualifier, but the weighted average alone lets two strong non-critical tiers prop a zeroed
+// critical cluster up to a 7-8, which reads as "strong fit" when it isn't. Applies to both
+// `fitment.md` and `engagement-fitment.md` (e.g. a stated core stack the candidate can't write, or
+// an engagement win-probability cluster scored `none` in a crowded pool).
+const CRITICAL_GAP_SCORE_CAP = 5;
 const NO_EXTRACTION_FALLBACK_SCORE = 5;
 
 const STATE_ORDER = ["major_gap", "minor_gap", "transferable", "strong"] as const;
@@ -108,6 +120,11 @@ const FIT_CATEGORY_LABELS: Record<string, [string, string]> = {
   altitude_mismatch: ["altitude mismatch", "right discipline, wrong level of responsibility"],
   context_gap: ["context gap", "missing domain/stack evidence this posting wants"],
   unclear: ["unclear", "not enough to classify confidently"],
+  // Engagement verdicts -- see playbooks/engagement-fitment.md.
+  good_bet: ["good bet", "you can deliver it and the economics work"],
+  thin_margin: ["thin margin", "doable, but the money or the effort is marginal"],
+  wrong_craft: ["wrong craft", "not actually your discipline"],
+  scope_unclear: ["scope unclear", "posting too vague to judge"],
 };
 
 // One header per group -- plain text, no emoji-as-color-coding (a chat Markdown renderer already
@@ -212,6 +229,16 @@ export function computeScore(clusters: Cluster[]): number {
     score = Math.min(score, BLOCKING_SCORE_CAP);
   }
 
+  // Softer gate: a `critical` (not `blocking`) cluster with zero evidence on its primary. See
+  // CRITICAL_GAP_SCORE_CAP.
+  if (
+    clusters.some(
+      (cluster) => !cluster.blocking && cluster.importance === "critical" && clusterPrimary(cluster).evidence === "none"
+    )
+  ) {
+    score = Math.min(score, CRITICAL_GAP_SCORE_CAP);
+  }
+
   return score;
 }
 
@@ -298,13 +325,33 @@ export function evaluate(assessment: Assessment): FitResult {
   };
 }
 
+/** Persist the assessment (this module's own input -- the agent's structured judgement) and its
+ * rendered Markdown into `outDir` as `fitment.json` + `fitment.md`. The single place the
+ * deterministic fitment layer writes to disk: called by the `score_fit` CLI/MCP tool when given
+ * an output dir, and by `vacancy_store.recordScoutOutcome` for the scout path -- so an agent
+ * never hand-writes a fitment file. `fitment.json` is what `rescore.ts` replays when the scoring
+ * formula changes, without re-running the model. */
+export function persistFitment(assessment: Assessment, outDir: string): { jsonPath: string; mdPath: string } {
+  fs.mkdirSync(outDir, { recursive: true });
+  const jsonPath = path.join(outDir, "fitment.json");
+  const mdPath = path.join(outDir, "fitment.md");
+  fs.writeFileSync(jsonPath, JSON.stringify(assessment, null, 2) + "\n", "utf-8");
+  fs.writeFileSync(mdPath, render(assessment).trimEnd() + "\n", "utf-8");
+  return { jsonPath, mdPath };
+}
+
 function main(): void {
-  const inputPath = process.argv[2];
+  const { values, positionals } = parseArgs({ allowPositionals: true, options: { "out-dir": { type: "string" } } });
+  const inputPath = positionals[0];
   if (!inputPath) {
-    console.error("Usage: node scripts/dist/score_fit.js <input.json>");
+    console.error("Usage: node scripts/dist/score_fit.js <input.json> [--out-dir <dir>]");
     process.exit(1);
   }
   const data = JSON.parse(fs.readFileSync(inputPath, "utf-8")) as Assessment;
+  if (values["out-dir"]) {
+    const { jsonPath, mdPath } = persistFitment(data, path.resolve(values["out-dir"]));
+    console.error(`Wrote ${jsonPath} and ${mdPath}`);
+  }
   console.log(render(data));
 }
 

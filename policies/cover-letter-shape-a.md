@@ -18,7 +18,9 @@ candidate is day to day:
 1. **Problem** — the type of problem underneath what the posting says, 1-2 sentences, framed as a
    pattern, not a diagnosis of this specific client's internals. If the posting gives real signal,
    name the pattern with that grounding. If it's generic/thin, say so plainly rather than
-   manufacturing specifics.
+   manufacturing specifics. Also work out two things that sharpen it and feed the Core message:
+   **what success looks like for them** (their own words if the posting gave them, otherwise
+   inferred from the problem) and **why it matters now** (cost of not solving it, urgency, timing).
 2. **Differentiator** — one sentence on what makes this candidate a fit, grounded in
    `data/CV_GENERAL.md` and `data/config.yaml`. In task mode, prefer a differentiator framed as
    "I've solved exactly this before"; in long-term mode, prefer one framed as a recurring
@@ -46,6 +48,11 @@ terminology, niche tech names — so you don't accidentally reach for them while
 
 ## Write
 
+- **The first sentence leads with an insight about *their* situation** — the Problem, stated
+  sharply — not a self-introduction, not "I'm excited about / interested in", not the job title
+  echoed back. It's the line that decides whether the rest gets read (in a proposal-feed preview,
+  or a skimming reader's first two seconds). Everything else can follow the plan; this line has to
+  land.
 - Max 4 short paragraphs, 1-3 sentences each, well under 150 words total.
 - Vary sentence openings — don't start three-plus sentences with "I can"/"I start"/"I have" in a
   row.

@@ -11,3 +11,8 @@ scripts/dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Local-only dev notes -- design rationale and unbuilt ideas, kept out of the
+# public engine docs. _sb/internal/implemented/ = why a shipped thing is shaped
+# the way it is; _sb/internal/ideas/ = not built yet.
+_sb/internal/

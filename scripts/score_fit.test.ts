@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { roundHalfToEven, computeScore, evaluate, render } from "./score_fit";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { roundHalfToEven, computeScore, evaluate, render, persistFitment } from "./score_fit";
 
 test("roundHalfToEven uses banker's rounding at exact .5 boundaries, unlike Math.round", () => {
   assert.equal(roundHalfToEven(2.5), 2, "2.5 rounds to even (2), not up to 3");
@@ -29,6 +32,33 @@ test("computeScore applies the blocking cap regardless of the weighted average",
   ] as any;
   const score = computeScore(clusters);
   assert.ok(score <= 3, `blocking cluster with no evidence must cap the score at 3, got ${score}`);
+});
+
+test("computeScore caps at 5 when a non-blocking critical cluster has zero evidence, even with strong everything else", () => {
+  const clusters = [
+    {
+      cluster: "Core stack",
+      importance: "critical",
+      blocking: false,
+      requirements: [{ requirement: "writes Go daily", primary: true, evidence: "none" }],
+    },
+    { cluster: "Delivery", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+    { cluster: "Nice", importance: "important", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+    { cluster: "Bonus", importance: "nice_to_have", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+  ] as any;
+  const uncapped = computeScore(clusters.slice(1)); // without the zeroed critical cluster
+  assert.ok(uncapped > 5, `sanity: the rest alone should score above 5, got ${uncapped}`);
+  const score = computeScore(clusters);
+  assert.ok(score <= 5, `a critical cluster with no evidence must cap the score at 5, got ${score}`);
+});
+
+test("computeScore does NOT cap when the zero-evidence cluster is only important, not critical", () => {
+  const clusters = [
+    { cluster: "Nice-to-have gap", importance: "important", blocking: false, requirements: [{ primary: true, evidence: "none" }] },
+    { cluster: "Core", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+    { cluster: "Core2", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+  ] as any;
+  assert.ok(computeScore(clusters) > 5, "an important (not critical) zero cluster must not trigger the cap");
 });
 
 test("location exception renders as eligibility, not as a score penalty", () => {
@@ -77,4 +107,23 @@ test("evaluate returns structured score data with rendered Markdown", () => {
   assert.equal(result.score, computeScore(assessment.clusters as any));
   assert.equal(result.fit_category, "stretch_fit");
   assert.match(result.markdown, /^## Match: \d+\/10 — stretch fit/m);
+});
+
+test("persistFitment writes fitment.json (the input, replayable) and fitment.md (the render)", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "career-space-persist-"));
+  const assessment = {
+    job_summary: "Build a thing.",
+    clusters: [{ cluster: "Core", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "direct_partial" }] }],
+    risk: "thin",
+    appeal: "real",
+    fit_category: "stretch_fit",
+  };
+  const { jsonPath, mdPath } = persistFitment(assessment as any, dir);
+  assert.equal(jsonPath, path.join(dir, "fitment.json"));
+  assert.equal(mdPath, path.join(dir, "fitment.md"));
+
+  const reloaded = JSON.parse(fs.readFileSync(jsonPath, "utf-8"));
+  assert.deepEqual(reloaded, assessment, "fitment.json must round-trip the assessment verbatim");
+  assert.equal(evaluate(reloaded).score, evaluate(assessment as any).score, "replaying the saved json gives the same score");
+  assert.match(fs.readFileSync(mdPath, "utf-8"), /## Match: \d+\/10/);
 });

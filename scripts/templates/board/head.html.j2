@@ -57,6 +57,27 @@
       font-size: 13px;
       margin: 0 0 20px;
     }
+    /* Shared nav between board.html (Employment) and engagements.html (Engagements). */
+    .board-nav {
+      display: flex;
+      gap: 6px;
+      margin: 8px 0 16px;
+      font-size: 13px;
+    }
+    .board-nav a, .board-nav .board-nav-current {
+      padding: 4px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      text-decoration: none;
+      color: var(--muted);
+    }
+    .board-nav a:hover { border-color: var(--accent); color: var(--text); }
+    .board-nav .board-nav-current {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
     /* Summary chips are progressive enhancement; every group is present without JS. */
     .summary {
       display: flex;

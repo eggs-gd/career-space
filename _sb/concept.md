@@ -1,79 +1,85 @@
 # career-space concept
 
-The founding thesis and the entity model that follows from it. `architecture.md` is how the
-current code is built; `roadmap.md` is what's next; this is the shape everything is meant to grow
-toward. Written 2026-09-07; concept agreed, most of it not yet implemented.
+The entity model and the invariant that holds it in place. `architecture.md` is how the code is
+built; `roadmap.md` is what's next; this is the shape it grows toward.
 
-## Thesis
+## Two decisions, not N channels
 
-career-space manages a person's whole money-making flow. It does not care whether the money comes
-from employment, freelance, or a personal brand -- those are modes of the same activity, not
-separate products. The chain is `direction -> positioning -> surfaces -> opportunities ->
-applications -> market feedback -> (back to direction)`. Opportunity discovery is one downstream
-part of that, never the center.
+Everything career-space assesses is an **opportunity** — a specific, trackable chance to be paid
+for work. There are exactly two kinds, distinguished by the decision being made, not the platform
+it arrived on:
 
-Concretely: the same person, the same Master CV, the same strategy doc, feeds an employment
-search *and* an Upwork search *and* (later) a productized-offer catalogue, through one Operator
-entry point. Adding a mode is adding a subtype, not standing up a parallel system.
+- **Employment** — *should they hire me for role X?* Assessed against role requirements ↔
+  candidate evidence, weighted by career strategy.
+- **Engagement** — *should we take on outcome X for this counterparty on these terms?* Assessed
+  against a deliverable ↔ capability evidence, weighted by commercial constraints (budget/effort,
+  scope clarity, mandatory constraints, counterparty quality, win probability) and strategic
+  value.
+
+A job board vacancy, an Upwork job, a Fiverr order, a warm inbound lead, a direct client email —
+these are all **Engagement** (or the vacancy, **Employment**). The signals available differ by
+channel (a marketplace exposes client rating / spend / hire rate; a direct lead exposes none),
+and the moment of assessment differs (published demand you choose to bid on vs. an inbound order
+you choose to accept). The *questions* don't: can we deliver it, is it proven by evidence, is the
+scope clear, are there mandatory constraints, is the money/time adequate, is the counterparty
+sound, is it worth it. One fitment model per decision, not per platform.
+
+### The invariant
+
+> Platform mechanics may change the signals available, but must not create a new opportunity type
+> or a new fitment model. Add a fitment model only when the underlying decision is *semantically*
+> different from "should they hire me" and "should we take this on".
+
+Anything upstream of a concrete opportunity — which surfaces to build, which productized offers to
+design, how to warm a market — is positioning / offer design, not opportunity assessment. It
+belongs in the candidate's own strategy/context material, not in a third opportunity type.
 
 ## Entity model
 
-**Opportunity** is the root: a specific, trackable chance to make money or advance the career.
-Subtypes so far:
+```
+Opportunity
+├── Employment   -- data/vacancies/<slug>/   (built)
+└── Engagement   -- data/engagements/<slug>/ (skeleton built; judgment schema still settling)
+```
 
-- **vacancy** -- an employment posting. Exists today as `data/vacancies/<slug>/`.
-- **order** -- a freelance job (Upwork-style). Not built; see
-  `_sb/ideas/freelance-opportunity-source.md`.
-- room for more (productized offers, inbound leads) -- not designed, deliberately.
+### Shared across both
 
-### Shared across all subtypes
+- A folder per opportunity: canonical `record.yaml`, the source text (`posting.md`), generated
+  artifacts (CV, cover letter / proposal, `fitment.md` + `fitment.json`) written in-place.
+- A pipeline: `status` + `status_history` (with an observed-reason `note`) + `archived`. Both
+  currently share `VALID_STATUSES`; the mechanism is fixed even where the vocabulary later isn't.
+- Deterministic identity (source/URL hash, content hash for repost collapse) and a slug.
+- Fit assessment through the same `fitment.md`-shaped judgment → `score_fit.ts` arithmetic. The
+  clusters and their `importance` tiers differ; the formula and its caps don't.
+- Board rendering from `data/` state by a deterministic renderer to a static page — no web
+  server, state changed only by Operator/MCP, one board per opportunity type sharing a nav.
 
-- A folder per opportunity: canonical `record.yaml`, the source text (`posting.md` / equivalent),
-  generated artifacts (CV, cover/proposal, fitment) written in-place.
-- A pipeline expressed as `status` + `status_history` with an observed-reason `note`, plus
-  `archived`. The concrete status values can differ per subtype, the mechanism doesn't.
-- Deterministic identity: two hashes (source/URL identity, content identity for repost collapse)
-  and a deterministic slug.
-- A `seen` ledger so re-scanning a source doesn't re-surface or duplicate.
-- Fit assessment through the same `fitment.md` + `score_fit.ts` machinery.
-- Board rendering from `data/state` by a deterministic renderer to a static page. No web server --
-  state is changed by Operator/MCP, the renderer only displays.
+### Different per type
 
-### Per-subtype
+- **Cluster weighting.** Employment leads with strategy/role-fit; Engagement leads with
+  deliverability and economics (strategy is a tie-breaker). Same `score_fit` formula.
+- **Enrichment fields** on the record (Employment: seniority, team, location/remote, eligibility;
+  Engagement: budget, effort, counterparty quality, competition, proposal angle — still
+  provisional, learned from real runs rather than fixed upfront).
 
-- The **reasoning-weight order** in fitment. Employment: `strategy -> role fit -> evidence ->
-  economics`. Order: `can deliver -> economics -> useful experience -> strategy`. Same clusters,
-  different priority.
-- The **enrichment fields** on the record (vacancy: seniority, team, location/remote, eligibility;
-  order: budget, effort, buyer quality, competition, proposal angle).
-- The **fitment criteria** and possibly the status vocabulary.
+## Data layout
+
+Each type gets its own top-level `data/` root — `data/vacancies/` and `data/engagements/` — not
+folders mixed under one root (that forces a type discriminator on every consumer and a filter in
+every renderer). `data/vacancies/` is not renamed to `data/opportunities/vacancies/` now: pure
+churn for zero functional gain. If an `data/opportunities/` parent is ever wanted, both roots move
+under it together, in one migration.
+
+`vacancy_store.ts`'s `scope: { dataDir }` seam made the second store cheap: `engagement_store.ts`
+points `setStatus` / `setArchived` / `attachArtifact` at `data/engagements/` unchanged and adds
+`upsertEngagement` / `listEngagements` for the leaner engagement record. `render_engagement.ts`
+mirrors `render_board.ts` (`data/engagements.html` + `.md`), sharing the head template and the
+`[ Employment | Engagements ]` nav.
 
 ## Current state
 
-Only `vacancy` exists, and the deterministic layer assumes it everywhere: `listVacancies`,
-`render_board`, `seen.jsonl`, slug handling, `workspace_validate` all treat every folder under
-`data/vacancies/` as a vacancy. There is no subtype discriminator anywhere yet.
-
-## Target state -- and the wrap-vs-rename question
-
-When a second subtype is built, it gets **its own `data/` root**, not folders mixed into
-`data/vacancies/` (a discriminator on every consumer and a filter in every renderer is the wrong
-tax). The open question was whether to:
-
-1. add sibling roots (`data/vacancies/`, `data/orders/`, ...), or
-2. introduce a parent (`data/opportunities/{vacancies,orders,...}`), or
-3. keep one root and wrap it -- the "global Vacancy + personal Opportunity" split from
-   `_sb/ideas/hosted-mcp-saas.md`.
-
-**Resolution:** option 3's argument ("wrap, don't rename") is a *multi-tenant hosted* concern --
-it exists to share one canonical posting analysis across many users, splitting the shared fact
-from each user's personal relationship to it. The local single-user tool has one user and no such
-split, so that argument doesn't apply here. Locally the clean shape is a parent:
-**`data/opportunities/<subtype>/<slug>/`**. If a hosted version ever happens, the global/personal
-split layers on top of that, it doesn't replace it.
-
-**Deferred:** the physical move (`data/vacancies/` -> `data/opportunities/vacancies/`) happens
-*with* the first second-subtype build, as one migration informed by that build -- not as a
-standalone rename now. A rename today is pure churn across `repo_paths.ts`, `vacancy_store.ts`,
-`render_board.ts`, `scout_*`, `workspace_validate.ts`, every playbook, `AGENTS.md`'s data-layout
-section, and the live gitignored `data/`, for zero functional gain.
+Employment is fully built. Engagement has its skeleton — `engagement_store.ts`,
+`render_engagement.ts`, `engagement_*` MCP/CLI, `workspace_validate` coverage,
+`playbooks/engagement-fitment.md` — mirroring the Employment pipeline. Not built: an automated
+source for engagements (a platform API adapter), a seen ledger for one, and the settled
+engagement judgment schema.

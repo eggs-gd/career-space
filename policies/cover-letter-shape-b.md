@@ -7,9 +7,7 @@ open `cover-letter-shape-a.md` too, this shape doesn't need it.
 For a letter likely to be **processed by an ATS or a formal corporate pipeline** before (or
 instead of) a person reading it closely: a standard vacancy posting, a large-company career
 portal, a Greenhouse/Lever/Workday-hosted listing, a generic formal application. Genuinely
-different genre from Shape A — different reader, different goal, different failure mode. Source:
-adapted from `_sb/reference/cover-letter-framework-vacancy.md`'s Blocks 1-4 (that file stays the
-full captured design doc; this is the operational version `cover-letter.md` actually calls).
+different genre from Shape A — different reader, different goal, different failure mode.
 
 ## Plan
 

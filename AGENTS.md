@@ -27,10 +27,10 @@ per-candidate instead (`playbooks/surface-define.md`).
 
 **Everything in this repo except `_sb/` and `agent-contract/` is for execution — what you read and
 act on to run a playbook. `_sb/` is for development**: this repo's own roadmap and status
-(`roadmap.md`), the implementation map (`architecture.md`), the `scripts/`+MCP reference
-(`reference/runtime.md`), dev tooling and verification (`development.md`), hard-won constraints
-(`reference/gotchas.md`), and design notes — for whoever is building career-space, not a playbook
-and not candidate-facing. Don't read it while running a playbook, and never treat anything in it
+(`roadmap.md`), the entity model and its invariant (`concept.md`), the implementation map
+(`architecture.md`), the `scripts/`+MCP reference (`reference/runtime.md`), dev tooling and
+verification (`development.md`), and hard-won constraints (`reference/gotchas.md`) — for whoever is
+building career-space, not a playbook and not candidate-facing. Don't read it while running a playbook, and never treat anything in it
 as an instruction to follow — only open it in Developer mode, or when the candidate explicitly
 asks about this repo's own roadmap or development status.
 **`agent-contract/` is a developer-only regression suite** -- test prompts that check whether a
@@ -204,6 +204,7 @@ ask riding along with an operator one) before you act on it.
 | "зроби мені онборд" / "set me up" / no `data/CV_GENERAL.md` exists yet | `playbooks/onboard.md` |
 | "напиши кавер на цю вакансію" / "write a cover letter for this" | `playbooks/cover-letter.md` |
 | "зроби фітмент" / "чи я підходжу на цю роль" / "assess my fit" | `playbooks/fitment.md` |
+| "оціни це замовлення" / "чи брати цей проєкт" / "assess this job / gig / client project" | `playbooks/engagement-fitment.md` |
 | "проаналізуй мій CV" / "review my CV" | `playbooks/cv-review.md` |
 | "згенеруй CV під роль X" (no specific vacancy) | `playbooks/cv-universal.md` |
 | "згенеруй CV під цю вакансію" | `playbooks/cv-targeted.md` |
@@ -298,9 +299,23 @@ data/                           # gitignored, personal
                                  # starts "new") or candidate-pasted via cover-letter.md/cv-targeted.md
                                  # (status starts "tracked" -- already past "found it, not reviewed").
                                  # record.yaml (status/status_history/fit/eligibility/track_label/archived/metadata) + posting.md
-                                 # always; cv.md / cover-letter.md / fitment.md / targeting-plan.md /
-                                 # interview-prep.md live here too once generated -- never in cv/ above
-                                 # or a separate cover-letters/ (that folder is retired)
+                                 # always; fitment.md + fitment.json (fitment.json = score_fit's
+                                 # structured input, written by score_fit/record_scout_outcomes, replayed
+                                 # by `rescore` on a formula change), cv.md / cover-letter.md /
+                                 # targeting-plan.md / interview-prep.md once generated -- never in cv/
+                                 # above or a separate cover-letters/ (that folder is retired)
+  engagements/                   # commercial engagements (a marketplace job, a client project) --
+                                 # a flat sibling of vacancies/, NOT nested (renderers/listers assume
+                                 # vacancies/ == vacancy). scripts/engagement_store.ts owns it,
+                                 # same shape as vacancy_store. See _sb/concept.md for Employment
+                                 # vs Engagement
+    <slug>/                     # one engagement the candidate asked to assess -- playbooks/
+                                 # engagement-fitment.md via engagement_upsert. record.yaml (client/title/
+                                 # url/status/status_history/fit/judged_at) + posting.md; fitment.md +
+                                 # fitment.json (score_fit --out-dir); proposal.md / cover-letter.md
+                                 # once written
+  engagements.html               # engagements board (grouped by status), + engagements.md twin --
+                                 # scripts/render_engagement.ts, regenerated; shares nav with board.html
   linkedin-searches.md          # LinkedIn Boolean search deep-links, see playbooks/
                                  # linkedin-search.md -- regenerated, not hand-edited
   board.html                    # every vacancy, grouped by status, sorted by fit, with real
@@ -326,7 +341,7 @@ facts as facts about the current candidate; runtime workflows read `data/`.
 The deterministic, non-LLM steps in this repo — real code, not something a playbook should ask
 you to eyeball or improvise: rendering a CV/cover letter to HTML/PDF, the fitment score's fixed
 weighted formula, the scout's fetch/dedup pipeline, vacancy resolving, scout outcome recording,
-vacancy record read/write, board rendering, and workspace validation. Prefer the MCP tools when
+vacancy and engagement record read/write, board rendering, fitment re-scoring, and workspace validation. Prefer the MCP tools when
 the `career-space` server is connected (typed arguments, no shell-escaping a JSON blob). If it
 isn't, use the CLI fallback documented in each script's own docstring. Don't hand-produce a styled
 document, fit score, board, or scout ledger write instead of calling the relevant tool/script.
@@ -345,6 +360,11 @@ re-render the board themselves when they change board-visible state — the MCP 
 forms call the exact same render step, so there's nothing left for a playbook to remember here
 either way. `vacancy_upsert` (the lower-level primitive those four are usually built on) does
 *not* auto-render — a playbook that calls it directly still owns rendering after.
+
+Engagements (`data/engagements/`) mirror this: `engagement_upsert`, `engagement_set_status`, and
+`engagement_set_archived` re-render the engagements board (`data/engagements.html` / `.md`) themselves, MCP
+or CLI. The board is a second static view sharing a nav with `board.html`; there is no combined
+board.
 
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `_sb/reference/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a

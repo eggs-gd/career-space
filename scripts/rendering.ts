@@ -183,10 +183,88 @@ const BOARD_FILE_LABELS: Record<string, string> = {
   "fitment.md": "fitment",
   "cv.md": "CV",
   "cover-letter.md": "cover",
+  "proposal.md": "proposal",
   "interview-prep.md": "prep",
   "targeting-plan.md": "plan",
   "record.yaml": "record",
 };
+
+/** The file badges the engagements board expands inline, in display order -- an engagement folder holds
+ * the posting, its fitment, and (once written) a proposal or cover letter, nothing else. */
+const ENGAGEMENT_FILE_ORDER = ["fitment.md", "posting.md", "proposal.md", "cover-letter.md"] as const;
+
+/** The board's progressive-enhancement script (chip scroll + copy-to-clipboard with a fallback).
+ * Shared verbatim by `renderBoardHtml` and `renderEngagementsHtml` -- both boards carry the same
+ * chip and copy-button markup. The page is fully readable without it. */
+const BOARD_SCRIPT = `  <script>
+    // Progressive enhancement only; the page is readable without this script.
+    (function () {
+      document.querySelectorAll("button.chip[data-scroll-target]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var target = document.getElementById(btn.getAttribute("data-scroll-target"));
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      });
+
+      // Clipboard support varies for local files; keep a fallback and never fail the page.
+      function fallbackCopy(text) {
+        var ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        var ok = false;
+        try {
+          ok = document.execCommand("copy");
+        } catch (e) {
+          ok = false;
+        }
+        document.body.removeChild(ta);
+        return ok;
+      }
+
+      document.querySelectorAll("button.copy-btn[data-copy]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var text;
+          try {
+            text = JSON.parse(btn.getAttribute("data-copy"));
+          } catch (e) {
+            return;
+          }
+          var showCopied = function () {
+            btn.textContent = "Copied";
+            setTimeout(function () {
+              btn.textContent = "Copy";
+            }, 1500);
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(showCopied, function () {
+              if (fallbackCopy(text)) showCopied();
+            });
+          } else if (fallbackCopy(text)) {
+            showCopied();
+          }
+        });
+      });
+    })();
+  </script>`;
+
+/** Shared top nav for the two opportunity boards -- `board.html` (vacancies) and
+ * `engagements.html` (orders) sit next to each other in `data/`, so a plain relative link works.
+ * One Career Space, two static views (see `_sb/concept.md`). */
+function boardNavHtml(current: "employment" | "engagement"): string {
+  const link = (href: string, label: string, key: string) =>
+    key === current
+      ? `<span class="board-nav-current">${escapeHtml(label)}</span>`
+      : `<a href="${href}">${escapeHtml(label)}</a>`;
+  return `<nav class="board-nav">${link("board.html", "Employment", "employment")}${link(
+    "engagements.html",
+    "Engagements",
+    "engagement"
+  )}</nav>`;
+}
 // record.yaml is real and openable but rarely what a candidate wants a quick link to (it's the
 // machine-facing metadata file, everything in it worth a glance at a distance is already a
 // column in the table) -- link every other file present, skip this one.
@@ -435,6 +513,7 @@ ${headHtml}
 <body>
   <main>
     <h1>${escapeHtml(title)}</h1>
+    ${boardNavHtml("employment")}
     <p class="meta">${total} vacancies &middot; generated ${escapeHtml(generatedAt)} &middot; click a file badge to open it in place</p>
 
     <div class="summary">
@@ -443,65 +522,197 @@ ${headHtml}
 
 ${groupsHtml.join("\n")}
   </main>
-  <script>
-    // Progressive enhancement only; the page is readable without this script.
-    (function () {
-      document.querySelectorAll("button.chip[data-scroll-target]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var target = document.getElementById(btn.getAttribute("data-scroll-target"));
-          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-        });
-      });
-
-      // Clipboard support varies for local files; keep a fallback and never fail the page.
-      function fallbackCopy(text) {
-        var ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        var ok = false;
-        try {
-          ok = document.execCommand("copy");
-        } catch (e) {
-          ok = false;
-        }
-        document.body.removeChild(ta);
-        return ok;
-      }
-
-      document.querySelectorAll("button.copy-btn[data-copy]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var text;
-          try {
-            text = JSON.parse(btn.getAttribute("data-copy"));
-          } catch (e) {
-            return;
-          }
-          var showCopied = function () {
-            btn.textContent = "Copied";
-            setTimeout(function () {
-              btn.textContent = "Copy";
-            }, 1500);
-          };
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(showCopied, function () {
-              if (fallbackCopy(text)) showCopied();
-            });
-          } else if (fallbackCopy(text)) {
-            showCopied();
-          }
-        });
-      });
-    })();
-  </script>
+${BOARD_SCRIPT}
 </body>
 </html>
 `;
 
   return document;
+}
+
+/** Flat Markdown twin of the engagements board -- one table, for handing an engagement list to another
+ * agent. Same status order as `renderBoardHtml`, sorted by fit within a status. */
+export function renderEngagementsMd(orders: Rec[]): string {
+  const order = new Map(BOARD_STATUS_ORDER.map(([status], i) => [status, i] as const));
+  const rows = [...orders].sort((a, b) => {
+    const oa = order.get(a.status ?? "new") ?? BOARD_STATUS_ORDER.length;
+    const ob = order.get(b.status ?? "new") ?? BOARD_STATUS_ORDER.length;
+    if (oa !== ob) return oa - ob;
+    const fa = -(a.fit_score ?? 0);
+    const fb = -(b.fit_score ?? 0);
+    if (fa !== fb) return fa - fb;
+    return String(a.client ?? "").localeCompare(String(b.client ?? ""));
+  });
+  const cell = (v: unknown): string => String(v ?? "").replace(/\s*\n\s*/g, " ").replace(/\|/g, "\\|").trim();
+  const lines = [
+    "# Engagements board",
+    "",
+    `${rows.length} engagements · generated ${formatGeneratedAt(new Date())}`,
+    "",
+    "Flat list for handing to another agent: match a row by client + title, then reconcile its",
+    "status against your own messages. Posting / fitment / proposal text stays in each order's",
+    "folder (`data/engagements/<slug>/`).",
+    "",
+    "| Status | Fit | Category | Client | Title | Judged | Slug | URL |",
+    "|---|---|---|---|---|---|---|---|",
+  ];
+  for (const o of rows) {
+    const status = cell(o.status ?? "new") + (o.archived ? " · archived" : "");
+    const fit = o.fit_score !== null && o.fit_score !== undefined ? String(o.fit_score) : "–";
+    lines.push(
+      `| ${status} | ${fit} | ${cell(o.fit_category)} | ${cell(o.client)} | ${cell(o.title)} | ${cell(
+        boardUpdatedShort(o.judged_at ?? "")
+      )} | ${cell(o.slug)} | ${cell(o.url)} |`
+    );
+  }
+  lines.push("");
+  return lines.join("\n");
+}
+
+/** Render the engagements board from `engagement_store.listEngagements()` output. Sibling of
+ * `renderBoardHtml` -- same head template, status groups, chips, inline file badges and script --
+ * with order columns (Fit / Client / Title / Category / Judged) and no vacancy-only apparatus
+ * (local keywords, location-exception, track label, CV badge). */
+export function renderEngagementsHtml(orders: Rec[], opts: { title?: string; engagementDirFn?: (slug: string) => string } = {}): string {
+  const title = opts.title ?? "Engagements board";
+  const engagementDirFn = opts.engagementDirFn ?? ((slug: string) => path.join(REPO_ROOT, "data", "engagements", slug));
+
+  const byStatus = new Map<string, Rec[]>();
+  for (const o of orders) {
+    const status = o.status ?? "new";
+    if (!byStatus.has(status)) byStatus.set(status, []);
+    byStatus.get(status)!.push(o);
+  }
+
+  const groupsHtml: string[] = [];
+  const chipsHtml: string[] = [];
+  let total = 0;
+
+  for (const [status, label] of BOARD_STATUS_ORDER) {
+    const rows = [...(byStatus.get(status) ?? [])].sort((a, b) => {
+      const fa = -(a.fit_score ?? 0);
+      const fb = -(b.fit_score ?? 0);
+      if (fa !== fb) return fa - fb;
+      return String(a.client ?? "").localeCompare(String(b.client ?? ""));
+    });
+    total += rows.length;
+
+    chipsHtml.push(
+      `<button type="button" class="chip" data-scroll-target="section-${escapeHtml(status)}"><span class="dot ${escapeHtml(
+        status
+      )}"></span>${escapeHtml(label)} <span class="count">${rows.length}</span></button>`
+    );
+
+    const rowsHtml = rows
+      .map((o) => {
+        const slug = String(o.slug ?? "");
+        const files: string[] = o.files ?? [];
+        const odir = engagementDirFn(slug);
+        const fitDisplay = o.fit_score !== null && o.fit_score !== undefined ? String(o.fit_score) : "–";
+
+        const fileButtonsHtml = ENGAGEMENT_FILE_ORDER.filter((f) => files.includes(f))
+          .map((fname) => {
+            let raw = "";
+            try {
+              raw = fs.readFileSync(path.join(odir, fname), "utf-8");
+            } catch {
+              return "";
+            }
+            const contentHtml = raw.trim()
+              ? md.render(raw.replace(/&/g, "&amp;").replace(/</g, "&lt;"))
+              : "<p><em>Empty.</em></p>";
+            return `<details class="file" name="panel-${escapeHtml(slug)}"><summary>${escapeHtml(
+              BOARD_FILE_LABELS[fname] ?? fname
+            )}</summary><div class="file-content">${contentHtml}</div></details>`;
+          })
+          .filter(Boolean)
+          .join("\n            ");
+
+        const folderUrl = fs.existsSync(odir) ? pathToFileURL(odir + path.sep).href : "";
+        const folderLinksHtml = folderUrl
+          ? `<details class="file" name="panel-${escapeHtml(slug)}"><summary>📁&nbsp;Folder</summary>` +
+            `<div class="file-content folder-list">` +
+            `<a href="${escapeHtml(folderUrl)}" target="_blank" rel="noopener">📂&nbsp;open folder&nbsp;&#8599;</a>` +
+            files.map((f) => `<a href="${escapeHtml(pathToFileURL(path.join(odir, f)).href)}" target="_blank" rel="noopener">${escapeHtml(f)}</a>`).join("") +
+            `</div></details>`
+          : "";
+        const postingLinkHtml = o.url
+          ? `<a class="posting-link" href="${escapeHtml(String(o.url))}" target="_blank" rel="noopener">posting&nbsp;&#8599;</a>`
+          : "";
+        const categoryHtml = o.fit_category ? `<span class="col-track">${escapeHtml(String(o.fit_category))}</span>` : `<span class="col-track"></span>`;
+        const archivedBadgeHtml = o.archived ? `<span class="archived-badge">Archived</span>` : "";
+        const copyPayload = [
+          `Title: ${o.title ?? ""}`,
+          `Client: ${o.client ?? ""}`,
+          `URL: ${o.url ?? ""}`,
+          `Status: ${o.status ?? ""}`,
+          `Fit: ${o.fit_score !== null && o.fit_score !== undefined ? `${o.fit_score}/10` : "not assessed"}${o.fit_category ? ` (${o.fit_category})` : ""}`,
+          `Order ID: ${slug}`,
+        ].join("\n");
+        const copyButtonHtml = `<button type="button" class="copy-btn" data-copy="${escapeHtml(JSON.stringify(copyPayload))}">Copy</button>`;
+
+        return `        <div class="vrow${o.archived ? " archived" : ""}">
+          <div class="vrow-main">
+            <span class="col-fit">${fitDisplay}</span>
+            <span class="col-company">${escapeHtml(String(o.client ?? ""))}</span>
+            <span class="col-role">${escapeHtml(String(o.title ?? ""))}${archivedBadgeHtml}</span>
+            ${categoryHtml}
+            <span class="col-updated">${escapeHtml(boardUpdatedShort(o.judged_at ?? ""))}</span>
+          </div>
+          <div class="vrow-files">
+            ${fileButtonsHtml}
+            ${folderLinksHtml}
+            ${postingLinkHtml}
+            ${copyButtonHtml}
+          </div>
+        </div>`;
+      })
+      .join("\n");
+
+    const bodyForGroup =
+      rows.length > 0
+        ? `      <div class="board">
+        <div class="board-head">
+          <span class="col-fit">Fit</span>
+          <span class="col-company">Client</span>
+          <span class="col-role">Title</span>
+          <span class="col-track">Category</span>
+          <span class="col-updated">Judged</span>
+        </div>
+${rowsHtml}
+      </div>`
+        : `      <p class="empty">Nothing here.</p>`;
+
+    groupsHtml.push(
+      `    <section id="section-${escapeHtml(status)}">
+      <h2><span class="dot ${escapeHtml(status)}"></span>${escapeHtml(label)} <span class="n">(${rows.length})</span></h2>
+${bodyForGroup}
+    </section>`
+    );
+  }
+
+  const headHtml = loadTemplate("board/head.html.j2").replace("{{ title }}", escapeHtml(title));
+  const generatedAt = formatGeneratedAt(new Date());
+
+  return `<!doctype html>
+<html lang="en">
+${headHtml}
+<body>
+  <main>
+    <h1>${escapeHtml(title)}</h1>
+    ${boardNavHtml("engagement")}
+    <p class="meta">${total} engagements &middot; generated ${escapeHtml(generatedAt)} &middot; click a file badge to open it in place</p>
+
+    <div class="summary">
+      ${chipsHtml.join("\n      ")}
+    </div>
+
+${groupsHtml.join("\n")}
+  </main>
+${BOARD_SCRIPT}
+</body>
+</html>
+`;
 }
 
 export function writeTxt(text: string, txtPath: string): void {
