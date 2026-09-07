@@ -126,6 +126,18 @@ and why each one was built lives in git history, not here.
   code change); the real fix would be a `max_postings_per_company_per_run`-shaped config in
   `scout_domain.ts`/`scout_prefilter.ts`'s dedup step. Not started, not urgent while the
   workaround holds.
+- **Freelance (Upwork) as an opportunity source.** Extend the pipeline past vacancies to Upwork
+  orders, in two decoupled phases. **Phase 1 -- startable now, manual-fed:** paste an order, judge
+  it through a reasoning-weight-inverted fitment (`can deliver -> economics -> useful experience
+  -> strategy`, vs employment's `strategy -> role fit -> evidence -> economics`), record it under
+  its own `data/` root (not mixed into `data/vacancies/`; room left for a `data/opportunities/`
+  parent, no rename now). More hand-work on purpose -- it's how the order record shape, criteria,
+  and statuses get learned before committing to code, and before the key lands. **Phase 2 --
+  later:** a read-only Upwork GraphQL API fetcher (`marketplaceJobPostingsSearch`; auth + client
+  plumbing already sketched) that plugs into the proven Phase 1 flow -- gated on a selective
+  dev-key requested 2026-09-07, disabled pending review. UI stays sibling static views, no server.
+  Fiverr / productized offers / outbound leads out of scope. Full context:
+  `_sb/ideas/freelance-opportunity-source.md`.
 - **A.Team, if/when Upwork/Fiverr/freelance-network platforms get more active attention.** Not a
   real job posting source -- a freelance-talent-network platform that promotes itself by posting
   through aggregators like Remotive; "Apply" leads to registering for A.Team's own service, not an
