@@ -222,7 +222,7 @@ function validateEngagementRecord(folder: string, filePath: string, issues: Vali
     }
   }
   if (!fs.existsSync(path.join(folder, "posting.md"))) {
-    issues.push(issue("error", "engagement_missing_posting", path.join(folder, "posting.md"), "Order folder must contain posting.md."));
+    issues.push(issue("error", "engagement_missing_posting", path.join(folder, "posting.md"), "Engagement folder must contain posting.md."));
   }
 }
 
@@ -234,7 +234,7 @@ function validateEngagements(dataDir: string, issues: ValidationIssue[]): void {
     const folder = path.join(engagementsDir, entry.name);
     const record = path.join(folder, "record.yaml");
     if (!fs.existsSync(record)) {
-      issues.push(issue("error", "engagement_missing_record", record, "Order folder must contain record.yaml."));
+      issues.push(issue("error", "engagement_missing_record", record, "Engagement folder must contain record.yaml."));
       continue;
     }
     validateEngagementRecord(folder, record, issues);

@@ -28,10 +28,14 @@ trap and the rule -- not the story.
   decision -- never ask "shall I render / regenerate the PDF now?". Confirm content changes, not
   tool runs.
 - `vacancy_resolve` / `vacancy_set_status` / `vacancy_set_archived` / `record_scout_outcomes` all
-  re-render the board themselves when board-visible state changes, MCP or CLI -- don't add a
-  manual `render_board` call after them. `vacancy_upsert` is the exception: it doesn't auto-render
-  (it's the lower-level primitive the others are built on), so a playbook calling it directly still
-  owns rendering after.
+  re-render the vacancy board themselves when board-visible state changes, MCP or CLI -- don't add
+  a manual `render_board` call after them. `vacancy_upsert` is the exception: it doesn't
+  auto-render (it's the lower-level primitive the others are built on), so a playbook calling it
+  directly still owns rendering after.
+- Engagements mirror this: `engagement_upsert` / `engagement_set_status` / `engagement_set_archived`
+  re-render the engagements board themselves (MCP or CLI). `engagement_upsert` *does* auto-render
+  (unlike `vacancy_upsert` -- it's the main entry point, not a primitive). `engagement_attach_artifact`
+  does not, same as `vacancy_attach_artifact`.
 - Reconciliation consumes whatever email/calendar capability the host has (connector, plugin, or
   a user-added MCP server) -- career-space ships and wires none of it, and mandates no account or
   cloud project (that would break "no server, no app, no account"). Host-composed, never wrapped

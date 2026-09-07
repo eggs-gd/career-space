@@ -172,7 +172,7 @@ server.registerTool(
   "score_fit",
   {
     description:
-      "Score a structured fitment assessment and return score, fit_category, eligibility, and rendered Markdown. With out_dir set, also writes fitment.json + fitment.md into that folder (pass the vacancy/order folder).",
+      "Score a structured fitment assessment and return score, fit_category, eligibility, and rendered Markdown. With out_dir set, also writes fitment.json + fitment.md into that folder (pass the vacancy/engagement folder).",
     inputSchema: {
       job_summary: z.string(),
       clusters: z.array(z.record(z.string(), z.unknown())),
@@ -504,7 +504,8 @@ server.registerTool(
   }
 );
 
-// --- Engagements (data/engagements/) -- sibling of the vacancy_* tools for the Engagement opportunity type. Orders share VALID_STATUSES with vacancies (see _sb/concept.md).
+// --- Engagements (data/engagements/) -- the sibling of the vacancy_* tools for the Engagement
+// opportunity type. Engagements share VALID_STATUSES with vacancies (see _sb/concept.md).
 
 server.registerTool(
   "engagement_upsert",
@@ -592,7 +593,7 @@ server.registerTool(
 server.registerTool(
   "render_engagement",
   {
-    description: "Render data/engagements.html and data/engagements.md from current order records. Excludes archived unless requested.",
+    description: "Render data/engagements.html and data/engagements.md from current engagement records. Excludes archived unless requested.",
     inputSchema: { output_path: z.string().optional(), include_archived: z.boolean().optional() },
   },
   async ({ output_path, include_archived }): Promise<CallToolResult> => {

@@ -252,7 +252,7 @@ const BOARD_SCRIPT = `  <script>
   </script>`;
 
 /** Shared top nav for the two opportunity boards -- `board.html` (vacancies) and
- * `engagements.html` (orders) sit next to each other in `data/`, so a plain relative link works.
+ * `engagements.html` (engagements) sit next to each other in `data/`, so a plain relative link works.
  * One Career Space, two static views (see `_sb/concept.md`). */
 function boardNavHtml(current: "employment" | "engagement"): string {
   const link = (href: string, label: string, key: string) =>
@@ -532,11 +532,11 @@ ${BOARD_SCRIPT}
 
 /** Flat Markdown twin of the engagements board -- one table, for handing an engagement list to another
  * agent. Same status order as `renderBoardHtml`, sorted by fit within a status. */
-export function renderEngagementsMd(orders: Rec[]): string {
-  const order = new Map(BOARD_STATUS_ORDER.map(([status], i) => [status, i] as const));
-  const rows = [...orders].sort((a, b) => {
-    const oa = order.get(a.status ?? "new") ?? BOARD_STATUS_ORDER.length;
-    const ob = order.get(b.status ?? "new") ?? BOARD_STATUS_ORDER.length;
+export function renderEngagementsMd(engagements: Rec[]): string {
+  const statusOrder = new Map(BOARD_STATUS_ORDER.map(([status], i) => [status, i] as const));
+  const rows = [...engagements].sort((a, b) => {
+    const oa = statusOrder.get(a.status ?? "new") ?? BOARD_STATUS_ORDER.length;
+    const ob = statusOrder.get(b.status ?? "new") ?? BOARD_STATUS_ORDER.length;
     if (oa !== ob) return oa - ob;
     const fa = -(a.fit_score ?? 0);
     const fb = -(b.fit_score ?? 0);
@@ -550,8 +550,8 @@ export function renderEngagementsMd(orders: Rec[]): string {
     `${rows.length} engagements · generated ${formatGeneratedAt(new Date())}`,
     "",
     "Flat list for handing to another agent: match a row by client + title, then reconcile its",
-    "status against your own messages. Posting / fitment / proposal text stays in each order's",
-    "folder (`data/engagements/<slug>/`).",
+    "status against your own messages. Posting / fitment / proposal text stays in each",
+    "engagement's folder (`data/engagements/<slug>/`).",
     "",
     "| Status | Fit | Category | Client | Title | Judged | Slug | URL |",
     "|---|---|---|---|---|---|---|---|",
@@ -573,12 +573,12 @@ export function renderEngagementsMd(orders: Rec[]): string {
  * `renderBoardHtml` -- same head template, status groups, chips, inline file badges and script --
  * with order columns (Fit / Client / Title / Category / Judged) and no vacancy-only apparatus
  * (local keywords, location-exception, track label, CV badge). */
-export function renderEngagementsHtml(orders: Rec[], opts: { title?: string; engagementDirFn?: (slug: string) => string } = {}): string {
+export function renderEngagementsHtml(engagements: Rec[], opts: { title?: string; engagementDirFn?: (slug: string) => string } = {}): string {
   const title = opts.title ?? "Engagements board";
   const engagementDirFn = opts.engagementDirFn ?? ((slug: string) => path.join(REPO_ROOT, "data", "engagements", slug));
 
   const byStatus = new Map<string, Rec[]>();
-  for (const o of orders) {
+  for (const o of engagements) {
     const status = o.status ?? "new";
     if (!byStatus.has(status)) byStatus.set(status, []);
     byStatus.get(status)!.push(o);

@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
- * Storage for commercial engagements (a marketplace job, a client project) the candidate asked to assess -- the sibling of
- * `vacancy_store.ts` for the second opportunity subtype. See `_sb/concept.md` -- an engagement is a
- * distinct entity from a vacancy, so it gets its own `data/` root (`data/engagements/<slug>/`), not
- * folders mixed into `data/vacancies/`.
+ * Storage for commercial engagements (a marketplace job, a client project) the candidate asked to
+ * assess -- the sibling of `vacancy_store.ts` for the Engagement opportunity type. See
+ * `_sb/concept.md`: an engagement is a distinct entity from a vacancy, so it gets its own `data/`
+ * root (`data/engagements/<slug>/`), not folders mixed into `data/vacancies/`.
  *
- * Deliberately thin. The pipeline skeleton -- a per-order folder, `record.yaml` with
+ * Deliberately thin. The pipeline skeleton -- a per-engagement folder, `record.yaml` with
  * `status`/`status_history`/`archived`, a status lifecycle -- is identical to a vacancy's, so the
  * generic operations (`setStatus`, `setArchived`, `attachArtifact`) are re-exported from
  * `vacancy_store.ts` bound to the engagement data dir via its existing `scope: { dataDir }` seam,
- * and orders share `VALID_STATUSES`. What's genuinely order-specific is small and lives here:
- * `upsertEngagement`'s record shape (client / budget / category, not company / eligibility / track) and
- * `listEngagements`. Order-judgment fields beyond the ones below (budget, buyer quality, competition)
+ * and engagements share `VALID_STATUSES`. What's engagement-specific is small and lives here:
+ * `upsertEngagement`'s record shape (client / fit / judged_at, not company / eligibility / track) and
+ * `listEngagements`. Judgment fields beyond the ones below (budget, buyer quality, competition)
  * are provisional -- they grow as real runs show which are load-bearing, then a schema.
  *
  * Usage: node scripts/dist/engagement_store.js
@@ -57,8 +57,8 @@ function writeRecord(rpath: string, record: Rec): void {
   fs.writeFileSync(rpath, yaml.dump(record, { lineWidth: 100, sortKeys: false }), "utf-8");
 }
 
-/** Slug of an existing order whose record matches `client` + `title` (case-insensitive), or null.
- * The fallback identity when a re-upsert arrives without the URL or posting text. */
+/** Slug of an existing engagement whose record matches `client` + `title` (case-insensitive), or
+ * null. The fallback identity when a re-upsert arrives without the URL or posting text. */
 function findEngagementByClientTitle(client: string, title: string, dataDir?: string): string | null {
   const dir = baseDir(dataDir);
   if (!fs.existsSync(dir)) return null;
@@ -90,10 +90,10 @@ export interface UpsertEngagementOptions {
   dataDir?: string;
 }
 
-/** Create or update an order folder. The slug is `client-title-<hash>`, the hash from the same
- * `posting_ids` helper the vacancy manual-paste path uses -- so a re-judge of the same posting
- * lands on the same folder. Client may be empty (common on Upwork); the title then carries the
- * slug alone. */
+/** Create or update an engagement folder. The slug is `client-title-<hash>`, the hash from the
+ * same `posting_ids` helper the vacancy manual-paste path uses -- so a re-judge of the same
+ * posting lands on the same folder. Client may be empty on a marketplace posting; the title then
+ * carries the slug alone. */
 export function upsertEngagement(opts: UpsertEngagementOptions): Rec {
   if (!opts.title || !opts.title.trim()) {
     throw new VacancyStoreError("upsertEngagement requires a title");
@@ -101,12 +101,12 @@ export function upsertEngagement(opts: UpsertEngagementOptions): Rec {
   if (opts.status !== undefined && !isValidStatus(opts.status)) {
     throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(opts.status)}`);
   }
-  // Re-judging an order (Step 4 of engagement-fitment.md) often re-calls this without the posting
+  // Re-judging an engagement (Step 4 of engagement-fitment.md) often re-calls this without the posting
   // text, so key off an existing client+title match first -- otherwise a text-less second call
   // computes a different content hash and forks a duplicate folder.
   const existingSlug = findEngagementByClientTitle(opts.client, opts.title, opts.dataDir);
   const [postingId] = postingIds.manualIds(opts.client, opts.title, opts.postingText ?? "", opts.url ?? "");
-  const slug = existingSlug ?? makeSlug(opts.client || "order", opts.title, postingId);
+  const slug = existingSlug ?? makeSlug(opts.client || "engagement", opts.title, postingId);
   const dir = engagementDir(slug, opts.dataDir);
   const rpath = recordPath(slug, opts.dataDir);
   const nowStr = now();
@@ -129,7 +129,9 @@ export function upsertEngagement(opts: UpsertEngagementOptions): Rec {
     title: opts.title,
     url: opts.url ?? "",
     source: opts.source || record.source || "upwork",
-    judged_at: opts.judgedAt || nowStr,
+    // Set once (first judgment) and preserved -- the board sorts and dates by it. `updated_at`
+    // is the "last touched" field; a Step-4 re-upsert to add the fit must not bump judged_at.
+    judged_at: opts.judgedAt || record.judged_at || nowStr,
     updated_at: nowStr,
   });
   if (opts.fitScore !== undefined || opts.fitCategory !== undefined || opts.fitReason !== undefined) {
@@ -155,9 +157,9 @@ export function upsertEngagement(opts: UpsertEngagementOptions): Rec {
   return record;
 }
 
-/** Every order folder's record, newest-judged first, for `render_engagement.ts`. Its own scan
- * rather than `vacancy_store.listVacancies` -- an order carries `client` / `fit.category` /
- * `judged_at`, not the vacancy summary's `company` / `track_label` / `eligibility`. */
+/** Every engagement folder's record, newest-judged first, for `render_engagement.ts`. Its own
+ * scan rather than `vacancy_store.listVacancies` -- an engagement carries `client` / `fit.category`
+ * / `judged_at`, not the vacancy summary's `company` / `track_label` / `eligibility`. */
 export function listEngagements(opts: { includeArchived?: boolean; dataDir?: string } = {}): Rec[] {
   const dir = baseDir(opts.dataDir);
   if (!fs.existsSync(dir)) return [];
@@ -192,7 +194,7 @@ export function listEngagements(opts: { includeArchived?: boolean; dataDir?: str
   return out.sort((a, b) => String(b.judged_at).localeCompare(String(a.judged_at)));
 }
 
-/** An order's status lifecycle and archive flag work exactly like a vacancy's, so these are
+/** An engagement's status lifecycle and archive flag work exactly like a vacancy's, so these are
  * `vacancy_store`'s own logic pointed at `data/engagements/` via its `scope: { dataDir }` seam. */
 export const setEngagementStatus = (slug: string, status: string, note?: string, dataDir?: string): Rec =>
   setStatus(slug, status as (typeof VALID_STATUSES)[number], note, { dataDir: baseDir(dataDir) });
@@ -260,8 +262,9 @@ function cli(): void {
     if (!values.slug || !values.kind || !values.path) {
       throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
     }
+    // No re-render here -- matches `vacancy_store.js attach-artifact` and the `engagement_attach_artifact`
+    // MCP tool, both of which leave the board to the next status/upsert call.
     result = attachEngagementArtifact(values.slug, values.kind, values.path);
-    renderEngagementFromCli();
   } else if (command === "list") {
     result = listEngagements({ includeArchived: values["include-archived"] });
   } else {

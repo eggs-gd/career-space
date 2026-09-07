@@ -111,3 +111,36 @@ test("validateWorkspace reports deterministic layout and schema issues", () => {
     assert.equal(codes.has(expected), true, `expected ${expected}`);
   }
 });
+
+test("validateWorkspace validates data/engagements/ records (leaner than a vacancy)", () => {
+  const dataDir = tempDataDir();
+  writeYaml(path.join(dataDir, "config.yaml"), { shared: { languages: ["English"] } });
+
+  // Valid engagement.
+  const okFolder = path.join(dataDir, "engagements", "acme-go-service-11112222");
+  fs.mkdirSync(okFolder, { recursive: true });
+  writeYaml(path.join(okFolder, "record.yaml"), {
+    slug: "acme-go-service-11112222",
+    client: "Acme",
+    title: "Go service",
+    status: "new",
+    status_history: [{ status: "new", at: "2026-09-01T10:00:00.000Z" }],
+    fit: { score: 7, category: "good_bet", reason: "keep" },
+  });
+  fs.writeFileSync(path.join(okFolder, "posting.md"), "Build a Go service.", "utf-8");
+  assert.equal(validateWorkspace({ dataDir }).ok, true);
+
+  // Broken: slug mismatch, missing title, bad status, out-of-range score, no posting.md.
+  const badFolder = path.join(dataDir, "engagements", "broken-33334444");
+  fs.mkdirSync(badFolder, { recursive: true });
+  writeYaml(path.join(badFolder, "record.yaml"), {
+    slug: "wrong",
+    status: "bogus",
+    status_history: {},
+    fit: { score: 42 },
+  });
+  const codes = validateWorkspace({ dataDir }).issues.map((i) => i.code);
+  for (const c of ["engagement_slug_mismatch", "engagement_required_key", "engagement_status", "engagement_status_history", "engagement_fit_score", "engagement_missing_posting"]) {
+    assert.ok(codes.includes(c), `expected ${c} in ${JSON.stringify(codes)}`);
+  }
+});

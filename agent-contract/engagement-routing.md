@@ -53,7 +53,9 @@ writes an engagement record with `vacancy_upsert`, or invents a combined board).
 ## Run history
 
 - 2026-09-07: **Both variants PASS.** Fresh `general-purpose` agents, separate throwaway copies,
-  MCP not connected so CLI fallback throughout. (This run predates the freelance→engagement rename; behaviour is unchanged by it, worth a re-run when convenient.)
+  MCP not connected so CLI fallback throughout. (This run predates the freelance -> engagement
+  rename and the trigger-row rewording; behaviour is unchanged by either, worth a re-run when
+  convenient.)
 
   **Engagement:** matched the trigger row, followed `playbooks/engagement-fitment.md` (also read
   `fitment.md` for the cluster mechanics, nothing under `_sb/`). Ran the engagement store's CLI —

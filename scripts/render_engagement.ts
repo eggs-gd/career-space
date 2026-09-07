@@ -2,10 +2,10 @@
 /**
  * Renders `data/engagements/` as a static HTML dashboard -- the engagement sibling of
  * `render_board.ts`. Grouped by status, sorted by fit, with clickable links to every file in each
- * order's folder. No server: open the written file directly. Deterministic formatting over
+ * engagement's folder. No server: open the written file directly. Deterministic formatting over
  * `engagement_store.listEngagements()` -- not something a playbook should hand-summarize into a table.
  *
- * Also writes a flat `data/engagements.md` twin (one table, no embedded text) for handing an order
+ * Also writes a flat `data/engagements.md` twin (one table, no embedded text) for handing an engagement
  * list to another agent.
  *
  * Usage: node scripts/dist/render_engagement.js [--output data/engagements.html] [--include-archived]
@@ -21,9 +21,9 @@ import { REPO_ROOT } from "./repo_paths";
 const DEFAULT_OUTPUT_PATH = path.join(REPO_ROOT, "data", "engagements.html");
 
 export function renderEngagements(outputPath?: string, includeArchived = false): { htmlPath: string; mdPath: string } {
-  const orders = listEngagements({ includeArchived });
-  const html = rendering.renderEngagementsHtml(orders);
-  const md = rendering.renderEngagementsMd(orders);
+  const engagements = listEngagements({ includeArchived });
+  const html = rendering.renderEngagementsHtml(engagements);
+  const md = rendering.renderEngagementsMd(engagements);
   const htmlPath = outputPath ?? DEFAULT_OUTPUT_PATH;
   const mdPath = htmlPath.replace(/\.html?$/i, "") + ".md";
   fs.mkdirSync(path.dirname(htmlPath), { recursive: true });

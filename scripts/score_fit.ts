@@ -19,7 +19,7 @@
  *
  * Usage: node scripts/dist/score_fit.js <input.json> [--out-dir <folder>]
  *   With --out-dir, also writes `fitment.json` (this input, verbatim) and `fitment.md` (the
- *   render) into that folder -- pass the vacancy/order folder so the agent never hand-writes them.
+ *   render) into that folder -- pass the vacancy/engagement folder so the agent never hand-writes them.
  *
  * Input JSON shape:
  * {

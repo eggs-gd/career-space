@@ -99,3 +99,14 @@ test("re-upsert without url or posting text still finds the folder via client+ti
   assert.equal(fs.readdirSync(dataDir).length, 1);
   assert.equal(second.fit.score, 7);
 });
+
+test("upsertEngagement preserves judged_at across a re-upsert (Step 1 create, Step 4 add fit)", () => {
+  const dataDir = tmpDir();
+  const first = upsertEngagement({ client: "Beacon", title: "Rust CLI", postingText: "build it", dataDir });
+  const judgedAt = first.judged_at as string;
+  assert.ok(judgedAt);
+  // Step 4: re-upsert with the score, no judgedAt passed.
+  const second = upsertEngagement({ client: "Beacon", title: "Rust CLI", fitScore: 7, fitCategory: "good_bet", dataDir });
+  assert.equal(second.judged_at, judgedAt, "judged_at is set once and preserved");
+  assert.notEqual(second.updated_at, judgedAt, "updated_at still moves");
+});
