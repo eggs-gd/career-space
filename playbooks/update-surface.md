@@ -29,7 +29,9 @@ anything.
 
 Follow `policies/surfaces-framework.md` for method, `context.md` for this surface's role and
 emphasis, and — for a constrained platform — the field list, order, and limits in its
-`reference/surfaces/<name>.md`.
+`reference/surfaces/<name>.md`. `examples/surfaces/*/output.md` show the expected output shape and
+tone — `linkedin/` (Headline/About/Experience) and `upwork/` (Title/Overview/Employment History),
+so match the one closest to this platform (example only — not facts about the candidate).
 
 If updating: keep wording, structure, and voice that still hold up; change only what's stale,
 missing, or inconsistent — **except** selection fields (proof points, the broader skills list,

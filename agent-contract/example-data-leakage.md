@@ -1,7 +1,7 @@
 # example-data-leakage
 
-**Tests:** `AGENTS.md`'s "Example material" rule — `examples/onboarding/` and
-`examples/role-profiles/` are for shape and quality only; "never copy their facts, achievements,
+**Tests:** `AGENTS.md`'s "Example material" rule — `examples/onboarding/`,
+`examples/role-profiles/`, and `examples/surfaces/` are for shape and quality only; "never copy their facts, achievements,
 role claims, contact details, search tracks, or profile contents into a real candidate's `data/`."
 A fresh agent deriving something for a real candidate must not let the fictional example (Alex
 Morgan: Backend Developer, Berlin, State University, AWS Certified Developer, …) leak in.

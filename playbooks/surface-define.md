@@ -83,7 +83,9 @@ doesn't support (ground rules #1, #5).
 
 ## Step 3 — write `context.md`
 
-Plain Markdown. Sections roughly: **Role in strategy** (what this surface is for, relative to the
+Plain Markdown. `examples/surfaces/*/context.md` show the shape and level of specificity — one
+for a strategic surface, one for a minimal secondary one (example only, never copy the
+positioning). Sections roughly: **Role in strategy** (what this surface is for, relative to the
 others), **Audience**, **Emphasise**, **Doesn't belong here** (themes to keep off this surface,
 topic-level), **Tone**, **Pinned** (verbatim values, if any), plus any category-level decisions
 (service directions, role emphasis order, whether a fractional/advisory title is explicit here).

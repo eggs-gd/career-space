@@ -331,10 +331,13 @@ poke at it speculatively.
 
 `examples/onboarding/` holds a complete onboarding example for a fictional candidate
 (`CV_GENERAL.md`, `config.yaml`, `sources.yaml`, `strategy.md`, plus `examples/role-profiles/`'s
-three lanes -- management, technical, individual contributor). Use examples only when designing or
-running onboarding (or `playbooks/prioritize.md`'s own Step 0, for `strategy.md`'s shape), to
-understand the expected shape, level of specificity, and file boundaries. Do not treat example
-facts as facts about the current candidate; runtime workflows read `data/`.
+three lanes -- management, technical, individual contributor). `examples/surfaces/` adds
+`context.md` + `output.md` pairs for the same candidate -- `linkedin/` (employment projection) and
+`upwork/` (client-work projection, and a surface that isn't a strategic priority) -- for
+`playbooks/surface-define.md` / `update-surface.md` to calibrate the artifact shape against. Use examples only when designing or
+running the matching playbook, to understand the expected shape, level of specificity, and file
+boundaries. Do not treat example facts as facts about the current candidate; runtime workflows
+read `data/`.
 
 ## Scripts and the MCP server
 
