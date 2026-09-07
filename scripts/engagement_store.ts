@@ -203,9 +203,9 @@ export const setEngagementArchived = (slug: string, archived: boolean, dataDir?:
 export const attachEngagementArtifact = (slug: string, kind: string, source: string, dataDir?: string): { path: string } =>
   attachArtifact(slug, kind, source, { dataDir: baseDir(dataDir) });
 
-function renderEngagementFromCli(): void {
-  const { renderEngagements } = require("./render_engagement") as typeof import("./render_engagement");
-  renderEngagements();
+function renderBoardsFromCli(): void {
+  const { renderBoards } = require("./render_boards") as typeof import("./render_boards");
+  renderBoards();
 }
 
 function cli(): void {
@@ -247,17 +247,17 @@ function cli(): void {
       fitReason: values["fit-reason"],
       status: values.status,
     });
-    renderEngagementFromCli();
+    renderBoardsFromCli();
   } else if (command === "set-status") {
     if (!values.slug || !values.status) throw new VacancyStoreError("set-status requires --slug and --status");
     result = setEngagementStatus(values.slug, values.status, values.note);
-    renderEngagementFromCli();
+    renderBoardsFromCli();
   } else if (command === "set-archived") {
     if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
       throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
     }
     result = setEngagementArchived(values.slug, values.archived === "true");
-    renderEngagementFromCli();
+    renderBoardsFromCli();
   } else if (command === "attach-artifact") {
     if (!values.slug || !values.kind || !values.path) {
       throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");

@@ -73,7 +73,7 @@ test("engagements board groups by status, shows category, shares the Employment/
   fs.mkdirSync(path.join(root, slug), { recursive: true });
   fs.writeFileSync(path.join(root, slug, "fitment.md"), "## Match: 8/10 — good bet\n\nStrong Go overlap.\n");
 
-  const orders = [
+  const engagements = [
     {
       slug,
       status: "tracked",
@@ -88,15 +88,15 @@ test("engagements board groups by status, shows category, shares the Employment/
     },
   ];
 
-  const html = renderEngagementsHtml(orders, { engagementDirFn: (s) => path.join(root, s) });
+  const html = renderEngagementsHtml(engagements, { engagementDirFn: (s) => path.join(root, s) });
   assert.match(html, /class="board-nav"/);
   assert.match(html, /class="board-nav-current">Engagements</);
-  assert.match(html, /<a href="board\.html">Employment<\/a>/);
+  assert.match(html, /<a href="vacancies\.html">Employment<\/a>/);
   assert.match(html, />Tracked <span class="n">\(1\)</);
   assert.match(html, /good_bet/);
   assert.match(html, /Strong Go overlap/);
 
-  const md = renderEngagementsMd(orders);
+  const md = renderEngagementsMd(engagements);
   assert.match(md, /# Engagements board/);
   assert.match(md, /\| tracked \| 8 \| good_bet \| Nimbus \| Go invoice sync \|/);
 });

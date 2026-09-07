@@ -10,7 +10,7 @@ Minimal synthetic `data/`:
 
 - `data/CV_GENERAL.md`, `data/config.yaml` (`shared:`), and 3–4 vacancy folders with `record.yaml`
   (a couple `applied`, one `interview`, one `tracked`).
-- `data/board.html` + `data/board.md` present, rendered from that state.
+- `data/vacancies.html` + `data/vacancies.md` present, rendered from that state.
 
 `career-space` MCP connected (or CLI available).
 
@@ -21,14 +21,12 @@ Minimal synthetic `data/`:
 
 ## Passes if / fails if
 
-**Passes if:** the agent moves both statuses (`vacancy_set_status` for each), then regenerates
-the board (`render_board`) once, as the closing step — no "want me to update the board?" question
-anywhere. It reports the two transitions. If it has an explicitly stated reason it may pass
-`note`; with none given here it's fine to omit it.
+**Passes if:** the agent moves both statuses (`vacancy_set_status` for each), which re-renders the
+board itself — no "want me to update the board?" question anywhere. It reports the two transitions.
+If it has an explicitly stated reason it may pass `note`; with none given here it's fine to omit it.
 
 **Fails if:** the agent changes the statuses but leaves the board stale; **or** asks whether to
-re-render / offers it as an optional follow-up; **or** re-renders after each change instead of
-once at the end.
+re-render / offers it as an optional follow-up.
 
 ## Run history
 

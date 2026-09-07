@@ -44,7 +44,9 @@ never nested). `record.yaml` carries `client` / `title` / `url` / `status` / `st
 are `vacancy_store`'s own `setStatus`/`setArchived` pointed at `data/engagements/` via the
 `scope: { dataDir }` seam. `upsertEngagement` and `listEngagements` are engagement-specific. `render_engagement.ts`
 writes `data/engagements.html` + `data/engagements.md`, sharing the head template and nav with the
-vacancy board. No seen ledger yet (there is no automated engagement source yet).
+vacancy board. `render_boards.ts` renders both; auto-render paths call it. `render_board.ts` /
+`render_engagement.ts` take `--output` / `--include-archived` for a one-off render. No seen ledger
+yet (there is no automated engagement source yet).
 
 ## Fitment persistence and re-scoring
 
@@ -57,7 +59,7 @@ the folder doesn't exist at judge time). An agent never hand-writes a fitment fi
 
 `rescore.ts` walks every `data/{vacancies,engagements}/*/fitment.json`, re-runs `score_fit.evaluate`,
 and (with `--write`) updates `record.yaml`'s `fit.score`/`fit.category`, rewrites `fitment.md`, and
-re-renders both boards. This is how a scoring-formula change propagates to existing records without
+re-renders the board. This is how a scoring-formula change propagates to existing records without
 re-running the model. Folders without a `fitment.json` (older records, or ones tracked via
 cover-letter/cv-targeted without a fitment run) are reported as not replayable.
 
@@ -79,11 +81,12 @@ Output filenames are derived from `data/config.yaml` and sibling `record.yaml` c
 
 `render_board.ts` writes both:
 
-- `data/board.html`: grouped status dashboard with inline vacancy documents, folder links, local
+- `data/vacancies.html`: grouped status dashboard with inline vacancy documents, folder links, local
   highlighting, archive visibility, copy payloads, and location-exception badges.
-- `data/board.md`: flat table for handing board state to another agent.
+- `data/vacancies.md`: flat table for handing board state to another agent.
 
-MCP status/archive changes return fresh board paths.
+`render_boards.ts` runs that plus `render_engagement.ts` (`data/engagements.{html,md}`). MCP/CLI
+status/archive changes call it and return the fresh paths.
 
 ## Validation
 
@@ -109,6 +112,7 @@ surface context files, and known enum values.
 - `vacancy_attach_artifact`
 - `vacancy_list`
 - `linkedin_searches`
+- `render_boards`
 - `render_board`
 - `workspace_validate`
 - `rescore`

@@ -21,6 +21,7 @@ import { LOCATION_ELIGIBILITY_STATUSES } from "./eligibility";
 import { generate as generateLinkedinSearches } from "./linkedin_searches";
 import { renderBoard } from "./render_board";
 import { renderEngagements } from "./render_engagement";
+import { renderBoards } from "./render_boards";
 import { rescore } from "./rescore";
 import { runScout } from "./scout_fetch";
 import { resolveVacancyFromUrl } from "./resolve_vacancy_url";
@@ -87,14 +88,14 @@ const recordScoutItemSchema = z.object({
   }),
 });
 
-function renderBoardResult(): { output_path: string; markdown_path: string } {
-  const { htmlPath, mdPath } = renderBoard();
-  return { output_path: htmlPath, markdown_path: mdPath };
-}
-
-function renderEngagementResult(): { output_path: string; markdown_path: string } {
-  const { htmlPath, mdPath } = renderEngagements();
-  return { output_path: htmlPath, markdown_path: mdPath };
+/** Renders the board; returned by every `vacancy_*` / `engagement_*` tool that changes
+ * board-visible state. */
+function renderBoardsResult(): { vacancies: { output_path: string; markdown_path: string }; engagements: { output_path: string; markdown_path: string } } {
+  const { vacancies, engagements } = renderBoards();
+  return {
+    vacancies: { output_path: vacancies.html, markdown_path: vacancies.md },
+    engagements: { output_path: engagements.html, markdown_path: engagements.md },
+  };
 }
 
 server.registerTool(
@@ -273,8 +274,8 @@ server.registerTool(
       status: args.status,
       trackLabel: args.track_label,
     });
-    const board = args.render_board && result.changed ? renderBoardResult() : null;
-    return respond({ ...result, board });
+    const boards = args.render_board && result.changed ? renderBoardsResult() : null;
+    return respond({ ...result, boards });
   }
 );
 
@@ -336,8 +337,8 @@ server.registerTool(
         minFitScore: min_fit_score,
       })
     );
-    const board = render_board && results.some((item) => item.outcome === "matched") ? renderBoardResult() : null;
-    return respond({ results, board });
+    const boards = render_board && results.some((item) => item.outcome === "matched") ? renderBoardsResult() : null;
+    return respond({ results, boards });
   }
 );
 
@@ -407,7 +408,7 @@ server.registerTool(
   },
   async ({ slug, status, note }): Promise<CallToolResult> => {
     const record = vacancyStore.setStatus(slug, status, note);
-    return respond({ record, board: renderBoardResult() });
+    return respond({ record, boards: renderBoardsResult() });
   }
 );
 
@@ -423,7 +424,7 @@ server.registerTool(
   },
   async ({ slug, archived }): Promise<CallToolResult> => {
     const record = vacancyStore.setArchived(slug, archived);
-    return respond({ record, board: renderBoardResult() });
+    return respond({ record, boards: renderBoardsResult() });
   }
 );
 
@@ -476,7 +477,7 @@ server.registerTool(
   "render_board",
   {
     description:
-      "Render data/board.html and data/board.md from current vacancy records. Excludes archived vacancies unless requested.",
+      "Render data/vacancies.html + data/vacancies.md with optional output_path / include_archived. For the default refresh use render_boards.",
     inputSchema: {
       output_path: z.string().optional(),
       include_archived: z.boolean().optional(),
@@ -538,7 +539,7 @@ server.registerTool(
       fitCategory: args.fit_category,
       fitReason: args.fit_reason,
     });
-    return respond({ record, board: renderEngagementResult() });
+    return respond({ record, boards: renderBoardsResult() });
   }
 );
 
@@ -554,7 +555,7 @@ server.registerTool(
   },
   async ({ slug, status, note }): Promise<CallToolResult> => {
     const record = engagementStore.setEngagementStatus(slug, status, note);
-    return respond({ record, board: renderEngagementResult() });
+    return respond({ record, boards: renderBoardsResult() });
   }
 );
 
@@ -566,7 +567,7 @@ server.registerTool(
   },
   async ({ slug, archived }): Promise<CallToolResult> => {
     const record = engagementStore.setEngagementArchived(slug, archived);
-    return respond({ record, board: renderEngagementResult() });
+    return respond({ record, boards: renderBoardsResult() });
   }
 );
 
@@ -593,7 +594,7 @@ server.registerTool(
 server.registerTool(
   "render_engagement",
   {
-    description: "Render data/engagements.html and data/engagements.md from current engagement records. Excludes archived unless requested.",
+    description: "Render data/engagements.html + data/engagements.md with optional output_path / include_archived. For the default refresh use render_boards.",
     inputSchema: { output_path: z.string().optional(), include_archived: z.boolean().optional() },
   },
   async ({ output_path, include_archived }): Promise<CallToolResult> => {
@@ -604,10 +605,20 @@ server.registerTool(
 );
 
 server.registerTool(
+  "render_boards",
+  {
+    description:
+      "Render the board -- data/vacancies.html + .md and data/engagements.html + .md -- from current records. The default refresh, no options. Status/archive changes call this automatically.",
+    inputSchema: {},
+  },
+  async (): Promise<CallToolResult> => respond(renderBoardsResult())
+);
+
+server.registerTool(
   "rescore",
   {
     description:
-      "Re-apply score_fit's formula to every saved fitment.json under data/vacancies/ and data/engagements/ without re-running the model -- use after a scoring-formula change. Dry run unless write:true (which updates record.yaml fit.score/fit.category, rewrites fitment.md, re-renders both boards).",
+      "Re-apply score_fit's formula to every saved fitment.json under data/vacancies/ and data/engagements/ without re-running the model -- use after a scoring-formula change. Dry run unless write:true (which updates record.yaml fit.score/fit.category, rewrites fitment.md, re-renders the board).",
     inputSchema: { write: z.boolean().default(false) },
   },
   async ({ write }): Promise<CallToolResult> => respond(rescore({ write }))

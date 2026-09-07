@@ -55,7 +55,7 @@ which one you're talking to:
   working on this repo itself" below. Developer mode doesn't grant operator privileges: don't
   inspect, regenerate, or otherwise operate on a candidate's `data/` as part of a repo-development
   task unless that task explicitly requires testing against runtime data and the user asked for
-  exactly that. Fixing `render_board.ts` doesn't mean also regenerating `data/board.html` "to
+  exactly that. Fixing `render_board.ts` doesn't mean also regenerating `data/vacancies.html` "to
   check it worked" -- that's operating on someone's real job-search data from developer mode, not
   verifying code.
 
@@ -315,13 +315,13 @@ data/                           # gitignored, personal
                                  # fitment.json (score_fit --out-dir); proposal.md / cover-letter.md
                                  # once written
   engagements.html               # engagements board (grouped by status), + engagements.md twin --
-                                 # scripts/render_engagement.ts, regenerated; shares nav with board.html
+                                 # scripts/render_engagement.ts, regenerated; shares nav with vacancies.html
   linkedin-searches.md          # LinkedIn Boolean search deep-links, see playbooks/
                                  # linkedin-search.md -- regenerated, not hand-edited
-  board.html                    # every vacancy, grouped by status, sorted by fit, with real
+  vacancies.html                # every vacancy, grouped by status, sorted by fit, with real
                                  # links into vacancies/ -- see playbooks/board.md, regenerated
-  board.md                      # flat one-table twin of board.html (no embedded doc text) --
-                                 # for handing to another agent; regenerated alongside board.html
+  vacancies.md                  # flat one-table twin of vacancies.html (no embedded doc text) --
+                                 # for handing to another agent; regenerated alongside vacancies.html
 ```
 
 Nothing outside a playbook you're actively running should read or write under `data/` — don't
@@ -359,15 +359,13 @@ sandbox, not something a playbook controls or should pre-empt with a question of
 
 **A status or archive change returns a fresh board, automatically, MCP or CLI.**
 `vacancy_resolve`, `vacancy_set_status`, `vacancy_set_archived`, and `record_scout_outcomes` all
-re-render the board themselves when they change board-visible state — the MCP tools and their CLI
-forms call the exact same render step, so there's nothing left for a playbook to remember here
+re-render the board themselves when they change board-visible state — the MCP tools and their
+CLI forms call the exact same render step, so there's nothing left for a playbook to remember here
 either way. `vacancy_upsert` (the lower-level primitive those four are usually built on) does
 *not* auto-render — a playbook that calls it directly still owns rendering after.
 
 Engagements (`data/engagements/`) mirror this: `engagement_upsert`, `engagement_set_status`, and
-`engagement_set_archived` re-render the engagements board (`data/engagements.html` / `.md`) themselves, MCP
-or CLI. The board is a second static view sharing a nav with `board.html`; there is no combined
-board.
+`engagement_set_archived` re-render the board themselves, MCP or CLI.
 
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `_sb/reference/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a

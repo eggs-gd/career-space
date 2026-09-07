@@ -28,7 +28,7 @@ interface over it or over `score_fit.ts`'s scoring formula:
   hand-writes a fitment file.
 - `scripts/rescore.ts` — re-applies `score_fit`'s formula to every saved
   `data/{vacancies,engagements}/*/fitment.json` without re-running the model; `--write` updates
-  `record.yaml`'s `fit`, rewrites `fitment.md`, re-renders both boards. Run it after a
+  `record.yaml`'s `fit`, rewrites `fitment.md`, re-renders the board. Run it after a
   scoring-formula change. Dry run by default.
 - `scripts/scout_fetch.ts` — fetch public ATS/job-board postings, run the cheap prefilter and
   repost-collapse, drop anything already in `data/vacancies/seen.jsonl`. `scout_domain.ts`/
@@ -53,17 +53,20 @@ interface over it or over `score_fit.ts`'s scoring formula:
 - `scripts/linkedin_searches.ts` — writes `data/linkedin-searches.md`: LinkedIn Boolean search
   deep-links built from `data/sources.yaml`'s `tracks`. No fetching, no network call at all --
   see `playbooks/linkedin-search.md` for why this is deliberately not part of the scout.
-- `scripts/render_board.ts` — writes `data/board.html` (every vacancy grouped by status, sorted
-  by fit score, with real clickable links into each vacancy's folder) plus a flat `data/board.md`
+- `scripts/render_board.ts` — writes `data/vacancies.html` (every vacancy grouped by status, sorted
+  by fit score, with real clickable links into each vacancy's folder) plus a flat `data/vacancies.md`
   twin (one table, no embedded doc text, for handing to another agent). Static files, no server.
   Don't hand-summarize `data/vacancies/` into a table yourself instead of calling this -- see
   `playbooks/board.md`.
+- `scripts/render_boards.ts` — renders the board (`render_board.ts` + `render_engagement.ts`), no
+  options. Every auto-render path calls this; `render_board.ts` / `render_engagement.ts` take
+  `--output` / `--include-archived` for a one-off.
 - `scripts/engagement_store.ts` — the vacancy store's sibling for engagements
   (`data/engagements/<slug>/`). `upsertEngagement` / `listEngagements` are engagement-specific; `setEngagementStatus` /
   `setEngagementArchived` / `attachEngagementArtifact` are `vacancy_store`'s own logic pointed at
   `data/engagements/`. Engagements share `VALID_STATUSES` with vacancies. See `playbooks/engagement-fitment.md`.
 - `scripts/render_engagement.ts` — writes `data/engagements.html` + `data/engagements.md`, the engagement
-  sibling of `render_board.ts`. Shares the head template and top nav with `data/board.html`.
+  sibling of `render_board.ts`. Shares the head template and top nav with `data/vacancies.html`.
 - `scripts/workspace_validate.ts` — validates deterministic `data/` layout and record/config
   schemas (vacancies and engagements). It reports structured issues and does not generate artifacts.
 
@@ -74,9 +77,9 @@ shell-escaping a JSON blob, no constructing a `node ...` invocation by hand. `sc
 wraps the same functions: `render_resume`, `render_cover_letter`, `score_fit`, `scout_fetch`,
 `resolve_vacancy_url`, `vacancy_resolve`, `vacancy_mark_seen`, `record_scout_outcomes`,
 `vacancy_upsert`, `vacancy_set_status`, `vacancy_set_archived`, `vacancy_attach_artifact`,
-`vacancy_list`, `linkedin_searches`, `render_board`, `workspace_validate`, `rescore`, and the
-engagement set: `engagement_upsert`, `engagement_set_status`, `engagement_set_archived`,
-`engagement_attach_artifact`, `engagement_list`, `render_engagement`.
+`vacancy_list`, `linkedin_searches`, `render_boards`, `render_board`, `workspace_validate`,
+`rescore`, and the engagement set: `engagement_upsert`, `engagement_set_status`,
+`engagement_set_archived`, `engagement_attach_artifact`, `engagement_list`, `render_engagement`.
 
 `record_scout_outcomes`: per candidate, `posting_id`/`content_id` are optional but both-or-neither
 (omit both for a manually-obtained posting — ids computed via `posting_ids.manualIds`, and the
@@ -90,8 +93,9 @@ If the server isn't connected, fall back to the CLI form documented in each scri
 `node scripts/dist/resolve_vacancy_url.js <url>`, `node scripts/dist/vacancy_store.js
 <mark-seen|upsert|set-status|set-archived|attach-artifact|list|record-scout-outcomes|resolve>
 ...`, `node scripts/dist/engagement_store.js <upsert|set-status|set-archived|attach-artifact|list>
-...`, `node scripts/dist/linkedin_searches.js`, `node scripts/dist/render_board.js
-[--include-archived]`, `node scripts/dist/render_engagement.js [--include-archived]`,
+...`, `node scripts/dist/linkedin_searches.js`, `node scripts/dist/render_boards.js`,
+`node scripts/dist/render_board.js [--include-archived]`,
+`node scripts/dist/render_engagement.js [--include-archived]`,
 `node scripts/dist/rescore.js [--write]`, and `node scripts/dist/workspace_validate.js`. Run
 `npm run build` first if `scripts/dist/` doesn't exist yet.
 

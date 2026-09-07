@@ -69,8 +69,8 @@ judgment; **or**, in the ambiguous case, guesses instead of asking.
   MCP/CLI parity gap in `scripts/vacancy_store.ts`'s `cli()` — the MCP tool wrappers for
   `vacancy_resolve`/`vacancy_set_status`/`vacancy_set_archived`/`record_scout_outcomes` already
   auto-rendered, but their CLI forms never got the equivalent call. Fixed (not part of this test):
-  a lazy-`require`d `renderBoardFromCli()` helper wired into all four CLI branches, verified via
-  build, full test suite, and a real runtime smoke test.
+  a lazy-`require`d helper wired into all four CLI branches, verified via build, full test suite,
+  and a real runtime smoke test.
 
 - 2026-09-04 (rerun): **Ambiguous variant PASS** after tightening `playbooks/cover-letter.md`
   Step 2 with a concrete operational floor — only a named/inferable ATS platform (Greenhouse,

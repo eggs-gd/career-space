@@ -9,13 +9,13 @@
  * thing this already does in one call, and produces plain text, not something with real
  * clickable links to the rest of what's in each vacancy's folder).
  *
- * Also writes a flat `board.md` twin next to it -- one table (status/fit/company/title/updated/
+ * Also writes a flat `vacancies.md` twin next to it -- one table (status/fit/company/title/updated/
  * slug/url), no embedded document text -- for handing to another agent to reconcile statuses
  * against emails/correspondence.
  *
- * Usage: node scripts/dist/render_board.js [--output data/board.html] [--include-archived]
+ * Usage: node scripts/dist/render_board.js [--output data/vacancies.html] [--include-archived]
  *
- * Writes `data/board.html` (and `data/board.md`) by default -- right next to `data/vacancies/`,
+ * Writes `data/vacancies.html` (and `data/vacancies.md`) by default -- right next to `data/vacancies/`,
  * so the HTML's links to `vacancies/<slug>/<file>` resolve without any path juggling.
  */
 
@@ -27,7 +27,7 @@ import * as vacancyStore from "./vacancy_store";
 import { loadScoutConfig } from "./scout_domain";
 import { REPO_ROOT } from "./repo_paths";
 
-const DEFAULT_OUTPUT_PATH = path.join(REPO_ROOT, "data", "board.html");
+const DEFAULT_OUTPUT_PATH = path.join(REPO_ROOT, "data", "vacancies.html");
 const SOURCES_PATH = path.join(REPO_ROOT, "data", "sources.yaml");
 
 /** `local_keywords` from `data/sources.yaml`, for highlighting local vacancies on the board --
@@ -45,7 +45,7 @@ function loadLocalKeywords(): string[] {
 
 /** `includeArchived` defaults to false, matching `vacancyStore.listVacancies`'s own default --
  * an archived vacancy (see `vacancy_store.setArchived`) stays off the board unless explicitly
- * asked for. Writes both `board.html` and its flat `board.md` twin; `mdPath` is `htmlPath` with
+ * asked for. Writes both `vacancies.html` and its flat `vacancies.md` twin; `mdPath` is `htmlPath` with
  * a `.md` extension (so `--output foo.html` also writes `foo.md`). */
 export function renderBoard(outputPath?: string, includeArchived = false): { htmlPath: string; mdPath: string } {
   const vacancies = vacancyStore.listVacancies(undefined, { includeArchived });

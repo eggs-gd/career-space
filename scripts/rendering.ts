@@ -251,15 +251,13 @@ const BOARD_SCRIPT = `  <script>
     })();
   </script>`;
 
-/** Shared top nav for the two opportunity boards -- `board.html` (vacancies) and
- * `engagements.html` (engagements) sit next to each other in `data/`, so a plain relative link works.
- * One Career Space, two static views (see `_sb/concept.md`). */
+/** Top nav shared by `vacancies.html` and `engagements.html` -- siblings in `data/`, relative links. */
 function boardNavHtml(current: "employment" | "engagement"): string {
   const link = (href: string, label: string, key: string) =>
     key === current
       ? `<span class="board-nav-current">${escapeHtml(label)}</span>`
       : `<a href="${href}">${escapeHtml(label)}</a>`;
-  return `<nav class="board-nav">${link("board.html", "Employment", "employment")}${link(
+  return `<nav class="board-nav">${link("vacancies.html", "Employment", "employment")}${link(
     "engagements.html",
     "Engagements",
     "engagement"

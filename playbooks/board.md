@@ -5,9 +5,10 @@ everything" -- the candidate wants an overview of every tracked vacancy, not one
 
 ## Step 1 -- render
 
-Call `render_board` (MCP tool, or `node scripts/dist/render_board.js` if the server isn't
-connected). It writes `data/board.html` and a flat `data/board.md` twin -- every non-archived
-vacancy (see "Archiving" below), grouped by status, sorted by fit score. Each HTML row shows:
+Call `render_boards` (MCP tool, or `node scripts/dist/render_boards.js` if the server isn't
+connected). It writes `data/vacancies.html` + a flat `data/vacancies.md` twin (and the engagements
+board, `data/engagements.html` + `.md`). The vacancies board is every non-archived vacancy (see
+"Archiving" below), grouped by status, sorted by fit score. Each HTML row shows:
 whatever files actually exist in that
 vacancy's folder (`fitment.md`, `posting.md`, `cv.md`, `cover-letter.md`, `interview-prep.md`,
 `targeting-plan.md`) behind a click-to-expand badge; a `📁 Folder` panel with `file://` links to every file in that
@@ -15,7 +16,7 @@ vacancy's directory (for grabbing the CV/cover-letter files to attach to an appl
 to the original posting URL; and a "📍 Local" badge when it matches `data/sources.yaml`'s
 `local_keywords`.
 
-If a candidate says a `📁 Folder` link goes nowhere, the likely cause is viewing `data/board.html`
+If a candidate says a `📁 Folder` link goes nowhere, the likely cause is viewing `data/vacancies.html`
 through some client's own in-app file preview rather than a real browser tab -- suggest that
 first. Same caveat for the status buttons
 (jump to that section) and each row's "Copy" button
@@ -32,8 +33,8 @@ data without writing a file.
 
 ## Step 2 -- hand it back
 
-Tell the candidate both paths and that they're plain files -- `board.html` opens directly in any
-browser (no server), `board.md` is a flat one-table version (status/fit/company/title/updated/
+Tell the candidate the paths and that they're plain files -- `vacancies.html` opens directly in any
+browser (no server), `vacancies.md` is a flat one-table version (status/fit/company/title/updated/
 slug/url, no embedded document text) meant for pasting into another agent to reconcile statuses
 against emails/correspondence. Pull out one or two headline numbers in your own reply too (how
 many `new`, how many `applied` with no movement in a while, anything that jumps out) rather than
@@ -49,7 +50,7 @@ playbook doesn't answer on its own.
 
 The candidate can ask to archive a vacancy at any point ("заархівуй цю вакансію" / "archive this
 one" / "get old rejected ones off the board") -- call `vacancy_set_archived(slug, true)`. This
-never deletes anything and never touches `status`; it only controls whether `render_board`/
+never deletes anything and never touches `status`; it only controls whether the board /
 `vacancy_list` show it by default. A `rejected`/`skipped` vacancy sitting untouched for a long
 time is the common candidate for this -- worth mentioning as an option when the board's getting
 cluttered with old ones, not something to do unprompted. Unarchive the same way with `archived:

@@ -73,8 +73,9 @@ under it together, in one migration.
 `vacancy_store.ts`'s `scope: { dataDir }` seam made the second store cheap: `engagement_store.ts`
 points `setStatus` / `setArchived` / `attachArtifact` at `data/engagements/` unchanged and adds
 `upsertEngagement` / `listEngagements` for the leaner engagement record. `render_engagement.ts`
-mirrors `render_board.ts` (`data/engagements.html` + `.md`), sharing the head template and the
-`[ Employment | Engagements ]` nav.
+mirrors `render_board.ts` (`data/vacancies.html` + `.md` ↔ `data/engagements.html` + `.md`),
+sharing the head template and the `[ Employment | Engagements ]` nav; `render_boards.ts` renders
+both and is what the auto-render paths call.
 
 ## Current state
 

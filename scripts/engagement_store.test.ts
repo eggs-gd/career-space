@@ -108,5 +108,7 @@ test("upsertEngagement preserves judged_at across a re-upsert (Step 1 create, St
   // Step 4: re-upsert with the score, no judgedAt passed.
   const second = upsertEngagement({ client: "Beacon", title: "Rust CLI", fitScore: 7, fitCategory: "good_bet", dataDir });
   assert.equal(second.judged_at, judgedAt, "judged_at is set once and preserved");
-  assert.notEqual(second.updated_at, judgedAt, "updated_at still moves");
+  // updated_at is rewritten on every upsert; it never predates judged_at. (Not asserting
+  // inequality -- two upserts in the same millisecond legitimately share a timestamp.)
+  assert.ok((second.updated_at as string) >= judgedAt, "updated_at is refreshed, never rolled back");
 });

@@ -11,7 +11,7 @@
  * to make them replayable in future).
  *
  * With `--write`: updates `record.yaml`'s `fit.score` / `fit.category` (`fit.reason`, the agent's
- * prose, is kept), rewrites `fitment.md` from the same assessment, and re-renders both boards.
+ * prose, is kept), rewrites `fitment.md` from the same assessment, and re-renders the board.
  *
  * Usage: node scripts/dist/rescore.js [--write] [--data-dir <dir>]
  */
@@ -22,8 +22,7 @@ import * as yaml from "js-yaml";
 import { parseArgs } from "util";
 import { REPO_ROOT } from "./repo_paths";
 import { Assessment, evaluate, persistFitment } from "./score_fit";
-import { renderBoard } from "./render_board";
-import { renderEngagements } from "./render_engagement";
+import { renderBoards } from "./render_boards";
 
 export interface RescoreRow {
   root: string;
@@ -89,8 +88,7 @@ export function rescore(opts: { write?: boolean; dataDir?: string } = {}): Resco
   scanRoot(path.join(base, "engagements"), write, rows, skipped);
   const changed = rows.filter((r) => r.changed);
   if (write && changed.length && !opts.dataDir) {
-    renderBoard();
-    renderEngagements();
+    renderBoards();
   }
   return { written: write, replayable: rows.length, changed, skipped };
 }
