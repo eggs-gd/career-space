@@ -1,7 +1,10 @@
 # MCP workflow resolver -- brainstorm, not started
 
 Captured 2026-08-30. An architectural idea, not a design that's been reviewed against real
-edge cases yet -- see `_sb/roadmap.md`'s "Later / maybe" for status.
+edge cases yet -- see `_sb/roadmap.md`'s "Later / maybe" for status. `_sb/ideas/packaging-and-
+runtime.md` builds on this: the resolver is what lets `data/` stay local while every flow runs
+through the MCP, and it drives the actions/flows split and the `AGENTS.md` collapse described
+there.
 
 ## The observation
 

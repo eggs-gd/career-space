@@ -142,18 +142,31 @@ and why each one was built lives in git history, not here.
   Vacancy slug sorting (folder names don't sort by recency) folds in here rather than being its
   own item -- `render_board` already removes the need to eyeball raw folder order, so it's a
   machine/collision concern only, worth solving alongside this if at all.
+- **Packaging + flows-in-MCP.** Ship the deterministic layer, the flow resolver, and the
+  bundled actions/policies as a prebuilt npm package run as a local subprocess -- not a server.
+  `data/` stays local; the resolver reads only shallow state (file exists? status field? hash?),
+  so a local subprocess reads it for free and the data-location dilemma dissolves. Splits
+  playbooks into **actions** (prose, model judgement) and **flows** (deterministic orchestration,
+  moved into `resolve()`); collapses `AGENTS.md` to the ground-rules stub; shrinks the user's
+  workspace to `data/` + `.mcp.json`. Its stage 2 (label every playbook action-or-flow) is the
+  same work as "Skill hygiene" in Next Steps, and the resolver delivers the input-slicing lever
+  the cheaper-model item below wants. Staged plan, the hard part (judgment branches in flows),
+  and why a server isn't the shape in `_sb/ideas/packaging-and-runtime.md`; resolver mechanics in
+  `_sb/ideas/workflow-resolver.md`. Not started.
 - **Dashboard, expensive path** -- only if the cheap board proves insufficient. SvelteKit +
   static adapter. Not started, not clearly needed yet.
-- **Offload narrow, mechanical LLM sub-steps to a cheaper-model subagent, host-capability-gated.**
+- **Offload narrow, mechanical LLM sub-steps to a cheaper model, host-capability-gated.**
   Some playbook steps are structured extraction, not real judgment -- small, classification-shaped,
   bounded input/output, no need for the full Master CV or conversation history. Two candidates
   worth evaluating on that basis when this gets picked up: `fitment.md`'s Step 1
   (requirement-cluster extraction) and cover-letter's mode inference (Step 2 -- now bundled with
   the shape judgment, which asks the candidate when unsure, so less purely mechanical than it was).
-  Worth trying on a cheaper model with a smaller, focused context instead of the full conversation
-  -- spawned as a subagent (Claude Code's `Agent`/Task tool with a pinned cheap model), not a
-  direct API call from a script, to stay agent-native rather than adding a separate LLM-calling
-  layer to maintain.
+  The "smaller, focused context" this needs is exactly what the flows resolver (Packaging item
+  above) hands back per action, so this is downstream of that -- the only open question left is
+  which model runs it. `_sb/ideas/local-inference-capability.md` refines the mechanism: an
+  optional local model the MCP discovers, not a host-specific subagent (which the note below
+  flags as non-portable). The subagent form (Claude Code's `Agent`/Task tool with a pinned cheap
+  model) stays the fallback where no local model is configured.
 
   Real constraint, not yet solved: subagent spawning is a host capability, not something callable
   via MCP the same way on every provider -- Codex CLI/Gemini CLI/Cursor have no confirmed
