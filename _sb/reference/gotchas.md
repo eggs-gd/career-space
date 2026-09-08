@@ -56,9 +56,15 @@ trap and the rule -- not the story.
   `score_fit` modules to hand-record an unsupported-URL vacancy -- `record_scout_outcomes` takes a
   candidate with no `posting_id`/`content_id` and computes them.
 - `fitment.json` is the model's verbatim input; its `fit_category` is NOT always the stored/rendered
-  one. `evaluate()` caps an `unclear` verdict at 7 and rewrites a positive `fit_category` when a
-  cap fired (`clean_fit` at 3 -> `craft_mismatch`). Compare against `evaluate()` output, never the
-  raw json.
+  one. `evaluate()` caps an `unclear` verdict at 7 and rewrites a positive `fit_category` to
+  `context_gap` / `thin_margin` when a cap fired (never `craft_mismatch` -- only the model says
+  that). Compare against `evaluate()` output, never the raw json.
+- The fit score ranks a permanent surplus of vacancies for the candidate's own application effort:
+  a capped decision score, not a measurement. A cluster at exactly `5` is correct (a capped `9` and
+  a capped `7` are the same for apply-priority); `4`/`6` near-empty is fine. Don't tune the rubric
+  or caps to spread the distribution -- calibrate against whether the top of the ranking holds up
+  when a human reads the fitment, and change `score_fit.ts` only when a mis-rank traces to the
+  formula, not to one model judgment.
 - `record_scout_outcomes` candidate ids are both-or-neither (one alone throws). On the no-ids
   path `recordScoutOutcome` passes `undefined` through to `upsertVacancy` (not the computed pair)
   so the record gets `id_source: manual` and still merges onto an existing company+title record

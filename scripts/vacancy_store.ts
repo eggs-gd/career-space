@@ -151,6 +151,10 @@ export interface VacancySummary {
   company: string;
   title: string;
   fitScore: number | null;
+  /** `fit.category` from the record -- the reconciled `score_fit` verdict (`clean_fit`,
+   * `context_gap`, `craft_mismatch`, ...). `null` when fitment hasn't run. Shown on the board as a
+   * colored pill next to the score. */
+  fitCategory: string | null;
   trackLabel: string | null;
   url: string;
   updatedAt: string;
@@ -181,6 +185,7 @@ function summaryToDict(s: VacancySummary): Rec {
     company: s.company,
     title: s.title,
     fit_score: s.fitScore,
+    fit_category: s.fitCategory,
     track_label: s.trackLabel,
     url: s.url,
     updated_at: s.updatedAt,
@@ -763,6 +768,7 @@ export function listVacancies(status?: string, opts: { includeArchived?: boolean
       company: record.company ?? "",
       title: record.title ?? "",
       fitScore: fit.score ?? null,
+      fitCategory: fit.category ?? null,
       trackLabel: record.track_label ?? null,
       url: record.url ?? "",
       updatedAt: record.updated_at ?? "",

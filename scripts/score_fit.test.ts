@@ -82,8 +82,10 @@ test("a capped score overrides a positive fit_category so the label never contra
   ] as any;
   const blocked = evaluate({ clusters: blocking, fit_category: "clean_fit" } as any);
   assert.ok(blocked.score <= 3);
-  assert.equal(blocked.fit_category, "craft_mismatch", "blocking cap + clean_fit -> craft_mismatch");
-  assert.match(blocked.markdown, /^## Match: \d\/10 — craft mismatch/m);
+  // Neutral gap label, never craft_mismatch -- a blocking cap is a location/skill gate, not a
+  // discipline verdict (only the model itself says craft_mismatch).
+  assert.equal(blocked.fit_category, "context_gap", "blocking cap + clean_fit -> context_gap");
+  assert.match(blocked.markdown, /^## Match: \d\/10 — context gap/m);
 
   const criticalGap = [
     { cluster: "Core stack", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "none" }] },
@@ -92,9 +94,11 @@ test("a capped score overrides a positive fit_category so the label never contra
   ] as any;
   assert.equal(evaluate({ clusters: criticalGap, fit_category: "stretch_fit" } as any).fit_category, "context_gap");
   assert.equal(evaluate({ clusters: criticalGap, fit_category: "underreach" } as any).fit_category, "context_gap");
-  // Engagement vocabulary stays in its own set.
+  // Engagement vocabulary reconciles within its own set.
   assert.equal(evaluate({ clusters: criticalGap, fit_category: "good_bet" } as any).fit_category, "thin_margin");
-  assert.equal(evaluate({ clusters: blocking, fit_category: "good_bet" } as any).fit_category, "wrong_craft");
+  assert.equal(evaluate({ clusters: blocking, fit_category: "good_bet" } as any).fit_category, "thin_margin");
+  // craft_mismatch the model chose is left alone.
+  assert.equal(evaluate({ clusters: blocking, fit_category: "craft_mismatch" } as any).fit_category, "craft_mismatch");
 });
 
 test("category reconciliation leaves an uncapped score's category untouched", () => {

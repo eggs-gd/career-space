@@ -296,6 +296,16 @@ function formatGeneratedAt(d: Date): string {
   return `${d.getDate()} ${MONTH_ABBR[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm}`;
 }
 
+/** Colored verdict pill for the board -- the reconciled `score_fit` `fit_category` (both the
+ * vacancy and engagement vocabularies: `clean_fit` / `context_gap` / `craft_mismatch` /
+ * `good_bet` / `thin_margin` / ...). Per-category color lives in `board/head.html.j2` as
+ * `.fit-cat-<category>`. Empty string when fitment hasn't run. */
+function fitCategoryPill(category: unknown): string {
+  const cat = String(category ?? "").trim();
+  if (!cat) return "";
+  return `<span class="fit-cat fit-cat-${escapeHtml(cat)}">${escapeHtml(cat.replace(/_/g, " "))}</span>`;
+}
+
 type Rec = Record<string, any>;
 
 /** A flat Markdown twin of the board -- one table, no embedded document bodies. Built for handing
@@ -326,14 +336,14 @@ export function renderBoardMd(vacancies: Rec[]): string {
     "status against your own emails and correspondence. No posting / CV / cover-letter / fitment",
     "text here -- those stay in each vacancy's own folder (`data/vacancies/<slug>/`).",
     "",
-    "| Status | Fit | Company | Title | Updated | Slug | URL |",
-    "|---|---|---|---|---|---|---|",
+    "| Status | Fit | Verdict | Company | Title | Updated | Slug | URL |",
+    "|---|---|---|---|---|---|---|---|",
   ];
   for (const v of rows) {
     const status = cell(v.status ?? "new") + (v.archived ? " · archived" : "");
     const fit = v.fit_score !== null && v.fit_score !== undefined ? String(v.fit_score) : "–";
     lines.push(
-      `| ${status} | ${fit} | ${cell(v.company)} | ${cell(v.title)} | ${cell(boardUpdatedShort(v.updated_at ?? ""))} | ${cell(v.slug)} | ${cell(v.url)} |`
+      `| ${status} | ${fit} | ${cell(v.fit_category)} | ${cell(v.company)} | ${cell(v.title)} | ${cell(boardUpdatedShort(v.updated_at ?? ""))} | ${cell(v.slug)} | ${cell(v.url)} |`
     );
   }
   lines.push("");
@@ -475,6 +485,7 @@ export function renderBoardHtml(
             ${folderLinksHtml}
             ${postingLinkHtml}
             ${copyButtonHtml}
+            ${fitCategoryPill(v.fit_category)}
           </div>
         </div>`;
       })
@@ -637,7 +648,6 @@ export function renderEngagementsHtml(engagements: Rec[], opts: { title?: string
         const postingLinkHtml = o.url
           ? `<a class="posting-link" href="${escapeHtml(String(o.url))}" target="_blank" rel="noopener">posting&nbsp;&#8599;</a>`
           : "";
-        const categoryHtml = o.fit_category ? `<span class="col-track">${escapeHtml(String(o.fit_category))}</span>` : `<span class="col-track"></span>`;
         const archivedBadgeHtml = o.archived ? `<span class="archived-badge">Archived</span>` : "";
         const copyPayload = [
           `Title: ${o.title ?? ""}`,
@@ -654,7 +664,6 @@ export function renderEngagementsHtml(engagements: Rec[], opts: { title?: string
             <span class="col-fit">${fitDisplay}</span>
             <span class="col-company">${escapeHtml(String(o.client ?? ""))}</span>
             <span class="col-role">${escapeHtml(String(o.title ?? ""))}${archivedBadgeHtml}</span>
-            ${categoryHtml}
             <span class="col-updated">${escapeHtml(boardUpdatedShort(o.judged_at ?? ""))}</span>
           </div>
           <div class="vrow-files">
@@ -662,6 +671,7 @@ export function renderEngagementsHtml(engagements: Rec[], opts: { title?: string
             ${folderLinksHtml}
             ${postingLinkHtml}
             ${copyButtonHtml}
+            ${fitCategoryPill(o.fit_category)}
           </div>
         </div>`;
       })
@@ -674,7 +684,6 @@ export function renderEngagementsHtml(engagements: Rec[], opts: { title?: string
           <span class="col-fit">Fit</span>
           <span class="col-company">Client</span>
           <span class="col-role">Title</span>
-          <span class="col-track">Category</span>
           <span class="col-updated">Judged</span>
         </div>
 ${rowsHtml}

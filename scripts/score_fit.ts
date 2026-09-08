@@ -117,7 +117,9 @@ const UNCLEAR_SCORE_CAP = 7;
 
 // `fit_category` values that present the role as a real, worth-pursuing match. A score the caps
 // above pulled down can't carry one -- otherwise the board reads "3/10 — clean fit" and a later
-// "show me the clean_fit ones" resurfaces a capped role.
+// "show me the clean_fit ones" resurfaces a capped role. Reconciled down to the neutral gap label
+// (`context_gap` / `thin_margin`), never `craft_mismatch` -- a cap fires on a location/authorization
+// gate or a missing skill, which is not a "wrong discipline" verdict; only the model itself says that.
 const POSITIVE_CATEGORIES = new Set(["clean_fit", "stretch_fit", "underreach", "good_bet"]);
 const UNCLEAR_CATEGORIES = new Set(["unclear", "scope_unclear"]);
 const ENGAGEMENT_CATEGORIES = new Set(["good_bet", "thin_margin", "wrong_craft", "scope_unclear"]);
@@ -267,8 +269,9 @@ export function computeScore(clusters: Cluster[]): number {
 /** Reconcile the model's `fit_category` with what the caps did to the score:
  *  - an `unclear` / `scope_unclear` verdict can't score above UNCLEAR_SCORE_CAP;
  *  - a capped score (blocking or critical-gap) can't be sold as a positive fit -- the code
- *    overrides the label, so `fitment.json` stays the model's verbatim input while the stored
- *    `fit.category` and the render never contradict the number.
+ *    overrides it to the neutral gap label, so `fitment.json` stays the model's verbatim input
+ *    while the stored `fit.category` and the render never contradict the number. Not
+ *    `craft_mismatch`: a cap is a location gate or a missing skill, not a discipline verdict.
  * `computeScore` has already applied the numeric caps; this adds the unclear ceiling and the
  * category override. */
 function reconcile(score: number, category: string, clusters: Cluster[]): { score: number; fit_category: string } {
@@ -279,9 +282,7 @@ function reconcile(score: number, category: string, clusters: Cluster[]): { scor
 
   const caps = scoreCaps(clusters);
   if ((caps.blocking || caps.criticalGap) && POSITIVE_CATEGORIES.has(cat)) {
-    const engagement = ENGAGEMENT_CATEGORIES.has(cat);
-    if (caps.blocking) cat = engagement ? "wrong_craft" : "craft_mismatch";
-    else cat = engagement ? "thin_margin" : "context_gap";
+    cat = ENGAGEMENT_CATEGORIES.has(cat) ? "thin_margin" : "context_gap";
   }
 
   return { score: out, fit_category: cat };

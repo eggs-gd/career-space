@@ -216,6 +216,27 @@
       align-items: baseline;
       flex-wrap: wrap;
     }
+    /* score_fit's reconciled fit_category as a colored pill on the vrow-files line, right-aligned
+       under the Track column. Green = worth a first look, blue/violet = real but caveated,
+       amber = a real gap, red = wrong discipline, grey = unknown. Covers both the vacancy and
+       engagement category vocabularies. Empty (no pill) when fitment hasn't run. */
+    .fit-cat {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      vertical-align: middle;
+      border: 1px solid transparent;
+    }
+    .vrow-files .fit-cat { margin-left: auto; margin-right: 58px; }
+    .fit-cat-clean_fit, .fit-cat-good_bet { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
+    .fit-cat-stretch_fit { color: #1d4ed8; background: #eff6ff; border-color: #bfdbfe; }
+    .fit-cat-underreach { color: #6d28d9; background: #f5f3ff; border-color: #ddd6fe; }
+    .fit-cat-context_gap, .fit-cat-altitude_mismatch, .fit-cat-thin_margin { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+    .fit-cat-craft_mismatch, .fit-cat-wrong_craft { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+    .fit-cat-unclear, .fit-cat-scope_unclear { color: var(--muted); background: var(--bg-alt); border-color: var(--line); }
     .col-fit { width: 24px; font-weight: 600; font-variant-numeric: tabular-nums; flex: none; }
     .board-head .col-fit { font-weight: 500; }
     .col-company { width: 150px; font-weight: 500; flex: none; }
