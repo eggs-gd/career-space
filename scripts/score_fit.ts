@@ -3,8 +3,10 @@
  * Deterministic fit score + rendering. The score is a fixed weighted formula over requirement
  * clusters -- each cluster's evidence level (direct_strong/direct_partial/transferable/none)
  * scored against its importance tier (critical/important/nice_to_have), with a hard cap when a
- * real blocking requirement has zero evidence and a softer cap when a non-blocking `critical`
- * cluster does. See `computeScore` below for the exact weights and caps.
+ * real blocking requirement has zero evidence, a softer cap when a non-blocking `critical`
+ * cluster does, and a ceiling on an `unclear` verdict. See `computeScore` / `reconcile` below for
+ * the exact weights and caps. A capped score also overrides a positive `fit_category`, so the
+ * stored category and the render never contradict the number.
  * The rendering is Markdown (headers, bold, horizontal rules), because this repo's output is
  * read in a chat client that renders Markdown -- grouped by evidence state (Major gaps / Minor
  * gaps / Transferable / Strong overlap, then risk/appeal).
@@ -106,6 +108,19 @@ const BLOCKING_SCORE_CAP = 3;
 // an engagement win-probability cluster scored `none` in a crowded pool).
 const CRITICAL_GAP_SCORE_CAP = 5;
 const NO_EXTRACTION_FALLBACK_SCORE = 5;
+// An `unclear` / `scope_unclear` verdict means the posting was too thin to judge. Left alone that
+// paradoxically out-scores a detailed posting -- the weighted formula only penalises a cluster it
+// can identify and find weak, and a vague posting offers none. Unknown evidence is not positive
+// evidence. Not a hard floor like the two above: a thin posting can still be a real 7 on what
+// little it states.
+const UNCLEAR_SCORE_CAP = 7;
+
+// `fit_category` values that present the role as a real, worth-pursuing match. A score the caps
+// above pulled down can't carry one -- otherwise the board reads "3/10 — clean fit" and a later
+// "show me the clean_fit ones" resurfaces a capped role.
+const POSITIVE_CATEGORIES = new Set(["clean_fit", "stretch_fit", "underreach", "good_bet"]);
+const UNCLEAR_CATEGORIES = new Set(["unclear", "scope_unclear"]);
+const ENGAGEMENT_CATEGORIES = new Set(["good_bet", "thin_margin", "wrong_craft", "scope_unclear"]);
 
 const STATE_ORDER = ["major_gap", "minor_gap", "transferable", "strong"] as const;
 type ClusterState = (typeof STATE_ORDER)[number];
@@ -186,6 +201,24 @@ function clusterEvidenceScore(cluster: Cluster): number {
   return Math.max(primaryValue, secondaryValue);
 }
 
+interface ScoreCaps {
+  /** A hard gate (location block, mandatory language, or a technology that IS the role) with zero
+   * evidence on its primary requirement -- caps at BLOCKING_SCORE_CAP. */
+  blocking: boolean;
+  /** A non-blocking `critical` cluster with zero evidence on its primary -- caps at
+   * CRITICAL_GAP_SCORE_CAP. */
+  criticalGap: boolean;
+}
+
+function scoreCaps(clusters: Cluster[]): ScoreCaps {
+  return {
+    blocking: clusters.some((c) => c.blocking && clusterPrimary(c).evidence === "none"),
+    criticalGap: clusters.some(
+      (c) => !c.blocking && c.importance === "critical" && clusterPrimary(c).evidence === "none"
+    ),
+  };
+}
+
 function clusterState(cluster: Cluster): ClusterState {
   const primary = clusterPrimary(cluster);
   const evidence = primary.evidence;
@@ -222,24 +255,36 @@ export function computeScore(clusters: Cluster[]): number {
 
   let score = Math.max(1, Math.min(10, roundHalfToEven(1 + score01 * 9)));
 
-  // Hard gate: a real blocker (hard location block, mandatory language, clearance, or a
-  // technology that IS the role's literal subject) with zero evidence on its own primary
-  // requirement caps the score outright, regardless of how the weighted average came out.
-  if (clusters.some((cluster) => cluster.blocking && clusterPrimary(cluster).evidence === "none")) {
-    score = Math.min(score, BLOCKING_SCORE_CAP);
-  }
-
-  // Softer gate: a `critical` (not `blocking`) cluster with zero evidence on its primary. See
-  // CRITICAL_GAP_SCORE_CAP.
-  if (
-    clusters.some(
-      (cluster) => !cluster.blocking && cluster.importance === "critical" && clusterPrimary(cluster).evidence === "none"
-    )
-  ) {
-    score = Math.min(score, CRITICAL_GAP_SCORE_CAP);
-  }
+  // A blocker or a zero-evidence `critical` cluster caps the score outright, regardless of how the
+  // weighted average came out. See BLOCKING_SCORE_CAP / CRITICAL_GAP_SCORE_CAP.
+  const caps = scoreCaps(clusters);
+  if (caps.blocking) score = Math.min(score, BLOCKING_SCORE_CAP);
+  if (caps.criticalGap) score = Math.min(score, CRITICAL_GAP_SCORE_CAP);
 
   return score;
+}
+
+/** Reconcile the model's `fit_category` with what the caps did to the score:
+ *  - an `unclear` / `scope_unclear` verdict can't score above UNCLEAR_SCORE_CAP;
+ *  - a capped score (blocking or critical-gap) can't be sold as a positive fit -- the code
+ *    overrides the label, so `fitment.json` stays the model's verbatim input while the stored
+ *    `fit.category` and the render never contradict the number.
+ * `computeScore` has already applied the numeric caps; this adds the unclear ceiling and the
+ * category override. */
+function reconcile(score: number, category: string, clusters: Cluster[]): { score: number; fit_category: string } {
+  let out = score;
+  let cat = category;
+
+  if (UNCLEAR_CATEGORIES.has(cat)) out = Math.min(out, UNCLEAR_SCORE_CAP);
+
+  const caps = scoreCaps(clusters);
+  if ((caps.blocking || caps.criticalGap) && POSITIVE_CATEGORIES.has(cat)) {
+    const engagement = ENGAGEMENT_CATEGORIES.has(cat);
+    if (caps.blocking) cat = engagement ? "wrong_craft" : "craft_mismatch";
+    else cat = engagement ? "thin_margin" : "context_gap";
+  }
+
+  return { score: out, fit_category: cat };
 }
 
 /** Markdown output -- this repo's output is read in a chat client that renders it (Claude
@@ -253,8 +298,11 @@ export function render(assessment: Assessment): string {
 
 export function evaluate(assessment: Assessment): FitResult {
   const clusters = assessment.clusters ?? [];
-  const score = computeScore(clusters);
-  const category = assessment.fit_category ?? "unclear";
+  const { score, fit_category: category } = reconcile(
+    computeScore(clusters),
+    assessment.fit_category ?? "unclear",
+    clusters
+  );
   const [shortLabel, explanation] = FIT_CATEGORY_LABELS[category] ?? [category, ""];
   const eligibility = normalizeEligibility(assessment.eligibility);
 

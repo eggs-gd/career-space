@@ -41,9 +41,10 @@ Build these clusters — the weighting lives in the `importance` tiers:
 
 1. **Can deliver it well** — `importance: critical`. Set `blocking: true` only if the candidate
    genuinely can't do this to a professional standard (`evidence: none` then caps the score).
-   `direct_strong` = has shipped exactly this; `direct_partial` = adjacent; `transferable` = the
-   underlying capability is there in different vocabulary (a specific programming *language* still
-   doesn't transfer). A real location/timezone/tooling gate the posting states goes here. If the
+   `direct_strong` = has shipped exactly this, recently, at comparable scale; `direct_partial` =
+   adjacent, smaller, or older; `transferable` = the underlying capability is there in a different
+   form (a specific programming *language* still doesn't transfer); `none` = nothing, or only a
+   vocabulary match. A real location/timezone/tooling gate the posting states goes here. If the
    engagement is advisory / client-facing / forward-deployed, "are you the profile they asked for"
    (see the background rule above) belongs in this cluster — for that kind of work the pedigree
    *is* the capability; rate it honestly even when the vocabulary matches. When the work is a

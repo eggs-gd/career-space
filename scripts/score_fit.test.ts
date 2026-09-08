@@ -61,6 +61,53 @@ test("computeScore does NOT cap when the zero-evidence cluster is only important
   assert.ok(computeScore(clusters) > 5, "an important (not critical) zero cluster must not trigger the cap");
 });
 
+test("an `unclear` verdict caps the score at 7, even when the clusters would score higher", () => {
+  const clusters = [
+    { cluster: "A", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+    { cluster: "B", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+    { cluster: "C", importance: "important", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+  ] as any;
+  assert.equal(computeScore(clusters), 10, "sanity: uncapped this is a 10");
+  assert.equal(evaluate({ clusters, fit_category: "unclear" } as any).score, 7);
+  assert.equal(evaluate({ clusters, fit_category: "scope_unclear" } as any).score, 7);
+  // A thin posting can still land below the ceiling on its own merits.
+  const thin = [{ cluster: "A", importance: "important", blocking: false, requirements: [{ primary: true, evidence: "transferable" }] }] as any;
+  assert.ok(evaluate({ clusters: thin, fit_category: "unclear" } as any).score < 7);
+});
+
+test("a capped score overrides a positive fit_category so the label never contradicts the number", () => {
+  const blocking = [
+    { cluster: "Location", importance: "critical", blocking: true, requirements: [{ primary: true, evidence: "none" }] },
+    { cluster: "Craft", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+  ] as any;
+  const blocked = evaluate({ clusters: blocking, fit_category: "clean_fit" } as any);
+  assert.ok(blocked.score <= 3);
+  assert.equal(blocked.fit_category, "craft_mismatch", "blocking cap + clean_fit -> craft_mismatch");
+  assert.match(blocked.markdown, /^## Match: \d\/10 — craft mismatch/m);
+
+  const criticalGap = [
+    { cluster: "Core stack", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "none" }] },
+    { cluster: "Delivery", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+    { cluster: "More", importance: "important", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+  ] as any;
+  assert.equal(evaluate({ clusters: criticalGap, fit_category: "stretch_fit" } as any).fit_category, "context_gap");
+  assert.equal(evaluate({ clusters: criticalGap, fit_category: "underreach" } as any).fit_category, "context_gap");
+  // Engagement vocabulary stays in its own set.
+  assert.equal(evaluate({ clusters: criticalGap, fit_category: "good_bet" } as any).fit_category, "thin_margin");
+  assert.equal(evaluate({ clusters: blocking, fit_category: "good_bet" } as any).fit_category, "wrong_craft");
+});
+
+test("category reconciliation leaves an uncapped score's category untouched", () => {
+  const clusters = [
+    { cluster: "Lead", importance: "critical", blocking: false, requirements: [{ primary: true, evidence: "direct_partial" }] },
+    { cluster: "Ship", importance: "important", blocking: false, requirements: [{ primary: true, evidence: "direct_strong" }] },
+  ] as any;
+  const result = evaluate({ clusters, fit_category: "stretch_fit" } as any);
+  assert.ok(result.score > 5, "sanity: not capped");
+  assert.equal(result.fit_category, "stretch_fit");
+  assert.equal(evaluate({ clusters, fit_category: "altitude_mismatch" } as any).fit_category, "altitude_mismatch");
+});
+
 test("location exception renders as eligibility, not as a score penalty", () => {
   const assessment = {
     job_summary: "Architecture-heavy engineering role.",

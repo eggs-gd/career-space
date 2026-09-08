@@ -68,7 +68,8 @@ about:
 
 - **Fitment present** — retain its score/category as the independent "can they want me" signal.
   Don't use it to derive suitability in Step 2; the two judgments only combine when ranking/
-  recommending in Step 3.
+  recommending in Step 3. Reading-order triage only, not suitability: **9–10** first, **7–8**
+  second pass, **5–6** needs a separate reason, **≤3** skip. The board sorts by this.
 - **Fitment absent** — judge candidate-side suitability from the posting + `strategy.md` alone,
   and say plainly that employer-side fit is unknown rather than guessing at one or inventing a
   score yourself (that's `playbooks/fitment.md`'s job, not this one's — offer to run it if the

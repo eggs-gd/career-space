@@ -51,8 +51,12 @@ yet (there is no automated engagement source yet).
 ## Fitment persistence and re-scoring
 
 The agent's structured judgement (`job_summary` / `clusters` / evidence levels / `risk` / `appeal`
-/ `fit_category`) is the model half; `score_fit.ts`'s weighted formula + caps + Markdown render is
-the deterministic half. `score_fit.persistFitment(assessment, dir)` writes both `fitment.json`
+/ `fit_category`) is the model half; `score_fit.ts`'s weighted formula + caps + category
+reconciliation + Markdown render is the deterministic half. `fitment.json` keeps the model's input
+verbatim; the score and category the store/render use are always `evaluate()`'s output — a capped
+score reconciles a positive `fit_category` down (no "3/10 — clean fit"), and
+`recordScoutOutcome` re-derives from the assessment rather than trusting the agent's passed
+numbers. `score_fit.persistFitment(assessment, dir)` writes both `fitment.json`
 (the input, verbatim) and `fitment.md` (the render) into a vacancy/engagement folder — invoked by the
 `score_fit` tool's `out_dir`, and by `vacancy_store.recordScoutOutcome` on the scout path (where
 the folder doesn't exist at judge time). An agent never hand-writes a fitment file.

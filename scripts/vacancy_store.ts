@@ -13,7 +13,7 @@ import { parseArgs } from "util";
 import { Eligibility, isLocationEligibilityStatus, normalizeEligibility } from "./eligibility";
 import * as postingIds from "./posting_ids";
 import { REPO_ROOT } from "./repo_paths";
-import { Assessment, persistFitment } from "./score_fit";
+import { Assessment, evaluate, persistFitment } from "./score_fit";
 
 export const DATA_DIR = path.join(REPO_ROOT, "data", "vacancies");
 
@@ -472,7 +472,15 @@ function scoutOutcomeMatched(fit: ScoutOutcomeFit, minFitScore: number): boolean
 export function recordScoutOutcome(opts: RecordScoutOutcomeOptions): RecordedScoutOutcome {
   const scope: VacancyStoreScope = { dataDir: opts.dataDir };
   const candidate = opts.candidate;
-  const fit = opts.fit;
+  const fit = { ...opts.fit };
+  // With the structured assessment present, the deterministic layer -- not the agent's passed
+  // score/category -- is authoritative, so record.yaml matches the replayable fitment.json.
+  if (fit.assessment) {
+    const derived = evaluate(fit.assessment);
+    fit.score = derived.score;
+    fit.fit_category = derived.fit_category;
+    fit.eligibility = derived.eligibility ?? fit.eligibility;
+  }
   const reason = fit.reason ?? "";
   const outcome = scoutOutcomeMatched(fit, opts.minFitScore) ? "matched" : "rejected";
 

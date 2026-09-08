@@ -20,10 +20,12 @@ interface over it or over `score_fit.ts`'s scoring formula:
   a text box — the candidate needs an actual file, chat text alone isn't attachable.
 - `scripts/score_fit.ts` — the 1-10 fitment score + grouped rendering, a fixed weighted formula
   over requirement clusters (shared by `fitment.md` and `engagement-fitment.md`), plus display of
-  non-scoring eligibility flags such as `location_exception_candidate`. Two caps: a `blocking`
+  non-scoring eligibility flags such as `location_exception_candidate`. Caps: a `blocking`
   cluster with `evidence: none` caps at 3; a non-blocking `critical` cluster with `evidence: none`
-  caps at 5. MCP returns the score/category/eligibility plus rendered Markdown; the CLI prints
-  Markdown. With `out_dir` / `--out-dir`, also writes `fitment.json` (the structured input) +
+  caps at 5; an `unclear` / `scope_unclear` verdict caps at 7. A capped score also overrides a
+  positive `fit_category` (so no "3/10 — clean fit") — `fitment.json` keeps the model's verbatim
+  input, the returned/stored category is the reconciled one. MCP returns the
+  score/category/eligibility plus rendered Markdown; the CLI prints Markdown. With `out_dir` / `--out-dir`, also writes `fitment.json` (the structured input) +
   `fitment.md` into that folder — the one place the fitment layer persists to disk, so no agent
   hand-writes a fitment file.
 - `scripts/rescore.ts` — re-applies `score_fit`'s formula to every saved

@@ -77,16 +77,19 @@ one underlying competency belong together). Each cluster names exactly one requi
 `"primary": true` — the one that actually anchors it; others in the same cluster are supporting
 context. For each requirement:
 
-- **`evidence`**: `direct_strong` (clearly, specifically demonstrated, close to the posting's own
-  terms) / `direct_partial` (touches it directly but thinner/smaller scale) / `transferable` (the
-  underlying capability is genuinely there but the Master CV never states it in the posting's
-  vocabulary — a real inferential step, not just thin direct evidence) / `none`. Practices,
-  platforms, and frameworks genuinely transfer within the same category (CI/CD, cloud platforms,
-  frameworks in the same language ecosystem); **a specific programming language does NOT transfer
-  from a different language**, no matter how strong the candidate is elsewhere — that's `none` or
-  `direct_partial` only, never `transferable`.
-- **`quote`**: a real quote/close paraphrase from `data/CV_GENERAL.md` grounding the evidence
-  level (`null` if `evidence` is `none`).
+- **`evidence`** — grade against what `data/CV_GENERAL.md` shows the candidate actually *did*, not
+  against words the CV and the posting happen to share:
+  - `direct_strong`: a specific, recent, comparable-scale instance where this *was* the core of the
+    work — not "the CV uses this term".
+  - `direct_partial`: in the history but thinner — older, smaller, or peripheral.
+  - `transferable`: the underlying capability is there in a different form and the inferential step
+    would hold up to a skeptical reader — not "sounds adjacent". Practices, platforms, and
+    frameworks transfer within one category (CI/CD, cloud platforms, frameworks in the same
+    language ecosystem); **a specific programming language does NOT transfer from a different
+    language**, however strong the candidate is elsewhere — `none` or `direct_partial` only.
+  - `none`: genuinely nothing — *or* only a vocabulary match with no role-history substance.
+- **`quote`**: a real quote/close paraphrase from `data/CV_GENERAL.md` pointing at that actual
+  instance, not a matching phrase (`null` if `evidence` is `none`).
 - **`reason`**: one plain-language sentence — this becomes the candidate-facing headline for the
   cluster, so make it read like one (not a JSON field dump).
 
