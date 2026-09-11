@@ -44,6 +44,8 @@ trap and the rule -- not the story.
 - `status_history.note` is an explicitly observed transition reason only (what the email said,
   that an interview was booked). Never an inferred cause ("probably too senior") -- omit
   inference. Keeps the field usable for the market-feedback loop instead of a speculation dump.
+- `communication.md` is for raw preserved context, not a meta-only summary. Keep one short
+  `Summary:` block at the top; every event below keeps the actual message/call-note text quoted.
 - Scout auto-runs `reconcile.md` first only when a **working** email-read tool exists -- one that
   succeeds, not one whose name is merely visible. A connector shown in the host UI (`@Gmail`, an
   unauthenticated MCP server) can still fail with `Auth required`; reconcile treats that as

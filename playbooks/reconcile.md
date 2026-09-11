@@ -85,6 +85,7 @@ current status
 suggested status
 evidence summary       (one line: what the correspondence actually says)
 reason                 (market feedback — ONLY if the correspondence states it; else omit)
+raw text               (the email/message/event text to preserve, if the host exposes it)
 confidence             (high / needs-confirmation)
 ```
 
@@ -93,12 +94,14 @@ transition.
 
 ## Step 4 — apply
 
-- **High confidence, transition directly supported** → `vacancy_set_status(slug, status, note=<one
-  line>)`. `note` is an **explicitly observed** transition reason/context only — what the
-  rejection email said, that an interview was scheduled, a requirement the recruiter stated. Not
-  your inference about *why* ("probably too senior", "likely comp mismatch"): omit that entirely.
-  If the correspondence states no reason, pass no `note`. This follows the same status rules as
-  anywhere else (never regress to `new`; a no-op if already at that status).
+- **High confidence, transition directly supported** → first log the raw correspondence through
+  `playbooks/communication-log.md` when the host exposes message/event text or the candidate
+  pasted it. Then `vacancy_set_status(slug, status, note=<one line>)`. `note` is an **explicitly
+  observed** transition reason/context only — what the rejection email said, that an interview was
+  scheduled, a requirement the recruiter stated. Not your inference about *why* ("probably too
+  senior", "likely comp mismatch"): omit that entirely. If the correspondence states no reason,
+  pass no `note`. This follows the same status rules as anywhere else (never regress to `new`; a
+  no-op if already at that status).
 - **Needs confirmation** (ambiguous match, unclear whether a call was an interview or a screen,
   two roles at one company) → present it to the candidate and ask before moving anything.
 - Never mutate Gmail or Calendar.

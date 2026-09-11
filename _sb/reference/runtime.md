@@ -52,6 +52,9 @@ interface over it or over `score_fit.ts`'s scoring formula:
   `targeting-plan.md`) is written directly into `data/vacancies/<slug>/` by the playbook that
   generated it — that's the intended, documented pattern (see `attachArtifact`'s own docstring),
   not a shortcut around this tool.
+- `scripts/communication_log.ts` — appends raw quoted communication events to
+  `communication.md` under a vacancy or engagement folder, optionally replacing the top
+  `Summary:` block. It never summarizes in place of preserving the event text.
 - `scripts/linkedin_searches.ts` — writes `data/linkedin-searches.md`: LinkedIn Boolean search
   deep-links built from `data/sources.yaml`'s `tracks`. No fetching, no network call at all --
   see `playbooks/linkedin-search.md` for why this is deliberately not part of the scout.
@@ -79,7 +82,7 @@ shell-escaping a JSON blob, no constructing a `node ...` invocation by hand. `sc
 wraps the same functions: `render_resume`, `render_cover_letter`, `score_fit`, `scout_fetch`,
 `resolve_vacancy_url`, `vacancy_resolve`, `vacancy_mark_seen`, `record_scout_outcomes`,
 `vacancy_upsert`, `vacancy_set_status`, `vacancy_set_archived`, `vacancy_attach_artifact`,
-`vacancy_list`, `linkedin_searches`, `render_boards`, `render_board`, `workspace_validate`,
+`opportunity_log_communication`, `vacancy_list`, `linkedin_searches`, `render_boards`, `render_board`, `workspace_validate`,
 `rescore`, and the engagement set: `engagement_upsert`, `engagement_set_status`,
 `engagement_set_archived`, `engagement_attach_artifact`, `engagement_list`, `render_engagement`.
 
@@ -95,7 +98,8 @@ If the server isn't connected, fall back to the CLI form documented in each scri
 `node scripts/dist/resolve_vacancy_url.js <url>`, `node scripts/dist/vacancy_store.js
 <mark-seen|upsert|set-status|set-archived|attach-artifact|list|record-scout-outcomes|resolve>
 ...`, `node scripts/dist/engagement_store.js <upsert|set-status|set-archived|attach-artifact|list>
-...`, `node scripts/dist/linkedin_searches.js`, `node scripts/dist/render_boards.js`,
+...`, `node scripts/dist/communication_log.js --kind <vacancy|engagement> --slug <slug>
+--title <title> --raw_file <path>`, `node scripts/dist/linkedin_searches.js`, `node scripts/dist/render_boards.js`,
 `node scripts/dist/render_board.js [--include-archived]`,
 `node scripts/dist/render_engagement.js [--include-archived]`,
 `node scripts/dist/rescore.js [--write]`, and `node scripts/dist/workspace_validate.js`. Run

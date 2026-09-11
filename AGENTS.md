@@ -218,6 +218,7 @@ ask riding along with an operator one) before you act on it.
 | "покажи дошку" / "show me the board" / "what's the status of everything" | `playbooks/board.md` |
 | "перевір workspace/data" / "validate workspace" / "is my data layout ok" | `playbooks/workspace-validate.md` |
 | "звір дошку з поштою/календарем" / "did I hear back on anything" / "reconcile my board" | `playbooks/reconcile.md` |
+| "збережи переписку" / "log this communication" / "додай це в історію по вакансії/проєкту" | `playbooks/communication-log.md` |
 | "що з дошки викинути" / "дай топ 10" / "what should I actually pursue" | `playbooks/prioritize.md` |
 | "готуй мене до співбесіди" / "prep me for this interview" / "що спитають на співбесіді" | `playbooks/interview-prep.md` |
 
@@ -302,8 +303,9 @@ data/                           # gitignored, personal
                                  # always; fitment.md + fitment.json (fitment.json = score_fit's
                                  # structured input, written by score_fit/record_scout_outcomes, replayed
                                  # by `rescore` on a formula change), cv.md / cover-letter.md /
-                                 # targeting-plan.md / interview-prep.md once generated -- never in cv/
-                                 # above or a separate cover-letters/ (that folder is retired)
+                                 # targeting-plan.md / interview-prep.md once generated; communication.md
+                                 # when correspondence is preserved -- never in cv/ above or a separate
+                                 # cover-letters/ (that folder is retired)
   engagements/                   # commercial engagements (a marketplace job, a client project) --
                                  # a flat sibling of vacancies/, NOT nested (renderers/listers assume
                                  # vacancies/ == vacancy). scripts/engagement_store.ts owns it,
@@ -312,8 +314,8 @@ data/                           # gitignored, personal
     <slug>/                     # one engagement the candidate asked to assess -- playbooks/
                                  # engagement-fitment.md via engagement_upsert. record.yaml (client/title/
                                  # url/status/status_history/fit/judged_at) + posting.md; fitment.md +
-                                 # fitment.json (score_fit --out-dir); proposal.md / cover-letter.md
-                                 # once written
+                                 # fitment.json (score_fit --out-dir); communication.md / proposal.md /
+                                 # cover-letter.md once written
   engagements.html               # engagements board (grouped by status), + engagements.md twin --
                                  # scripts/render_engagement.ts, regenerated; shares nav with vacancies.html
   linkedin-searches.md          # LinkedIn Boolean search deep-links, see playbooks/
@@ -344,10 +346,11 @@ read `data/`.
 The deterministic, non-LLM steps in this repo — real code, not something a playbook should ask
 you to eyeball or improvise: rendering a CV/cover letter to HTML/PDF, the fitment score's fixed
 weighted formula, the scout's fetch/dedup pipeline, vacancy resolving, scout outcome recording,
-vacancy and engagement record read/write, board rendering, fitment re-scoring, and workspace validation. Prefer the MCP tools when
-the `career-space` server is connected (typed arguments, no shell-escaping a JSON blob). If it
-isn't, use the CLI fallback documented in each script's own docstring. Don't hand-produce a styled
-document, fit score, board, or scout ledger write instead of calling the relevant tool/script.
+vacancy and engagement record read/write, communication-log appends, board rendering, fitment
+re-scoring, and workspace validation. Prefer the MCP tools when the `career-space` server is
+connected (typed arguments, no shell-escaping a JSON blob). If it isn't, use the CLI fallback
+documented in each script's own docstring. Don't hand-produce a styled document, fit score, board,
+or scout ledger write instead of calling the relevant tool/script.
 
 **A deterministic tool call is execution, not a decision.** Once the candidate has approved the
 content, or asked for a workflow whose output is an artifact, running the renderer — or any other

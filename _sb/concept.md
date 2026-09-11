@@ -48,6 +48,8 @@ Opportunity
   artifacts (CV, cover letter / proposal, `fitment.md` + `fitment.json`) written in-place.
 - A pipeline: `status` + `status_history` (with an observed-reason `note`) + `archived`. Both
   currently share `VALID_STATUSES`; the mechanism is fixed even where the vocabulary later isn't.
+- A `communication.md` log for preserved correspondence and meeting/call notes: one summary block
+  at the top, then raw event text as quotes. `status_history.note` is only the lifecycle index.
 - Deterministic identity (source/URL hash, content hash for repost collapse) and a slug.
 - Fit assessment through the same `fitment.md`-shaped judgment → `score_fit.ts` arithmetic. The
   clusters and their `importance` tiers differ; the formula and its caps don't.

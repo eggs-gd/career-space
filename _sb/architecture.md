@@ -34,6 +34,10 @@ Omitted enrichment fields mean "no opinion"; existing values are preserved. `new
 status, not a regression target for an existing record. `status_history.note` is only for an
 explicitly observed transition reason.
 
+`communication.md` is the preserved interaction log beside `record.yaml`: a top `Summary:` block
+plus append-only quoted event sections. It stores the raw correspondence/call-note text that
+future playbooks need for context; `status_history.note` stays a one-line lifecycle index.
+
 ## Engagements
 
 `engagement_store.ts` is the vacancy store's sibling for the Engagement opportunity type (see
@@ -114,6 +118,7 @@ surface context files, and known enum values.
 - `vacancy_set_status`
 - `vacancy_set_archived`
 - `vacancy_attach_artifact`
+- `opportunity_log_communication`
 - `vacancy_list`
 - `linkedin_searches`
 - `render_boards`

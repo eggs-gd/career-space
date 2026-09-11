@@ -67,6 +67,37 @@ test("board renders an interview-prep.md file as a 'prep' badge with its content
   assert.match(html, /Remember this candidate as the one who restructures ambiguous systems/);
 });
 
+test("board renders communication.md as a quoted communication badge", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "career-space-board-"));
+  const slug = "acme-principal-engineer-a1b2c3d4";
+  fs.mkdirSync(path.join(root, slug), { recursive: true });
+  fs.writeFileSync(
+    path.join(root, slug, "communication.md"),
+    "# Communication\n\nSummary:\nInterview invite received.\n\n## 2026-09-11 — Recruiter email\n\nSource: Gmail\n\n> We would like to invite you.\n"
+  );
+
+  const html = renderBoardHtml(
+    [
+      {
+        slug,
+        status: "interview",
+        company: "Acme",
+        title: "Principal Engineer",
+        fit_score: 8,
+        url: "https://example.com/jobs/1",
+        updated_at: "2026-09-02T10:00:00Z",
+        archived: false,
+        files: ["communication.md"],
+      },
+    ],
+    { vacancyDirFn: (s) => path.join(root, s) }
+  );
+
+  assert.match(html, /<summary>✉️ comm<\/summary>/);
+  assert.match(html, /Interview invite received/);
+  assert.match(html, /We would like to invite you/);
+});
+
 test("engagements board groups by status, shows category, shares the Employment/Engagements nav", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "career-space-eng-board-"));
   const slug = "nimbus-go-invoice-sync-91911bfa";

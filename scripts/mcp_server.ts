@@ -17,6 +17,7 @@ import * as rendering from "./rendering";
 import * as scoreFit from "./score_fit";
 import * as vacancyStore from "./vacancy_store";
 import * as engagementStore from "./engagement_store";
+import { appendCommunication } from "./communication_log";
 import { LOCATION_ELIGIBILITY_STATUSES } from "./eligibility";
 import { generate as generateLinkedinSearches } from "./linkedin_searches";
 import { renderBoard } from "./render_board";
@@ -441,6 +442,39 @@ server.registerTool(
   },
   async ({ slug, kind, path: sourcePath }): Promise<CallToolResult> =>
     respond(vacancyStore.attachArtifact(slug, kind, sourcePath))
+);
+
+server.registerTool(
+  "opportunity_log_communication",
+  {
+    description:
+      "Append a raw quoted communication event to data/vacancies/<slug>/communication.md or data/engagements/<slug>/communication.md, optionally updating the top summary paragraph. Renders boards.",
+    inputSchema: {
+      kind: z.enum(["vacancy", "engagement"]),
+      slug: z.string(),
+      title: z.string(),
+      source: z.string().default(""),
+      raw_text: z.string(),
+      summary: z.string().optional(),
+      observed_at: z.string().optional(),
+      direction: z.string().optional(),
+      status: z.string().optional(),
+    },
+  },
+  async (args): Promise<CallToolResult> => {
+    const written = appendCommunication({
+      kind: args.kind,
+      slug: args.slug,
+      title: args.title,
+      source: args.source,
+      rawText: args.raw_text,
+      summary: args.summary,
+      observedAt: args.observed_at,
+      direction: args.direction,
+      status: args.status,
+    });
+    return respond({ ...written, boards: renderBoardsResult() });
+  }
 );
 
 server.registerTool(

@@ -77,8 +77,9 @@ and why each one was built lives in git history, not here.
       the host already has (connector, plugin, or a user-added MCP server -- career-space wires
       and mandates none) as read-only evidence, moves tracked vacancy statuses to match recruiter
       correspondence, stores the why on the `status_history` entry (`setStatus`'s optional
-      `note`). Falls back to a pasted summary; skips cleanly when nothing's connected. Offered by
-      `scout.md` before a run.
+      `note`), and preserves raw correspondence in `communication.md` when message text is
+      available. Falls back to a pasted summary; skips cleanly when nothing's connected. Offered
+      by `scout.md` before a run.
 - [x] Interview preparation -- `playbooks/interview-prep.md`. One `interview-prep.md` artifact per
       vacancy, on request only (no status-change trigger). An interview thesis (positioning
       continued into the interview phase), "what they're actually hiring for" with confidence +

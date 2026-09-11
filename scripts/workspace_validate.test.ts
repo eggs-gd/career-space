@@ -47,11 +47,16 @@ test("validateWorkspace accepts a valid minimal data layout", () => {
     companies: [{ name: "Acme", ats: "greenhouse", slug: "acme" }],
     min_fit_score: 4,
   });
-  writeValidVacancy(dataDir);
+  const slug = writeValidVacancy(dataDir);
   fs.mkdirSync(path.join(dataDir, "surfaces", "linkedin"), { recursive: true });
   fs.writeFileSync(path.join(dataDir, "surfaces", "linkedin", "context.md"), "# LinkedIn\n", "utf-8");
   fs.mkdirSync(path.join(dataDir, "cv"), { recursive: true });
   fs.writeFileSync(path.join(dataDir, "cv", "universal-technical.md"), "# CV\n", "utf-8");
+  fs.writeFileSync(
+    path.join(dataDir, "vacancies", slug, "communication.md"),
+    "# Communication\n\nSummary:\nInterview invite received.\n\n## 2026-09-11 — Recruiter email\n\nSource: Gmail\n\n> We would like to invite you.\n",
+    "utf-8"
+  );
 
   const result = validateWorkspace({ dataDir });
   assert.equal(result.ok, true);
@@ -110,6 +115,18 @@ test("validateWorkspace reports deterministic layout and schema issues", () => {
   ]) {
     assert.equal(codes.has(expected), true, `expected ${expected}`);
   }
+});
+
+test("validateWorkspace warns when communication.md is meta-only instead of quoted event text", () => {
+  const dataDir = tempDataDir();
+  const slug = writeValidVacancy(dataDir);
+  fs.writeFileSync(path.join(dataDir, "vacancies", slug, "communication.md"), "# Notes\n\nRecruiter liked the candidate.\n", "utf-8");
+
+  const result = validateWorkspace({ dataDir });
+  const codes = new Set(result.issues.map((item) => item.code));
+  assert.equal(result.ok, true);
+  assert.equal(codes.has("communication_shape"), true);
+  assert.equal(codes.has("communication_no_quotes"), true);
 });
 
 test("validateWorkspace validates data/engagements/ records (leaner than a vacancy)", () => {

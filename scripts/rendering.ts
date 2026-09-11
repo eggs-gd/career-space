@@ -184,6 +184,7 @@ const BOARD_FILE_LABELS: Record<string, string> = {
   "cv.md": "CV",
   "cover-letter.md": "cover",
   "proposal.md": "proposal",
+  "communication.md": "✉️ comm",
   "interview-prep.md": "prep",
   "targeting-plan.md": "plan",
   "record.yaml": "record",
@@ -191,7 +192,7 @@ const BOARD_FILE_LABELS: Record<string, string> = {
 
 /** The file badges the engagements board expands inline, in display order -- an engagement folder holds
  * the posting, its fitment, and (once written) a proposal or cover letter, nothing else. */
-const ENGAGEMENT_FILE_ORDER = ["fitment.md", "posting.md", "proposal.md", "cover-letter.md"] as const;
+const ENGAGEMENT_FILE_ORDER = ["fitment.md", "posting.md", "communication.md", "proposal.md", "cover-letter.md"] as const;
 
 /** The board's progressive-enhancement script (chip scroll + copy-to-clipboard with a fallback).
  * Shared verbatim by `renderBoardHtml` and `renderEngagementsHtml` -- both boards carry the same
@@ -269,6 +270,7 @@ function boardNavHtml(current: "employment" | "engagement"): string {
 const BOARD_FILE_ORDER = [
   "fitment.md",
   "posting.md",
+  "communication.md",
   "cv.md",
   "cover-letter.md",
   "interview-prep.md",

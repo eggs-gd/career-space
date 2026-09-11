@@ -172,6 +172,7 @@ function validateVacancyRecord(folder: string, filePath: string, issues: Validat
   if (!fs.existsSync(path.join(folder, "posting.md"))) {
     issues.push(issue("error", "vacancy_missing_posting", path.join(folder, "posting.md"), "Vacancy folder must contain posting.md."));
   }
+  validateCommunicationFile(folder, issues);
 }
 
 function validateVacancies(dataDir: string, issues: ValidationIssue[]): void {
@@ -223,6 +224,19 @@ function validateEngagementRecord(folder: string, filePath: string, issues: Vali
   }
   if (!fs.existsSync(path.join(folder, "posting.md"))) {
     issues.push(issue("error", "engagement_missing_posting", path.join(folder, "posting.md"), "Engagement folder must contain posting.md."));
+  }
+  validateCommunicationFile(folder, issues);
+}
+
+function validateCommunicationFile(folder: string, issues: ValidationIssue[]): void {
+  const filePath = path.join(folder, "communication.md");
+  if (!fs.existsSync(filePath)) return;
+  const text = fs.readFileSync(filePath, "utf-8");
+  if (!text.startsWith("# Communication\n\nSummary:\n")) {
+    issues.push(issue("warning", "communication_shape", filePath, "communication.md should start with # Communication, then Summary:."));
+  }
+  if (!/^> /m.test(text)) {
+    issues.push(issue("warning", "communication_no_quotes", filePath, "communication.md should preserve event text as Markdown quotes."));
   }
 }
 

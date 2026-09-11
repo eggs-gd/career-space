@@ -16,8 +16,9 @@ export, answer a few questions a resume doesn't usually cover, and you're set up
 From then on, just say what you want in your own words — write a cover letter, check your fit for
 a posting, generate a CV tailored to it, define or update how you show up on LinkedIn, a freelance
 marketplace, a portfolio or personal site, search job boards automatically, or see your whole
-pipeline on one page. The agent explains what it can do and how, as you go — nothing here needs
-memorizing up front.
+pipeline on one page. It can also preserve the actual correspondence around an opportunity —
+emails, confirmations, replies, feedback, interview notes — inside that opportunity's folder. The
+agent explains what it can do and how, as you go; nothing here needs memorizing up front.
 
 Career Space starts with you, not the job feed. It helps you work out where you're going, how you
 want the market to understand you, and carries that positioning through public surfaces,

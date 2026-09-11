@@ -10,8 +10,8 @@ connected). It writes `data/vacancies.html` + a flat `data/vacancies.md` twin (a
 board, `data/engagements.html` + `.md`). The vacancies board is every non-archived vacancy (see
 "Archiving" below), grouped by status, sorted by fit score. Each HTML row shows:
 whatever files actually exist in that
-vacancy's folder (`fitment.md`, `posting.md`, `cv.md`, `cover-letter.md`, `interview-prep.md`,
-`targeting-plan.md`) behind a click-to-expand badge; a `📁 Folder` panel with `file://` links to every file in that
+vacancy's folder (`fitment.md`, `posting.md`, `communication.md`, `cv.md`, `cover-letter.md`,
+`interview-prep.md`, `targeting-plan.md`) behind a click-to-expand badge; a `📁 Folder` panel with `file://` links to every file in that
 vacancy's directory (for grabbing the CV/cover-letter files to attach to an application); a link
 to the original posting URL; and a "📍 Local" badge when it matches `data/sources.yaml`'s
 `local_keywords`.

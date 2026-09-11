@@ -34,9 +34,12 @@ Read, from `data/vacancies/<slug>/`:
 - `targeting-plan.md` — if present, its Requirement Evidence section is the evidence selection
   for Step 7; don't re-derive independently.
 - `cv.md` / `cover-letter.md` — if present, for what the candidate has already told this employer.
+- `communication.md` — if present, for preserved recruiter/client messages, candidate replies,
+  confirmations, feedback, and call notes. The top `Summary:` block is only an index; the quoted
+  event bodies are the source of truth for what was actually said.
 - `record.yaml` — `status_history` notes carry recruiter correspondence brought in by
-  `playbooks/reconcile.md`. A question the recruiter already asked ("do you have X?") is a
-  confirmed probe, not a predicted one — mark it as such in Step 6.
+  older runs or one-line status context. A question the recruiter already asked ("do you have X?")
+  is a confirmed probe, not a predicted one — mark it as such in Step 6.
 
 Then read `data/CV_GENERAL.md` in full, `data/config.yaml`'s `shared:` block, `data/strategy.md`
 if it exists, and the `data/role-profiles/*.md` that `fitment.md`/`targeting-plan.md` points at.
