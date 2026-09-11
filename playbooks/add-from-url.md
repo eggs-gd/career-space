@@ -16,8 +16,11 @@ Call `resolve_vacancy_url` (MCP tool, or `node scripts/dist/resolve_vacancy_url.
 - **`matched: true`, `already_seen: true`** -- this exact posting has already been judged before.
   Say so; if it has a vacancy folder, point at it (`vacancy_list`) instead of re-judging.
 - **`matched: true`, a `candidate`** -- continue to Step 2 with it.
-- **`matched: true`, an `error`** -- the URL is from a known source but the fetch itself failed
-  (dead link, removed posting, malformed ID). Tell the candidate plainly, stop.
+- **`matched: true`, an `error`** -- the URL is from a known source but the fetch itself failed.
+  `error` is a raw fetch failure (timeout, DNS, a flaky endpoint), not a verdict on the posting.
+  Retry once before concluding anything -- a single failed fetch isn't evidence the posting is
+  dead. If it fails again, tell the candidate plainly what the error said and that the posting may
+  be gone.
 - **`matched: false`** -- this URL isn't from a source this repo fetches precisely. Fetch it
   yourself (your own web-fetch/browsing capability) and read the page. Show the candidate what you
   found -- title, company, the posting text -- before doing anything else; don't silently trust a
