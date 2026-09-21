@@ -370,6 +370,13 @@ either way. `vacancy_upsert` (the lower-level primitive those four are usually b
 Engagements (`data/engagements/`) mirror this: `engagement_upsert`, `engagement_set_status`, and
 `engagement_set_archived` re-render the board themselves, MCP or CLI.
 
+**Writing a board-visible artifact into a vacancy/engagement folder also needs a re-render, and
+nothing does it for you.** The board's file badges/folder links are read from disk at render time,
+not from `record.yaml` — `cv.md`, `cover-letter.md`, `interview-prep.md`, `targeting-plan.md`, a
+rendered PDF, none of these auto-render the way a status/archive change does. The playbook that
+writes one (or calls `attach_artifact`) owns calling `render_boards` as its own closing step, same
+as `vacancy_upsert` above — don't rely on remembering to do this separately.
+
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `_sb/reference/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a
 change to this repo's own files: `_sb/development.md`.
