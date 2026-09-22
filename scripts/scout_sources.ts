@@ -878,6 +878,29 @@ async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promis
   return [postings, null];
 }
 
+/** Djinni's RSS gives no company field (see `fetchDjinni`'s docstring), but the job's own page
+ * `<title>` does, in a fixed pattern confirmed live against several real postings: `"<job title>
+ * в <Company> – Djinni"` (Ukrainian "в" = "at", U+0432, not the Latin letters in an English word
+ * like "in" -- e.g. "Head of QA (in Warsaw)" doesn't collide with it). Strips the RSS's own
+ * `rssTitle` as an exact prefix rather than guessing where " в " splits -- a job title that
+ * itself contains " в " (rare, but not impossible) would otherwise cut in the wrong place.
+ * Regex fallback for when the exact-prefix strip doesn't line up (an HTML-entity or whitespace
+ * difference between the RSS title and the page's own); returns `null` (caller keeps `"?"`) if
+ * neither works. */
+export async function fetchDjinniCompany(jobUrl: string, rssTitle: string): Promise<string | null> {
+  const html = await getText(jobUrl);
+  const pageTitle = decodeHtmlEntities(/<title>([^<]*)<\/title>/.exec(html)?.[1]?.trim() ?? "");
+  const suffix = " – Djinni";
+  if (!pageTitle.endsWith(suffix)) return null;
+  const withoutSuffix = pageTitle.slice(0, -suffix.length);
+  const prefix = `${rssTitle} в `;
+  if (withoutSuffix.startsWith(prefix)) {
+    return withoutSuffix.slice(prefix.length).trim() || null;
+  }
+  const fallback = / в (.+)$/.exec(withoutSuffix);
+  return fallback ? fallback[1]!.trim() || null : null;
+}
+
 /** djinni.co -- Ukraine's largest tech job board. RSS confirmed live at `/jobs/rss/`, and
  * `?primary_keyword=<exact category>` confirmed to genuinely filter server-side -- but ONLY for
  * an exact match against Djinni's own fixed category taxonomy (~123 values, one per
@@ -893,10 +916,13 @@ async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promis
  * slug form (`"engineering_manager"`) is safest since it's already all-lowercase and is exactly
  * what `reference/ua-scout-categories.md` lists. An item has no structured company/location
  * field at all (`title`, `link`, `description`, `category` [the matched keyword, not useful as a
- * real category], `pubDate`, `guid` only, confirmed live) -- company defaults to `"?"` like
- * several other fetchers already do when it's genuinely unavailable, and remote/location relies
- * entirely on the existing description-text fallback (Ukrainian-aware, see `REMOTE_WORDS`). */
-async function fetchDjinni({ uaCategories }: FeedFetchOpts): Promise<FetchResult> {
+ * real category], `pubDate`, `guid` only, confirmed live) -- so company comes from one extra
+ * fetch of the item's own page (like `fetchJustjoin`'s detail fetch, gated the same way by
+ * `worthDetailFetch` so we're not fetching every single RSS item's page). Falls back to `"?"`,
+ * same as several other fetchers already do, if that detail fetch fails or the page doesn't
+ * parse; remote/location relies entirely on the existing description-text fallback
+ * (Ukrainian-aware, see `REMOTE_WORDS`). */
+async function fetchDjinni({ uaCategories, trackTitles, roleSignals }: FeedFetchOpts): Promise<FetchResult> {
   if (uaCategories.length === 0) return [[], "Djinni: no ua_categories configured for this candidate"];
   const postings: Posting[] = [];
   let error: string | null = null;
@@ -915,13 +941,23 @@ async function fetchDjinni({ uaCategories }: FeedFetchOpts): Promise<FetchResult
         const m = FIELD_RE[name].exec(chunk);
         return m ? decodeHtmlEntities(m[1]!.trim()) : "";
       };
+      const title = field("title");
+      const link = field("link");
+      let company = "?";
+      if (link && worthDetailFetch(title, trackTitles, roleSignals)) {
+        try {
+          company = (await fetchDjinniCompany(link, title)) ?? "?";
+        } catch {
+          // best effort -- a failed detail fetch keeps the posting, just without a company name
+        }
+      }
       postings.push(
         makePosting({
           source: "djinni",
-          company: "?",
-          title: field("title"),
+          company,
+          title,
           location: "",
-          url: field("link"),
+          url: link,
           description: stripHtml(field("description")),
           postedAt: field("pubDate"),
         })
