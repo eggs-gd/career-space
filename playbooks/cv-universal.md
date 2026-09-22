@@ -36,7 +36,12 @@ anti-fabrication guardrails on top of the universal ones).
 
 Specifically: does every bullet trace to something in `data/CV_GENERAL.md`? Is ownership language
 preserved? Does the positioning match `data/config.yaml`'s `shared:` block rather than
-whichever evidence was most detailed?
+whichever evidence was most detailed? And structurally, per `cv-writing-policy.md`'s "Document
+structure": does every role older than 10 years that isn't part of a tenure continuing within the
+last 10 years appear, condensed, under `## Early Career` — not silently dropped? Under length
+pressure it's tempting to just not write it, but the policy's cut order puts early-career detail
+last, after redundancy and weak/secondary achievements, not first -- check for this specifically,
+it's easy to skip without noticing.
 
 ## Step 5 — save and show
 

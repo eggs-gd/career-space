@@ -730,10 +730,12 @@ export function writeTxt(text: string, txtPath: string): void {
 }
 
 /** Returns false (and prints a note) instead of throwing if the PDF step fails -- the HTML file
- * is still useful on its own (open it, print to PDF from a browser). Ported from weasyprint to
- * Puppeteer (headless Chromium print-to-PDF) -- see AGENTS.md for why. `preferCSSPageSize: true`
- * so each template's own `@page { size: A4; margin: 14mm; }` (or the board/cover-letter
- * variants' own margins) governs the output instead of Puppeteer's API-level defaults. */
+ * is still useful on its own (open it, print to PDF from a browser). Puppeteer (headless Chromium)
+ * because the templates are real styled HTML+CSS documents (font stacks, `@page` print rules) --
+ * turning that into a PDF that matches the HTML preview needs an actual browser print pipeline,
+ * not a text-to-PDF library. `preferCSSPageSize: true` so each template's own
+ * `@page { size: A4; margin: 14mm; }` (or the board/cover-letter variants' own margins) governs
+ * the output instead of Puppeteer's API-level defaults. */
 export async function writePdf(html: string, pdfPath: string): Promise<boolean> {
   // `any`, not `typeof import("puppeteer")`: under Node16/NodeNext module resolution a type-only
   // import of an ESM-shaped package from this CommonJS file needs an explicit resolution-mode
