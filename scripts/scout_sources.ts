@@ -56,15 +56,35 @@ function isRemote(location: string | null | undefined, description: string | nul
   return REMOTE_WORDS.some((word) => (description ?? "").toLowerCase().includes(word));
 }
 
-async function fetchWithTimeout(url: string, headers: Record<string, string>, timeoutMs: number): Promise<Response> {
-  const response = await fetch(url, {
-    headers: { ...HEADERS, ...headers },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText} for ${url}`);
+/** One retry, after a short fixed backoff, on a transient failure -- a 5xx, or the fetch call
+ * itself throwing (timeout/abort, DNS hiccup, connection reset). Not for 4xx: a bad request/auth/
+ * not-found is deterministic, retrying just wastes a second. This is the single fetch choke point
+ * every source (Greenhouse, JustJoin, ...) goes through, so one retry here covers a feed's whole
+ * flaky-endpoint problem without each fetcher needing its own retry logic. */
+export async function fetchWithTimeout(
+  url: string,
+  headers: Record<string, string>,
+  timeoutMs: number,
+  retryDelayMs = 1_000 // overridden to 0 in tests only; real callers keep the backoff
+): Promise<Response> {
+  const attempt = async (): Promise<Response> => {
+    const response = await fetch(url, {
+      headers: { ...HEADERS, ...headers },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText} for ${url}`);
+    }
+    return response;
+  };
+  try {
+    return await attempt();
+  } catch (error) {
+    const httpStatus = error instanceof Error ? Number(/^HTTP (\d{3})/.exec(error.message)?.[1]) : NaN;
+    if (httpStatus >= 400 && httpStatus < 500) throw error; // deterministic client error, no retry
+    await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+    return attempt();
   }
-  return response;
 }
 
 async function getJson(url: string, headers: Record<string, string> = {}, timeoutMs = 20_000): Promise<any> {

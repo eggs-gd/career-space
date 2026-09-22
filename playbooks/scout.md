@@ -103,6 +103,12 @@ seen.jsonl) -> `returned_count` handed back now (`capped_count` held back for a 
 lost -- worth a one-line mention if non-zero, so the candidate knows more is waiting rather than
 assuming this run found everything).
 
+**Most or all configured feeds erroring (not one or two) is a different signal from a normal flaky
+feed -- don't report it as "the market/boards are down."** It usually means the current execution
+context has no real network access (a sandboxed shell run without escalation), not that every
+independent source failed at once. Say so plainly and retry outside the sandbox / with network
+access before concluding anything about fetch results.
+
 If `candidates` is empty, say so plainly and stop -- there's nothing to judge this run.
 
 ## Step 2 -- judge each candidate
