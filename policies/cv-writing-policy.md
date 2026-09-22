@@ -45,8 +45,14 @@ non-role-oriented profiles — follow that instead when it does).
   entries.
 - Ongoing ("Present") experience stays near the top in reverse chronology even when secondary to
   the current lens — compress it, don't move it below older flagship roles.
-- Condense roles older than 10 years into an "Early Career" section, except when a role belongs to
-  a tenure that continues within the last 10 years.
+- Condense roles older than 10 years into an `## Early Career` section, except when a role belongs
+  to a tenure that continues within the last 10 years. **One line per company/tenure, never a
+  merged paragraph:** `- **<start>–<end>** — <Company>, <Title> — <one clause on what it actually
+  was>.` A reader should get what each stop was from one scan down the list, not have to extract
+  it from prose. Every company gets its own line, even a short stint — don't blur two or more
+  companies into one sentence to save space. Still no achievement bullets and no Skills line under
+  it (that's what makes it "Early Career" and not just more "Experience") — the point is a
+  scannable timeline, not a compressed re-run of the full entry format.
 - Don't fully omit an experience entry just because it's secondary — compress to 1-3 bullets
   instead of dropping it, especially for ongoing entries. At most 2-3 bullets per role; compress
   secondary roles to 1 bullet; move background-only older roles into Early Career instead of
