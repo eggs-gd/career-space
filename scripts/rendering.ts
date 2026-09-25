@@ -170,6 +170,7 @@ export function renderCoverLetterHtml(draftText: string, title: string): string 
 // declaration order (that one's about lifecycle logic).
 const BOARD_STATUS_ORDER: ReadonlyArray<readonly [string, string]> = [
   ["interview", "Interview"],
+  ["screen", "Screen"],
   ["tracked", "Tracked"],
   ["new", "New"],
   ["applied", "Applied"],
@@ -178,15 +179,22 @@ const BOARD_STATUS_ORDER: ReadonlyArray<readonly [string, string]> = [
   ["skipped", "Skipped"],
 ];
 
+// One emoji per document type, same family throughout (plain objects, no faces/people), chosen
+// for actual rendered color -- several common "document" emoji (envelope, page, pen, compass,
+// newspaper) render as flat grey/outline in Apple Color Emoji specifically, defeating the point.
+// Picked for a saturated, distinct hue each instead: red/orange/blue/pink/brown/yellow/green. A
+// row's badges only show the files that actually exist for that vacancy, so both the count and
+// the left-to-right position of any given badge shift from row to row -- the emoji is a fixed
+// visual anchor that doesn't depend on position: "that's the fitment one" at a glance.
 const BOARD_FILE_LABELS: Record<string, string> = {
-  "posting.md": "posting",
-  "fitment.md": "fitment",
-  "cv.md": "CV",
-  "cover-letter.md": "cover",
-  "proposal.md": "proposal",
-  "communication.md": "✉️ comm",
-  "interview-prep.md": "prep",
-  "targeting-plan.md": "plan",
+  "posting.md": "🏷️ posting",
+  "fitment.md": "🎯 fitment",
+  "cv.md": "🪪 CV",
+  "cover-letter.md": "💌 cover",
+  "proposal.md": "💼 proposal",
+  "communication.md": "📨 comm",
+  "interview-prep.md": "💡 prep",
+  "targeting-plan.md": "🗺️ plan",
   "record.yaml": "record",
 };
 

@@ -10,13 +10,11 @@
  * CLI: `node scripts/dist/scout_fetch.js [--sources data/sources.yaml] [--feeds jobico,douua]
  * [--out-file /tmp/scout-result.json]` prints a JSON object to stdout by default -- `--feeds`
  * restricts the run to that subset of the configured `feeds:` list (see `runScout`'s own
- * docstring for why it's an intersection, never a bypass). A full run's JSON (up to
- * `max_judgments_per_run` candidates, each with the raw posting text) can be large enough that a
- * terminal/chat surface truncates it -- pass `--out-file` to write it straight to disk instead of
- * stdout, rather than hand-rolling a `node -e` one-liner to capture it yourself (a real, repeated
- * failure mode -- get the quoting/escaping wrong and the file silently ends up empty or truncated,
- * worse than the truncation it was meant to fix). Prefer the `scout_fetch` MCP tool when the
- * server is connected -- same function, typed return, no shell-escaping anything.
+ * docstring for why it's an intersection, never a bypass). `--out-file` writes the JSON straight
+ * to disk instead of stdout -- use it for a large run instead of hand-rolling a shell one-liner to
+ * capture the output, which is an easy way to get quoting wrong and end up with an empty file.
+ * Prefer the `scout_fetch` MCP tool when the server is connected -- same function, typed return,
+ * no shell-escaping anything.
  */
 
 import * as fs from "fs";
@@ -123,6 +121,7 @@ async function main(): Promise<void> {
   const json = JSON.stringify(result, null, 2);
   if (values["out-file"]) {
     const outPath = path.resolve(values["out-file"]);
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, json + "\n", "utf-8");
     console.log(`Wrote ${outPath}`);
   } else {

@@ -878,15 +878,11 @@ async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promis
   return [postings, null];
 }
 
-/** Djinni's RSS gives no company field (see `fetchDjinni`'s docstring), but the job's own page
- * `<title>` does, in a fixed pattern confirmed live against several real postings: `"<job title>
- * в <Company> – Djinni"` (Ukrainian "в" = "at", U+0432, not the Latin letters in an English word
- * like "in" -- e.g. "Head of QA (in Warsaw)" doesn't collide with it). Strips the RSS's own
- * `rssTitle` as an exact prefix rather than guessing where " в " splits -- a job title that
- * itself contains " в " (rare, but not impossible) would otherwise cut in the wrong place.
- * Regex fallback for when the exact-prefix strip doesn't line up (an HTML-entity or whitespace
- * difference between the RSS title and the page's own); returns `null` (caller keeps `"?"`) if
- * neither works. */
+/** Djinni's RSS has no company field (see `fetchDjinni`); the job page's own `<title>` does, as
+ * `"<job title> в <Company> – Djinni"` (confirmed live against several postings; "в" is Cyrillic
+ * "at", U+0432 -- doesn't collide with Latin "in", e.g. "Head of QA (in Warsaw)"). Strips the
+ * known RSS title as an exact prefix rather than guessing where " в " splits, with a regex
+ * fallback for a title/page mismatch; `null` (caller keeps `"?"`) if neither parses. */
 export async function fetchDjinniCompany(jobUrl: string, rssTitle: string): Promise<string | null> {
   const html = await getText(jobUrl);
   const pageTitle = decodeHtmlEntities(/<title>([^<]*)<\/title>/.exec(html)?.[1]?.trim() ?? "");

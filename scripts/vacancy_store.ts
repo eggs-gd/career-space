@@ -24,13 +24,18 @@ export interface VacancyStoreScope {
 // A vacancy record's lifecycle -- see playbooks/scout.md for what triggers each transition.
 // `new` -> just surfaced by the scout, not yet reviewed by the candidate.
 // `tracked` -> candidate confirmed it's worth pursuing.
-// `applied` / `interview` / `offer` -> normal pipeline progress.
+// `applied` / `screen` / `interview` / `offer` -> normal pipeline progress.
+// `screen` -> recruiter/HR contact after applying: a connect, a scheduled or completed
+//   recruiter/HR call, still before anyone is evaluating the candidate against the role itself.
+// `interview` -> a round where the candidate is actually being evaluated on the role: technical,
+//   hiring-manager, client, panel, final.
 // `rejected` -> declined, either by the candidate or the company.
 // `skipped` -> candidate looked and passed, distinct from `rejected` (company said no).
 export const VALID_STATUSES = [
   "new",
   "tracked",
   "applied",
+  "screen",
   "interview",
   "offer",
   "rejected",

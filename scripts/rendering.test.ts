@@ -40,7 +40,7 @@ test("board renders location-exception metadata as a visible badge", () => {
   assert.match(html, /Remote scope lists nearby markets but no hard legal blocker/);
 });
 
-test("board renders an interview-prep.md file as a 'prep' badge with its content", () => {
+test("board renders an interview-prep.md file as a '💡 prep' badge with its content", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "career-space-board-"));
   const slug = "acme-principal-engineer-a1b2c3d4";
   fs.mkdirSync(path.join(root, slug), { recursive: true });
@@ -63,7 +63,7 @@ test("board renders an interview-prep.md file as a 'prep' badge with its content
     { vacancyDirFn: (s) => path.join(root, s) }
   );
 
-  assert.match(html, /<summary>prep<\/summary>/);
+  assert.match(html, /<summary>💡 prep<\/summary>/);
   assert.match(html, /Remember this candidate as the one who restructures ambiguous systems/);
 });
 
@@ -93,7 +93,7 @@ test("board renders communication.md as a quoted communication badge", () => {
     { vacancyDirFn: (s) => path.join(root, s) }
   );
 
-  assert.match(html, /<summary>✉️ comm<\/summary>/);
+  assert.match(html, /<summary>📨 comm<\/summary>/);
   assert.match(html, /Interview invite received/);
   assert.match(html, /We would like to invite you/);
 });

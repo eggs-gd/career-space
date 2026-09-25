@@ -47,9 +47,9 @@ cover it; it never goes in this repo's committed files.
 ## Step 1 — the vacancies to reconcile
 
 `vacancy_list` (MCP tool, or `node scripts/dist/vacancy_store.js list`). Reconcile the ones still
-in motion — `tracked`, `applied`, `interview` (and `new` if the candidate says they applied
-outside the system). Skip terminal ones (`rejected`, `offer`, `skipped`) unless the candidate
-asks. Each record already gives you `slug`, `company`, `title`, `status`, `url`.
+in motion — `tracked`, `applied`, `screen`, `interview` (and `new` if the candidate says they
+applied outside the system). Skip terminal ones (`rejected`, `offer`, `skipped`) unless the
+candidate asks. Each record already gives you `slug`, `company`, `title`, `status`, `url`.
 
 ## Step 2 — gather evidence, bounded
 
@@ -102,8 +102,14 @@ transition.
   senior", "likely comp mismatch"): omit that entirely. If the correspondence states no reason,
   pass no `note`. This follows the same status rules as anywhere else (never regress to `new`; a
   no-op if already at that status).
-- **Needs confirmation** (ambiguous match, unclear whether a call was an interview or a screen,
-  two roles at one company) → present it to the candidate and ask before moving anything.
+- **`screen` vs `interview`** — classify from what the correspondence actually says, don't default
+  to either: a recruiter/HR connect, or a call with "our recruiter" / "quick intro chat" / "HR
+  screen", is `screen` — nobody is evaluating the candidate against the role yet. A technical,
+  hiring-manager, client, panel, or final round — anyone assessing the candidate on the actual
+  job — is `interview`. Only fall through to "needs confirmation" below if the text genuinely
+  doesn't say which kind of call it is.
+- **Needs confirmation** (ambiguous match, a call whose kind isn't stated, two roles at one
+  company) → present it to the candidate and ask before moving anything.
 - Never mutate Gmail or Calendar.
 
 ## Step 5 — summarise

@@ -375,7 +375,7 @@ nothing does it for you.** The board's file badges/folder links are read from di
 not from `record.yaml` — `cv.md`, `cover-letter.md`, `interview-prep.md`, `targeting-plan.md`, a
 rendered PDF, none of these auto-render the way a status/archive change does. The playbook that
 writes one (or calls `attach_artifact`) owns calling `render_boards` as its own closing step, same
-as `vacancy_upsert` above — don't rely on remembering to do this separately.
+as `vacancy_upsert` above.
 
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `_sb/reference/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a
