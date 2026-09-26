@@ -306,6 +306,9 @@ data/                           # gitignored, personal
                                  # targeting-plan.md / interview-prep.md once generated; communication.md
                                  # when correspondence is preserved -- never in cv/ above or a separate
                                  # cover-letters/ (that folder is retired)
+    _archive/<slug>/            # archived vacancies live here instead (moved by vacancy_set_archived,
+                                 # same contents) -- take a vacancy's folder from vacancy_resolve's
+                                 # `paths.dir`, never build data/vacancies/<slug> yourself
   engagements/                   # commercial engagements (a marketplace job, a client project) --
                                  # a flat sibling of vacancies/, NOT nested (renderers/listers assume
                                  # vacancies/ == vacancy). scripts/engagement_store.ts owns it,
@@ -315,7 +318,7 @@ data/                           # gitignored, personal
                                  # engagement-fitment.md via engagement_upsert. record.yaml (client/title/
                                  # url/status/status_history/fit/judged_at) + posting.md; fitment.md +
                                  # fitment.json (score_fit --out-dir); communication.md / proposal.md /
-                                 # cover-letter.md once written
+                                 # cover-letter.md once written; archived ones under _archive/<slug>/
   engagements.html               # engagements board (grouped by status), + engagements.md twin --
                                  # scripts/render_engagement.ts, regenerated; shares nav with vacancies.html
   linkedin-searches.md          # LinkedIn Boolean search deep-links, see playbooks/

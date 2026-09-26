@@ -2,6 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { parseArgs } from "util";
+import { opportunityDir } from "./opportunity_dirs";
 import { REPO_ROOT } from "./repo_paths";
 import { VacancyStoreError } from "./vacancy_store";
 
@@ -30,7 +31,7 @@ function rootDir(kind: OpportunityKind, dataDir?: string): string {
 }
 
 function communicationPath(kind: OpportunityKind, slug: string, dataDir?: string): string {
-  return path.join(rootDir(kind, dataDir), slug, "communication.md");
+  return path.join(opportunityDir(rootDir(kind, dataDir), slug), "communication.md");
 }
 
 function normalizeDate(input?: string): string {

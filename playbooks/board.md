@@ -50,8 +50,8 @@ playbook doesn't answer on its own.
 
 The candidate can ask to archive a vacancy at any point ("заархівуй цю вакансію" / "archive this
 one" / "get old rejected ones off the board") -- call `vacancy_set_archived(slug, true)`. This
-never deletes anything and never touches `status`; it only controls whether the board /
-`vacancy_list` show it by default. A `rejected`/`skipped` vacancy sitting untouched for a long
+never deletes anything and never touches `status`; it moves the folder to
+`data/vacancies/_archive/<slug>/` and controls whether the board / `vacancy_list` show it by default. A `rejected`/`skipped` vacancy sitting untouched for a long
 time is the common candidate for this -- worth mentioning as an option when the board's getting
 cluttered with old ones, not something to do unprompted. Unarchive the same way with `archived:
 false`, or pass `include_archived` to either tool to see everything, archived or not, in one

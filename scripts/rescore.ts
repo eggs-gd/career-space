@@ -20,6 +20,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
 import { parseArgs } from "util";
+import { listOpportunityDirs } from "./opportunity_dirs";
 import { REPO_ROOT } from "./repo_paths";
 import { Assessment, evaluate, persistFitment } from "./score_fit";
 import { renderBoards } from "./render_boards";
@@ -44,9 +45,7 @@ export interface RescoreResult {
 function scanRoot(dir: string, write: boolean, rows: RescoreRow[], skipped: string[]): void {
   if (!fs.existsSync(dir)) return;
   const rootName = path.basename(dir);
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory()) continue;
-    const folder = path.join(dir, entry.name);
+  for (const folder of listOpportunityDirs(dir).sort((a, b) => path.basename(a).localeCompare(path.basename(b)))) {
     const recordPath = path.join(folder, "record.yaml");
     if (!fs.existsSync(recordPath)) continue;
     const jsonPath = path.join(folder, "fitment.json");
@@ -63,7 +62,7 @@ function scanRoot(dir: string, write: boolean, rows: RescoreRow[], skipped: stri
     const changed = oldScore !== result.score || oldCategory !== result.fit_category;
     rows.push({
       root: rootName,
-      slug: entry.name,
+      slug: path.basename(folder),
       old_score: oldScore,
       new_score: result.score,
       old_category: oldCategory,

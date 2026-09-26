@@ -15,7 +15,7 @@
  * are provisional -- they grow as real runs show which are load-bearing, then a schema.
  *
  * Usage: node scripts/dist/engagement_store.js
- *   <upsert|set-status|set-archived|attach-artifact|list>  ...same flags as vacancy_store.js...
+ *   <upsert|set-status|set-archived|relocate-archived|attach-artifact|list>  ...same flags as vacancy_store.js...
  */
 
 import * as fs from "fs";
@@ -23,6 +23,7 @@ import * as path from "path";
 import * as yaml from "js-yaml";
 import { parseArgs } from "util";
 import { REPO_ROOT } from "./repo_paths";
+import { listOpportunityDirs, opportunityDir, relocateArchived } from "./opportunity_dirs";
 import * as postingIds from "./posting_ids";
 import { VALID_STATUSES, VacancyStoreError, makeSlug, setStatus, setArchived, attachArtifact } from "./vacancy_store";
 
@@ -45,7 +46,7 @@ function baseDir(dataDir?: string): string {
   return dataDir ?? ENGAGEMENTS_DIR;
 }
 function engagementDir(slug: string, dataDir?: string): string {
-  return path.join(baseDir(dataDir), slug);
+  return opportunityDir(baseDir(dataDir), slug);
 }
 function recordPath(slug: string, dataDir?: string): string {
   return path.join(engagementDir(slug, dataDir), "record.yaml");
@@ -64,13 +65,12 @@ function findEngagementByClientTitle(client: string, title: string, dataDir?: st
   if (!fs.existsSync(dir)) return null;
   const c = (client ?? "").trim().toLowerCase();
   const t = title.trim().toLowerCase();
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const rpath = path.join(dir, entry.name, "record.yaml");
+  for (const folder of listOpportunityDirs(dir)) {
+    const rpath = path.join(folder, "record.yaml");
     if (!fs.existsSync(rpath)) continue;
     const record = readRecord(rpath);
     if (String(record.client ?? "").trim().toLowerCase() === c && String(record.title ?? "").trim().toLowerCase() === t) {
-      return record.slug ?? entry.name;
+      return record.slug ?? path.basename(folder);
     }
   }
   return null;
@@ -165,20 +165,19 @@ export function listEngagements(opts: { includeArchived?: boolean; dataDir?: str
   if (!fs.existsSync(dir)) return [];
   const includeArchived = opts.includeArchived ?? false;
   const out: Rec[] = [];
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const rpath = path.join(dir, entry.name, "record.yaml");
+  for (const folder of listOpportunityDirs(dir)) {
+    const rpath = path.join(folder, "record.yaml");
     if (!fs.existsSync(rpath)) continue;
     const record = readRecord(rpath);
     if (!includeArchived && record.archived) continue;
     const files = fs
-      .readdirSync(path.join(dir, entry.name), { withFileTypes: true })
+      .readdirSync(folder, { withFileTypes: true })
       .filter((e) => e.isFile())
       .map((e) => e.name)
       .sort();
     const fit = record.fit ?? {};
     out.push({
-      slug: record.slug ?? entry.name,
+      slug: record.slug ?? path.basename(folder),
       status: record.status ?? "new",
       client: record.client ?? "",
       title: record.title ?? "",
@@ -228,6 +227,7 @@ function cli(): void {
       path: { type: "string" },
       archived: { type: "string" },
       "include-archived": { type: "boolean" },
+      write: { type: "boolean" },
     },
   });
   const command = positionals[0];
@@ -258,6 +258,9 @@ function cli(): void {
     }
     result = setEngagementArchived(values.slug, values.archived === "true");
     renderBoardsFromCli();
+  } else if (command === "relocate-archived") {
+    // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
+    result = relocateArchived(ENGAGEMENTS_DIR, values.write ?? false);
   } else if (command === "attach-artifact") {
     if (!values.slug || !values.kind || !values.path) {
       throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
@@ -269,7 +272,7 @@ function cli(): void {
     result = listEngagements({ includeArchived: values["include-archived"] });
   } else {
     throw new VacancyStoreError(
-      `Unknown command ${JSON.stringify(command)} -- expected: upsert, set-status, set-archived, attach-artifact, list`
+      `Unknown command ${JSON.stringify(command)} -- expected: upsert, set-status, set-archived, relocate-archived, attach-artifact, list`
     );
   }
   console.log(JSON.stringify(result, null, 2));

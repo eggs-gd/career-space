@@ -11,6 +11,7 @@ import * as path from "path";
 import * as yaml from "js-yaml";
 import { parseArgs } from "util";
 import { Eligibility, isLocationEligibilityStatus, normalizeEligibility } from "./eligibility";
+import { listOpportunityDirs, moveToHome, opportunityDir, relocateArchived } from "./opportunity_dirs";
 import * as postingIds from "./posting_ids";
 import { REPO_ROOT } from "./repo_paths";
 import { Assessment, evaluate, persistFitment } from "./score_fit";
@@ -74,8 +75,9 @@ function dataDir(scope: VacancyStoreScope = {}): string {
   return scope.dataDir ?? DATA_DIR;
 }
 
+/** The vacancy's folder wherever it lives (active, or `_archive/`) -- see `opportunity_dirs.ts`. */
 export function vacancyDir(slug: string, scope: VacancyStoreScope = {}): string {
-  return path.join(dataDir(scope), slug);
+  return opportunityDir(dataDir(scope), slug);
 }
 export function recordPath(slug: string, scope: VacancyStoreScope = {}): string {
   return path.join(vacancyDir(slug, scope), "record.yaml");
@@ -201,17 +203,11 @@ function summaryToDict(s: VacancySummary): Rec {
   };
 }
 
-/** One level of `<slug>` directories under DATA_DIR, each checked for a `record.yaml`. */
+/** Every vacancy's `record.yaml`, active and archived. */
 function listRecordPaths(scope: VacancyStoreScope = {}): string[] {
-  const root = dataDir(scope);
-  if (!fs.existsSync(root)) return [];
-  const out: string[] = [];
-  for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const rpath = path.join(root, entry.name, "record.yaml");
-    if (fs.existsSync(rpath)) out.push(rpath);
-  }
-  return out;
+  return listOpportunityDirs(dataDir(scope))
+    .map((dir) => path.join(dir, "record.yaml"))
+    .filter((rpath) => fs.existsSync(rpath));
 }
 
 /** Find an existing vacancy by normalized company+title. Used only as an upsert fallback. */
@@ -222,6 +218,14 @@ export function findByCompanyTitle(company: string, title: string, scope: Vacanc
     const record = readYamlRecord(rpath);
     const key = `${slugify(record.company ?? "")}\0${slugify(record.title ?? "")}`;
     if (key === target) return record.slug ?? path.basename(path.dirname(rpath));
+  }
+  return null;
+}
+
+/** Folder name of the vacancy with this `posting_id`, active or archived, or null. */
+function findSlugByPostingId(postingId: string, scope: VacancyStoreScope = {}): string | null {
+  for (const rpath of listRecordPaths(scope)) {
+    if (readYamlRecord(rpath).posting_id === postingId) return path.basename(path.dirname(rpath));
   }
   return null;
 }
@@ -387,7 +391,9 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
     throw new VacancyStoreError("internal error: posting_id/content_id unresolved in upsertVacancy");
   }
 
-  const slug = makeSlug(opts.company, opts.title, pid);
+  // The folder already holding this exact posting wins, even if its name predates a later company/
+  // title correction -- the slug is derived from those, so re-deriving it would fork a duplicate.
+  const slug = findSlugByPostingId(pid, scope) ?? makeSlug(opts.company, opts.title, pid);
   const vdir = vacancyDir(slug, scope);
   const rpath = recordPath(slug, scope);
   const nowStr = now();
@@ -712,12 +718,19 @@ export function setStatus(slug: string, status: VacancyStatus, note?: string, sc
   return record;
 }
 
-/** Archive visibility is orthogonal to pipeline status. */
+/** Archive visibility is orthogonal to pipeline status. Archiving also moves the folder into
+ * `_archive/` (and unarchiving moves it back); calling it on a record whose folder is in the wrong
+ * place fixes the location even when the flag already matches. */
 export function setArchived(slug: string, archived: boolean, scope: VacancyStoreScope = {}): Rec {
-  const rpath = recordPath(slug, scope);
-  if (!fs.existsSync(rpath)) {
-    throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)} at ${rpath}`);
+  if (!fs.existsSync(recordPath(slug, scope))) {
+    throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)} at ${recordPath(slug, scope)}`);
   }
+  try {
+    moveToHome(dataDir(scope), slug, archived);
+  } catch (error) {
+    throw new VacancyStoreError(error instanceof Error ? error.message : String(error));
+  }
+  const rpath = recordPath(slug, scope);
   const record = readYamlRecord(rpath);
   if (record.archived !== archived) {
     record.archived = archived;
@@ -828,6 +841,7 @@ function cli(): void {
       archived: { type: "string" },
       "include-archived": { type: "boolean" },
       input: { type: "string" },
+      write: { type: "boolean" },
     },
   });
 
@@ -894,6 +908,9 @@ function cli(): void {
     }
     result = setArchived(values.slug, values.archived === "true");
     renderBoardsFromCli();
+  } else if (command === "relocate-archived") {
+    // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
+    result = relocateArchived(DATA_DIR, values.write ?? false);
   } else if (command === "attach-artifact") {
     if (!values.slug || !values.kind || !values.path) {
       throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
@@ -948,7 +965,7 @@ function cli(): void {
     if ((result as ResolveVacancyResult).changed) renderBoardsFromCli();
   } else {
     throw new VacancyStoreError(
-      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, attach-artifact, list, record-scout-outcomes, resolve`
+      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, relocate-archived, attach-artifact, list, record-scout-outcomes, resolve`
     );
   }
 

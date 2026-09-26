@@ -66,3 +66,13 @@ test("rescore --write updates fit.score/category, keeps fit.reason, rewrites fit
   // Idempotent: a second write finds nothing changed.
   assert.equal(rescore({ write: true, dataDir: base }).changed.length, 0);
 });
+
+test("rescore also replays archived records living in _archive/", () => {
+  const { base, slug } = seed();
+  const from = path.join(base, "vacancies", slug);
+  const to = path.join(base, "vacancies", "_archive", slug);
+  fs.mkdirSync(path.dirname(to), { recursive: true });
+  fs.renameSync(from, to);
+  const result = rescore({ dataDir: base });
+  assert.deepEqual(result.changed.map((r) => r.slug), [slug]);
+});

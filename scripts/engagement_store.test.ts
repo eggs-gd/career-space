@@ -66,6 +66,13 @@ test("setEngagementStatus records a transition with history; setEngagementArchiv
     "archived order is excluded and the rest still list"
   );
   assert.equal(listEngagements({ dataDir, includeArchived: true }).length, 2);
+  assert.equal(fs.existsSync(path.join(dataDir, "_archive", b.slug, "record.yaml")), true, "archived folder moved into _archive/");
+  assert.equal(fs.existsSync(path.join(dataDir, b.slug)), false);
+
+  // A re-upsert of the archived one lands on the same folder, not a duplicate.
+  const again = upsertEngagement({ client: "Two", title: "Task B", url: "https://x/b", fitScore: 5, dataDir });
+  assert.equal(again.slug, b.slug);
+  assert.equal(fs.existsSync(path.join(dataDir, b.slug)), false);
 });
 
 test("listEngagements sorts newest-judged first", () => {

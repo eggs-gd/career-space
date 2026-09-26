@@ -32,6 +32,10 @@ interface over it or over `score_fit.ts`'s scoring formula:
   `data/{vacancies,engagements}/*/fitment.json` without re-running the model; `--write` updates
   `record.yaml`'s `fit`, rewrites `fitment.md`, re-renders the board. Run it after a
   scoring-formula change. Dry run by default.
+- `scripts/opportunity_dirs.ts` — where an opportunity folder lives: `<root>/<slug>/` while active,
+  `<root>/_archive/<slug>/` once archived (`set-archived` moves it; `relocate-archived [--write]`
+  fixes any folder whose location disagrees with its `archived` flag). Every path to a vacancy or
+  engagement folder goes through `opportunityDir`, so lookups by slug find it wherever it is.
 - `scripts/scout_fetch.ts` — fetch public ATS/job-board postings, run the cheap prefilter and
   repost-collapse, drop anything already in `data/vacancies/seen.jsonl`. `scout_domain.ts`/
   `scout_sources.ts`/`scout_prefilter.ts` are its supporting modules (config shape, per-source
@@ -96,8 +100,8 @@ If the server isn't connected, fall back to the CLI form documented in each scri
 `node scripts/dist/render_resume.js <file>.md`, `node scripts/dist/render_cover_letter.js
 <file>.md`, `node scripts/dist/score_fit.js <file>.json`, `node scripts/dist/scout_fetch.js`,
 `node scripts/dist/resolve_vacancy_url.js <url>`, `node scripts/dist/vacancy_store.js
-<mark-seen|upsert|set-status|set-archived|attach-artifact|list|record-scout-outcomes|resolve>
-...`, `node scripts/dist/engagement_store.js <upsert|set-status|set-archived|attach-artifact|list>
+<mark-seen|upsert|set-status|set-archived|relocate-archived|attach-artifact|list|record-scout-outcomes|resolve>
+...`, `node scripts/dist/engagement_store.js <upsert|set-status|set-archived|relocate-archived|attach-artifact|list>
 ...`, `node scripts/dist/communication_log.js --kind <vacancy|engagement> --slug <slug>
 --title <title> --raw_file <path>`, `node scripts/dist/linkedin_searches.js`, `node scripts/dist/render_boards.js`,
 `node scripts/dist/render_board.js [--include-archived]`,

@@ -25,8 +25,12 @@ import {
   recordScoutOutcome,
   resolveVacancy,
   seenPath,
+  setArchived,
+  setStatus,
+  upsertVacancy,
   vacancyDir,
 } from "./vacancy_store";
+import { relocateArchived } from "./opportunity_dirs";
 import { REPO_ROOT } from "./repo_paths";
 
 // Not `__dirname` -- at runtime that's `scripts/dist` (where this test itself compiles to), but
@@ -202,4 +206,73 @@ test("recordScoutOutcome applies deterministic match blockers and location excep
     });
     assert.equal(result.outcome, item.outcome);
   }
+});
+
+test("setArchived moves the folder into _archive/ and back, and everything still finds it there", () => {
+  const root = tempVacanciesDir();
+  const created = resolveVacancy({ dataDir: root, company: "Acme", title: "Staff Engineer", postingText: "Build platforms.", status: "tracked" });
+  const slug = created.context.slug;
+  fs.writeFileSync(created.context.paths.cv, "# CV\n", "utf-8");
+
+  setArchived(slug, true, { dataDir: root });
+  assert.equal(fs.existsSync(path.join(root, slug)), false, "gone from the active list");
+  assert.equal(fs.existsSync(path.join(root, "_archive", slug, "cv.md")), true, "whole folder moved");
+  assert.equal(listVacancies(undefined, { dataDir: root }).length, 0);
+  const all = listVacancies(undefined, { dataDir: root, includeArchived: true });
+  assert.deepEqual(all.map((v) => [v.slug, v.archived]), [[slug, true]]);
+  assert.deepEqual(all[0]!.files.includes("cv.md"), true);
+
+  // Slug-based lookups, status changes and a re-resolve all follow it into the archive.
+  assert.ok(readVacancyContext(slug, { dataDir: root }).paths.dir.includes(`${path.sep}_archive${path.sep}`));
+  setStatus(slug, "rejected", undefined, { dataDir: root });
+  const again = resolveVacancy({ dataDir: root, company: "Acme", title: "Staff Engineer" });
+  assert.equal(again.context.slug, slug, "found by company+title, not duplicated");
+  assert.equal(fs.existsSync(path.join(root, slug)), false, "no stray active folder recreated");
+
+  setArchived(slug, false, { dataDir: root });
+  assert.equal(fs.existsSync(path.join(root, slug, "cv.md")), true);
+  assert.equal(fs.existsSync(path.join(root, "_archive", slug)), false);
+  assert.equal(listVacancies(undefined, { dataDir: root }).length, 1);
+});
+
+test("relocateArchived moves folders whose location disagrees with their archived flag; dry run moves nothing", () => {
+  const root = tempVacanciesDir();
+  const mk = (slug: string, archived: boolean, under = root) => {
+    fs.mkdirSync(path.join(under, slug), { recursive: true });
+    fs.writeFileSync(path.join(under, slug, "record.yaml"), yaml.dump({ slug, archived }));
+  };
+  mk("old-a", true);
+  mk("live-b", false);
+  mk("back-c", false, path.join(root, "_archive"));
+
+  const dry = relocateArchived(root, false);
+  assert.deepEqual(dry.moved.map((m) => m.slug).sort(), ["back-c", "old-a"]);
+  assert.equal(fs.existsSync(path.join(root, "old-a")), true, "dry run moves nothing");
+
+  relocateArchived(root, true);
+  assert.equal(fs.existsSync(path.join(root, "_archive", "old-a", "record.yaml")), true);
+  assert.equal(fs.existsSync(path.join(root, "back-c", "record.yaml")), true);
+  assert.equal(fs.existsSync(path.join(root, "live-b", "record.yaml")), true);
+  assert.deepEqual(relocateArchived(root, true).moved, [], "idempotent");
+});
+
+test("relocateArchived reports a destination that already exists instead of overwriting it", () => {
+  const root = tempVacanciesDir();
+  for (const dir of [path.join(root, "dup-a"), path.join(root, "_archive", "dup-a")]) {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "record.yaml"), yaml.dump({ slug: "dup-a", archived: true }));
+  }
+  const result = relocateArchived(root, true);
+  assert.deepEqual(result.conflicts.map((c) => c.slug), ["dup-a"]);
+  assert.equal(fs.existsSync(path.join(root, "dup-a", "record.yaml")), true, "left untouched");
+});
+
+test("upsertVacancy re-finds a posting whose folder name predates a company correction instead of forking a duplicate", () => {
+  const root = tempVacanciesDir();
+  const ids = { postingId: "aaaabbbbccccdddd", contentId: "1111222233334444", dataDir: root };
+  // Company was "?" at first (Djinni gave none), so the slug came out title-only.
+  const first = upsertVacancy({ ...ids, company: "?", title: "Group Engineering Manager", postingText: "Lead teams." });
+  const second = upsertVacancy({ ...ids, company: "JustMarkets Tech", title: "Group Engineering Manager" });
+  assert.equal(second.slug, first.slug);
+  assert.equal(fs.readdirSync(root).filter((n) => fs.statSync(path.join(root, n)).isDirectory()).length, 1);
 });

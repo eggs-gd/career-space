@@ -14,6 +14,7 @@ import MarkdownIt from "markdown-it";
 import markdownItFootnote from "markdown-it-footnote";
 import { REPO_ROOT } from "./repo_paths";
 import { formatCvMarkdown } from "./markdown_normalize";
+import { opportunityDir } from "./opportunity_dirs";
 import { vacancyDir as defaultVacancyDir } from "./vacancy_store";
 import { matchesLocalKeywords } from "./scout_prefilter";
 
@@ -594,7 +595,7 @@ export function renderEngagementsMd(engagements: Rec[]): string {
  * (local keywords, location-exception, track label, CV badge). */
 export function renderEngagementsHtml(engagements: Rec[], opts: { title?: string; engagementDirFn?: (slug: string) => string } = {}): string {
   const title = opts.title ?? "Engagements board";
-  const engagementDirFn = opts.engagementDirFn ?? ((slug: string) => path.join(REPO_ROOT, "data", "engagements", slug));
+  const engagementDirFn = opts.engagementDirFn ?? ((slug: string) => opportunityDir(path.join(REPO_ROOT, "data", "engagements"), slug));
 
   const byStatus = new Map<string, Rec[]>();
   for (const o of engagements) {

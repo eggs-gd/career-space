@@ -6,6 +6,7 @@ import { parseArgs } from "util";
 import { isLocationEligibilityStatus } from "./eligibility";
 import { TRACK_KIND_FALLBACK, TRACK_KIND_PRIMARY, loadScoutConfig } from "./scout_domain";
 import { FEED_FETCHERS, PER_COMPANY_FETCHERS } from "./scout_sources";
+import { ARCHIVE_DIRNAME, listOpportunityDirs } from "./opportunity_dirs";
 import { REPO_ROOT } from "./repo_paths";
 import { VALID_STATUSES } from "./vacancy_store";
 
@@ -129,6 +130,19 @@ function validateSources(dataDir: string, issues: ValidationIssue[]): void {
   }
 }
 
+/** A record's `archived` flag and its folder's location (`_archive/` or not) must agree; the fix is
+ * `relocate-archived --write` (or toggling the flag via `set-archived`). */
+function checkArchivePlacement(kind: "vacancy" | "engagement", folder: string, filePath: string, record: Record<string, any>, issues: ValidationIssue[]): void {
+  const inArchive = path.basename(path.dirname(folder)) === ARCHIVE_DIRNAME;
+  const archived = record.archived === true;
+  if (archived !== inArchive) {
+    const where = archived ? "is archived but not in _archive/" : "is in _archive/ but not archived";
+    issues.push(
+      issue("warning", `${kind}_archive_placement`, filePath, `Record ${where}; run \`node scripts/dist/${kind === "vacancy" ? "vacancy_store" : "engagement_store"}.js relocate-archived --write\`.`)
+    );
+  }
+}
+
 function validateVacancyRecord(folder: string, filePath: string, issues: ValidationIssue[]): void {
   const record = loadYaml(filePath, issues);
   if (record === null) return;
@@ -137,6 +151,7 @@ function validateVacancyRecord(folder: string, filePath: string, issues: Validat
   if (record.slug !== slug) {
     issues.push(issue("error", "vacancy_slug_mismatch", filePath, `record slug must match folder name ${slug}.`));
   }
+  checkArchivePlacement("vacancy", folder, filePath, record, issues);
   for (const required of ["posting_id", "content_id", "company", "title", "status", "status_history"]) {
     if (!(required in record)) {
       issues.push(issue("error", "vacancy_required_key", filePath, `record.yaml missing ${required}.`));
@@ -170,7 +185,16 @@ function validateVacancyRecord(folder: string, filePath: string, issues: Validat
   }
 
   if (!fs.existsSync(path.join(folder, "posting.md"))) {
-    issues.push(issue("error", "vacancy_missing_posting", path.join(folder, "posting.md"), "Vacancy folder must contain posting.md."));
+    // A record imported from an earlier tool never had its posting text captured -- can't be recovered.
+    const imported = typeof record.imported_from === "string";
+    issues.push(
+      issue(
+        imported ? "warning" : "error",
+        "vacancy_missing_posting",
+        path.join(folder, "posting.md"),
+        imported ? "Imported record has no posting.md (the posting text was never captured)." : "Vacancy folder must contain posting.md."
+      )
+    );
   }
   validateCommunicationFile(folder, issues);
 }
@@ -178,9 +202,7 @@ function validateVacancyRecord(folder: string, filePath: string, issues: Validat
 function validateVacancies(dataDir: string, issues: ValidationIssue[]): void {
   const vacanciesDir = path.join(dataDir, "vacancies");
   if (!fs.existsSync(vacanciesDir)) return;
-  for (const entry of fs.readdirSync(vacanciesDir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const folder = path.join(vacanciesDir, entry.name);
+  for (const folder of listOpportunityDirs(vacanciesDir)) {
     const record = path.join(folder, "record.yaml");
     if (!fs.existsSync(record)) {
       issues.push(issue("error", "vacancy_missing_record", record, "Vacancy folder must contain record.yaml."));
@@ -200,6 +222,7 @@ function validateEngagementRecord(folder: string, filePath: string, issues: Vali
   if (record.slug !== slug) {
     issues.push(issue("error", "engagement_slug_mismatch", filePath, `record slug must match folder name ${slug}.`));
   }
+  checkArchivePlacement("engagement", folder, filePath, record, issues);
   for (const required of ["title", "status", "status_history"]) {
     if (!(required in record)) {
       issues.push(issue("error", "engagement_required_key", filePath, `record.yaml missing ${required}.`));
@@ -243,9 +266,7 @@ function validateCommunicationFile(folder: string, issues: ValidationIssue[]): v
 function validateEngagements(dataDir: string, issues: ValidationIssue[]): void {
   const engagementsDir = path.join(dataDir, "engagements");
   if (!fs.existsSync(engagementsDir)) return;
-  for (const entry of fs.readdirSync(engagementsDir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const folder = path.join(engagementsDir, entry.name);
+  for (const folder of listOpportunityDirs(engagementsDir)) {
     const record = path.join(folder, "record.yaml");
     if (!fs.existsSync(record)) {
       issues.push(issue("error", "engagement_missing_record", record, "Engagement folder must contain record.yaml."));

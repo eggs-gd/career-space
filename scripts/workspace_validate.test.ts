@@ -161,3 +161,42 @@ test("validateWorkspace validates data/engagements/ records (leaner than a vacan
     assert.ok(codes.includes(c), `expected ${c} in ${JSON.stringify(codes)}`);
   }
 });
+
+test("validateWorkspace validates records inside _archive/ and warns when location and archived flag disagree", () => {
+  const dataDir = tempDataDir();
+  writeYaml(path.join(dataDir, "config.yaml"), { shared: { languages: ["English"] } });
+  const slug = writeValidVacancy(dataDir);
+  const active = path.join(dataDir, "vacancies", slug);
+
+  // Archived and in _archive/: valid, no warning, and `_archive` itself isn't read as a vacancy.
+  const archivedDir = path.join(dataDir, "vacancies", "_archive", slug);
+  fs.mkdirSync(path.dirname(archivedDir), { recursive: true });
+  fs.renameSync(active, archivedDir);
+  const rec = yaml.load(fs.readFileSync(path.join(archivedDir, "record.yaml"), "utf-8")) as Record<string, unknown>;
+  writeYaml(path.join(archivedDir, "record.yaml"), { ...rec, archived: true });
+  const ok = validateWorkspace({ dataDir });
+  assert.equal(ok.ok, true);
+  assert.deepEqual(ok.issues.map((i) => i.code), []);
+
+  // Flag says active but the folder is in _archive/: a warning pointing at relocate-archived.
+  writeYaml(path.join(archivedDir, "record.yaml"), { ...rec, archived: false });
+  const mismatch = validateWorkspace({ dataDir });
+  assert.deepEqual(mismatch.issues.map((i) => i.code), ["vacancy_archive_placement"]);
+  assert.match(mismatch.issues[0]!.message, /relocate-archived --write/);
+});
+
+test("validateWorkspace only warns about a missing posting.md on an imported record", () => {
+  const dataDir = tempDataDir();
+  writeYaml(path.join(dataDir, "config.yaml"), { shared: { languages: ["English"] } });
+  const slug = writeValidVacancy(dataDir);
+  const folder = path.join(dataDir, "vacancies", slug);
+  fs.unlinkSync(path.join(folder, "posting.md"));
+  const plain = validateWorkspace({ dataDir });
+  assert.equal(plain.ok, false);
+
+  const rec = yaml.load(fs.readFileSync(path.join(folder, "record.yaml"), "utf-8")) as Record<string, unknown>;
+  writeYaml(path.join(folder, "record.yaml"), { ...rec, imported_from: "career-wizard" });
+  const imported = validateWorkspace({ dataDir });
+  assert.equal(imported.ok, true);
+  assert.deepEqual(imported.issues.map((i) => [i.severity, i.code]), [["warning", "vacancy_missing_posting"]]);
+});
