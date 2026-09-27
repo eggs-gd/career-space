@@ -67,6 +67,9 @@ trap and the rule -- not the story.
   or caps to spread the distribution -- calibrate against whether the top of the ranking holds up
   when a human reads the fitment, and change `score_fit.ts` only when a mis-rank traces to the
   formula, not to one model judgment.
+- `record.source` is one canonical discovery channel (`djinni`, `linkedin`, `recruiter` = they reached out first, `manual`, ...),
+  never free text: `upsertVacancy` runs it through `normalizeSource` and keeps the original wording in
+  `source_detail`. Group on `source`, read `source_detail` for the story.
 - `record_scout_outcomes` candidate ids are both-or-neither (one alone throws). On the no-ids
   path `recordScoutOutcome` passes `undefined` through to `upsertVacancy` (not the computed pair)
   so the record gets `id_source: manual` and still merges onto an existing company+title record

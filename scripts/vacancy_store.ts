@@ -13,6 +13,7 @@ import { parseArgs } from "util";
 import { Eligibility, isLocationEligibilityStatus, normalizeEligibility } from "./eligibility";
 import { listOpportunityDirs, moveToHome, opportunityDir, relocateArchived } from "./opportunity_dirs";
 import * as postingIds from "./posting_ids";
+import { normalizeSource } from "./source_channel";
 import { REPO_ROOT } from "./repo_paths";
 import { Assessment, evaluate, persistFitment } from "./score_fit";
 
@@ -447,7 +448,11 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   });
   if (opts.location) record.location = opts.location;
   if (opts.remote !== undefined) record.remote = opts.remote;
-  if (opts.source) record.source = opts.source;
+  if (opts.source) {
+    const { source, detail } = normalizeSource(opts.source);
+    record.source = source;
+    if (detail) record.source_detail = detail;
+  }
   if (opts.postedAt) record.posted_at = opts.postedAt;
   if (opts.trackLabel) record.track_label = opts.trackLabel;
   if (opts.fitScore !== undefined || opts.fitCategory !== undefined || opts.fitReason !== undefined) {

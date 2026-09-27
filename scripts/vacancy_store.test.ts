@@ -276,3 +276,13 @@ test("upsertVacancy re-finds a posting whose folder name predates a company corr
   assert.equal(second.slug, first.slug);
   assert.equal(fs.readdirSync(root).filter((n) => fs.statSync(path.join(root, n)).isDirectory()).length, 1);
 });
+
+test("upsertVacancy stores a canonical source and keeps free text in source_detail", () => {
+  const root = tempVacanciesDir();
+  const rec = upsertVacancy({ dataDir: root, company: "Acme", title: "Staff Engineer", postingText: "x", source: "LinkedIn Job Alert / Greenhouse" });
+  assert.equal(rec.source, "linkedin");
+  assert.equal(rec.source_detail, "LinkedIn Job Alert / Greenhouse");
+  const scout = upsertVacancy({ dataDir: root, company: "Beta", title: "Head of Eng", postingText: "y", source: "djinni" });
+  assert.equal(scout.source, "djinni");
+  assert.equal("source_detail" in scout, false);
+});
