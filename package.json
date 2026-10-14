@@ -6,7 +6,7 @@
   "description": "Deterministic scripts backing the career-space MCP server -- rendering, fitment scoring, vacancy storage, scout fetch. See AGENTS.md.",
   "type": "commonjs",
   "engines": {
-    "node": ">=18.17.0"
+    "node": ">=22.12.0"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

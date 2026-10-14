@@ -10,7 +10,7 @@ If the user sent you this page, they want career-space installed and started. Yo
 2. Read `AGENTS.md` in the clone and follow it. It is the canonical instruction file.
 3. Start onboarding with the user (`playbooks/onboard.md`). It builds their Master CV and strategy from a conversation.
 
-Needs Node 18.17 or newer for the bundled MCP server, which installs itself on first use. Never commit anything under `data/`.
+Needs Node 22.12 or newer for the bundled MCP server, which installs itself on first use. Never commit anything under `data/`.
 
 ## Links
 

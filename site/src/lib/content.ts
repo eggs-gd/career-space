@@ -148,3 +148,64 @@ export const alternatives: Alternative[] = [
 
 export const compareNote =
 	'Categories, not product reviews: individual tools vary. career-ops was read in September 2026; the other categories are described in general terms. The scouting approach was inspired by jobhunt-agent.';
+
+export const meta = {
+	title: 'career-space: a job-search workspace for your coding agent',
+	description:
+		'A personal career consultant inside Claude Code, Codex, Gemini CLI or Cursor: positioning and strategy, tailored CVs and cover letters, public profiles, and a scout that collects vacancies from job boards. Your data stays local.'
+};
+
+export const copy = {
+	skip: 'Skip to content',
+	brand: 'career-space',
+	navLabel: 'Sections',
+	nav: [
+		{ label: 'Why', href: '#why' },
+		{ label: 'What it does', href: '#what' },
+		{ label: 'How', href: '#how' },
+		{ label: 'Compare', href: '#compare' }
+	],
+	github: 'GitHub',
+	hero: {
+		title: 'A job search you run by talking to your coding agent.',
+		lead: 'career-space is a personal career consultant that lives in your coding agent. It helps you work out your professional positioning and strategy, turns them into a CV, cover letters and public profiles, and runs a scout that collects vacancies from job boards and company ATS pages and judges each one against you. No server, no app, no account.',
+		primary: 'View on GitHub',
+		secondary: 'Why it exists'
+	},
+	start: {
+		heading: 'Get started',
+		agent: {
+			title: 'Hand it to your agent',
+			text: 'Paste this into Claude Code, Codex CLI, Gemini CLI or Cursor. The agent reads this page and sets everything up by itself, then pulls you into the conversation.',
+			copyLabel: 'Copy the prompt for your agent',
+			stepsIntro: 'It needs an agent that can run shell commands. It:'
+		},
+		manual: {
+			title: 'Or do it yourself',
+			text: 'Clone it, open the folder in your agent and say anything. It explains itself and walks you through setup.',
+			copyLabel: 'Copy the clone commands',
+			node: 'Needs Node 22.12 or newer for the bundled MCP server; it installs itself on first use.'
+		}
+	},
+	say: {
+		heading: 'Then, in plain language',
+		note: 'Close paraphrases work. There is no syntax to memorize.'
+	},
+	sections: {
+		why: 'Why it exists',
+		what: 'What it does',
+		how: {
+			title: 'How it works',
+			intro: 'Each level sets the frame for the next, from the ten-year direction down to the daily pipeline.'
+		},
+		limits: 'What it deliberately does not do',
+		compare: {
+			title: 'Compared with the alternatives',
+			intro:
+				'Most of these start from a different place: the feed, the form, the document. Scroll through them, or use the arrows.'
+		}
+	},
+	footer: {
+		text: 'career-space is open source under Apache-2.0. Source, issues and the contribution rules:'
+	}
+};

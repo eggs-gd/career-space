@@ -4,77 +4,66 @@
 	import {
 		REPO_URL,
 		SITE_URL,
-		alternatives,
-		capabilities,
 		agentPrompt,
 		agentSteps,
-		cloneCommand,
-		forAgents,
-		compareNote,
-		flow,
-		limits,
-		moreNote,
+		alternatives,
 		askMore,
+		capabilities,
+		cloneCommand,
+		compareNote,
+		copy,
+		flow,
+		forAgents,
+		limits,
+		meta,
+		moreNote,
 		origin,
 		sayThis
 	} from '#lib/content.ts';
-
-	const title = 'career-space: a job-search workspace for your coding agent';
-	const description =
-		'A personal career consultant inside Claude Code, Codex, Gemini CLI or Cursor: positioning and strategy, tailored CVs and cover letters, public profiles, and a scout that collects vacancies from job boards. Your data stays local.';
 </script>
 
 <svelte:head>
-	<title>{title}</title>
-	<meta name="description" content={description} />
+	<title>{meta.title}</title>
+	<meta name="description" content={meta.description} />
 	<link rel="canonical" href={SITE_URL} />
 	<meta property="og:type" content="website" />
-	<meta property="og:title" content={title} />
-	<meta property="og:description" content={description} />
+	<meta property="og:title" content={meta.title} />
+	<meta property="og:description" content={meta.description} />
 	<meta property="og:url" content={SITE_URL} />
 	<meta name="twitter:card" content="summary" />
 </svelte:head>
 
-<a class="skip-link" href="#main">Skip to content</a>
+<a class="skip-link" href="#main">{copy.skip}</a>
 
 <header class="top">
 	<div class="wrap bar">
-		<a class="brand" href="/">career-space</a>
-		<nav aria-label="Sections">
-			<a href="#why">Why</a>
-			<a href="#what">What it does</a>
-			<a href="#how">How</a>
-			<a href="#compare">Compare</a>
-			<a class="gh" href={REPO_URL}>GitHub</a>
+		<a class="brand" href="/">{copy.brand}</a>
+		<nav aria-label={copy.navLabel}>
+			{#each copy.nav as item (item.href)}
+				<a href={item.href}>{item.label}</a>
+			{/each}
+			<a class="gh" href={REPO_URL}>{copy.github}</a>
 		</nav>
 	</div>
 </header>
 
 <main id="main">
 	<section class="hero wrap">
-		<h1>A job search you run by talking to your coding agent.</h1>
-		<p class="lead">
-			career-space is a personal career consultant that lives in your coding agent. It helps you work out your
-			professional positioning and strategy, turns them into a CV, cover letters and public profiles, and runs a scout
-			that collects vacancies from job boards and company ATS pages and judges each one against you. No server, no app,
-			no account.
-		</p>
+		<h1>{copy.hero.title}</h1>
+		<p class="lead">{copy.hero.lead}</p>
 		<div class="actions">
-			<a class="button primary" href={REPO_URL}>View on GitHub</a>
-			<a class="button" href="#why">Why it exists</a>
+			<a class="button primary" href={REPO_URL}>{copy.hero.primary}</a>
+			<a class="button" href="#why">{copy.hero.secondary}</a>
 		</div>
 
 		<div class="start">
-			<h2 class="eyebrow">Get started</h2>
+			<h2 class="eyebrow">{copy.start.heading}</h2>
 			<div class="paths">
 				<div class="path featured">
-					<h3>Hand it to your agent</h3>
-					<p>
-						Paste this into Claude Code, Codex CLI, Gemini CLI or Cursor. The agent reads this page and sets everything up
-						by itself, then pulls you into the conversation.
-					</p>
-					<CopyBlock text={agentPrompt} label="Copy the prompt for your agent" />
-					<p class="small">It needs an agent that can run shell commands. It:</p>
+					<h3>{copy.start.agent.title}</h3>
+					<p>{copy.start.agent.text}</p>
+					<CopyBlock text={agentPrompt} label={copy.start.agent.copyLabel} />
+					<p class="small">{copy.start.agent.stepsIntro}</p>
 					<ol class="steps">
 						{#each agentSteps as step}
 							<li>{step}</li>
@@ -82,28 +71,28 @@
 					</ol>
 				</div>
 				<div class="path">
-					<h3>Or do it yourself</h3>
-					<p>Clone it, open the folder in your agent and say anything. It explains itself and walks you through setup.</p>
-					<CopyBlock text={cloneCommand} label="Copy the clone commands" />
-					<p class="small">Needs Node 18.17 or newer for the bundled MCP server; it installs itself on first use.</p>
+					<h3>{copy.start.manual.title}</h3>
+					<p>{copy.start.manual.text}</p>
+					<CopyBlock text={cloneCommand} label={copy.start.manual.copyLabel} />
+					<p class="small">{copy.start.manual.node}</p>
 				</div>
 			</div>
 			<p class="small agents">{forAgents}</p>
 		</div>
 
 		<div class="say">
-			<h2 class="eyebrow">Then, in plain language</h2>
+			<h2 class="eyebrow">{copy.say.heading}</h2>
 			<ul class="pills">
 				{#each sayThis as phrase}
 					<li><q>{phrase}</q></li>
 				{/each}
 			</ul>
-			<p class="small">Close paraphrases work. There is no syntax to memorize.</p>
+			<p class="small">{copy.say.note}</p>
 		</div>
 	</section>
 
 	<section id="why" class="section wrap">
-		<h2>Why it exists</h2>
+		<h2>{copy.sections.why}</h2>
 		<div class="prose">
 			{#each origin as paragraph}
 				<p>{paragraph}</p>
@@ -112,7 +101,7 @@
 	</section>
 
 	<section id="what" class="section wrap">
-		<h2>What it does</h2>
+		<h2>{copy.sections.what}</h2>
 		<ol class="cards">
 			{#each capabilities as item, index (item.title)}
 				<li>
@@ -133,8 +122,8 @@
 	</section>
 
 	<section id="how" class="section wrap">
-		<h2>How it works</h2>
-		<p class="intro">Each level sets the frame for the next, from the ten-year direction down to the daily pipeline.</p>
+		<h2>{copy.sections.how.title}</h2>
+		<p class="intro">{copy.sections.how.intro}</p>
 		<ol class="flow">
 			{#each flow as step, index (step.title)}
 				<li>
@@ -147,7 +136,7 @@
 	</section>
 
 	<section id="limits" class="section wrap">
-		<h2>What it deliberately does not do</h2>
+		<h2>{copy.sections.limits}</h2>
 		<ul class="limits">
 			{#each limits as line}
 				<li>{line}</li>
@@ -156,11 +145,8 @@
 	</section>
 
 	<section id="compare" class="section wrap">
-		<h2>Compared with the alternatives</h2>
-		<p class="intro">
-			Most of these start from a different place: the feed, the form, the document. Scroll through them, or use the
-			arrows.
-		</p>
+		<h2>{copy.sections.compare.title}</h2>
+		<p class="intro">{copy.sections.compare.intro}</p>
 		<CompareRow items={alternatives} />
 		<p class="small note">{compareNote}</p>
 	</section>
@@ -169,7 +155,7 @@
 <footer class="foot">
 	<div class="wrap">
 		<p>
-			career-space is open source under Apache-2.0. Source, issues and the contribution rules:
+			{copy.footer.text}
 			<a href={REPO_URL}>{REPO_URL}</a>
 		</p>
 	</div>
