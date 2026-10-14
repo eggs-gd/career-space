@@ -758,11 +758,7 @@ export async function writePdf(html: string, pdfPath: string): Promise<boolean> 
     return false;
   }
   try {
-    // `--disable-crash-reporter`/`--disable-breakpad`: puppeteer's bundled Chromium is only
-    // ad-hoc signed, so on macOS `browser.close()` below tears its helper processes down with
-    // SIGABRT instead of a clean exit -- without these flags every PDF render pops a "Google
-    // Chrome for Testing quit unexpectedly" dialog per helper process. Cosmetic (the PDF is
-    // already written by then), but noisy enough to disable outright.
+    // macOS: without these flags every `browser.close()` pops a crash dialog per helper process.
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--disable-crash-reporter", "--disable-breakpad"],

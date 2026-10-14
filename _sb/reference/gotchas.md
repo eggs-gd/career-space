@@ -82,3 +82,10 @@ trap and the rule -- not the story.
   independent judgment calls -- a long-term role can be either shape, don't conflate them. Never
   force-create `targeting-plan.md` just to write a cover letter; reuse it only when it already
   exists.
+- Puppeteer's bundled Chromium is only ad-hoc signed: on macOS `browser.close()` ends its helpers
+  with SIGABRT and every PDF render pops a "quit unexpectedly" dialog per helper. Keep
+  `--disable-crash-reporter --disable-breakpad` in `writePdf`'s launch args.
+- `.gitignore`'s `data/` matches a directory of that name at any depth -- never name a folder
+  `data` under `site/` (or anywhere else tracked).
+- `vite preview` snapshots its file list at start: after `npm run build` restart it, or the new
+  hashed assets 404 and the page renders unstyled.

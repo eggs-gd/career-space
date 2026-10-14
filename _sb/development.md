@@ -1,7 +1,7 @@
 # Developing career-space itself -- tooling and verification
 
 Use this only in Developer mode, when changing `scripts/`, `playbooks/`, `policies/`, `examples/`,
-`reference/`, or `_sb/`. Operator-facing playbooks do not read this file. For the `scripts/`+MCP
+`reference/`, `site/`, or `_sb/`. Operator-facing playbooks do not read this file. For the `scripts/`+MCP
 reference itself (what each script does, MCP vs CLI, setup), see `_sb/reference/runtime.md`.
 
 ## Developer MCP tools
@@ -24,6 +24,7 @@ Use the smallest check that covers the change:
 - `node scripts/dist/workspace_validate.js` -- after changing `data/` layout rules or validators.
 - `node scripts/dist/rescore.js` (dry run) -- after changing `score_fit.ts`'s formula or caps, to
   see the blast radius across saved `fitment.json` records before deciding to `--write`.
+- `cd site && npm ci && npm run check && npm run build` -- after changing `site/`.
 - `git diff --check` -- after any tracked-file edit.
 - Manual doc review -- after playbook, policy, example, reference, docs, or `_sb/` edits:
   check current-state wording, role boundaries, cited file paths, and whether a fresh agent can
