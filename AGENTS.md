@@ -25,7 +25,7 @@ to the candidate, not approximate from memory. The shipped `reference/surfaces/*
 examples of the mechanism, not a whitelist — a surface with no canonical file is defined
 per-candidate instead (`playbooks/surface-define.md`).
 
-**Everything in this repo except `_sb/` and `agent-contract/` is for execution — what you read and
+**Everything in this repo except `_sb/`, `agent-contract/` and `site/` is for execution — what you read and
 act on to run a playbook. `_sb/` is for development**: this repo's own roadmap and status
 (`roadmap.md`), the entity model and its invariant (`concept.md`), the implementation map
 (`architecture.md`), the `scripts/`+MCP reference (`reference/runtime.md`), dev tooling and
@@ -36,6 +36,9 @@ asks about this repo's own roadmap or development status.
 **`agent-contract/` is a developer-only regression suite** -- test prompts that check whether a
 fresh agent derives correct behavior from this file, not whether the code works; see its own
 `README.md`. Not something a playbook reads, and not something to run as part of one.
+**`site/` is the public landing page** (SvelteKit, prerendered static), published to
+`career.eggs.gd` by `.github/workflows/site.yml`. Not read by a playbook, holds no candidate data;
+its copy lives in `site/src/lib/content.ts`.
 
 `jobhunt-agent` (adjacent repo) is reference only, never a dependency and never imported
 directly. `scripts/scout_sources.ts`'s fetchers target the same public ATS/board APIs (public

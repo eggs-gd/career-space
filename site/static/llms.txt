@@ -1,0 +1,19 @@
+# career-space
+
+> A personal career consultant that lives in your coding agent: professional positioning and strategy, tailored CVs and cover letters, public profiles, and a scout that collects vacancies from job boards. Runs through conversation; no server, no app, no account. Personal data stays in a gitignored `data/` folder on the user's machine.
+
+## Set it up for the user
+
+If the user sent you this page, they want career-space installed and started. You need a shell.
+
+1. Ask where to put it, then clone: `git clone https://github.com/eggs-gd/career-space.git`
+2. Read `AGENTS.md` in the clone and follow it. It is the canonical instruction file.
+3. Start onboarding with the user (`playbooks/onboard.md`). It builds their Master CV and strategy from a conversation.
+
+Needs Node 22.12 or newer for the bundled MCP server, which installs itself on first use. Never commit anything under `data/`.
+
+## Links
+
+- [Source](https://github.com/eggs-gd/career-space)
+- [AGENTS.md](https://github.com/eggs-gd/career-space/blob/main/AGENTS.md)
+- [README](https://github.com/eggs-gd/career-space/blob/main/README.md)

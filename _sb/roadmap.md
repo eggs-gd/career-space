@@ -90,6 +90,8 @@ and why each one was built lives in git history, not here.
       cheat sheet. Re-runs for later rounds keep the stable blocks and regenerate the
       round-sensitive ones. No voice/mock infra, no persistent story bank, no post-interview
       answer-grading -- design rationale kept in local notes.
+- [x] Landing page -- `site/` (SvelteKit, static), deployed to `career.eggs.gd` by
+      `.github/workflows/site.yml` on pushes touching `site/`. Copy in `site/src/lib/content.ts`.
 
 ## Next steps, in order
 
