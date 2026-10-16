@@ -87,7 +87,9 @@ to describing the system itself:
   candidate configured — no scraping, no login-walled boards. It's manually triggered; there's no
   background scheduler baked into this repo (an agent's own scheduling nicety, if it has one, can
   sit on top of this, but that's not something career-space itself provides).
-- No auto-submit. Nothing here fills out or clicks an application form.
+- No auto-submit. career-space ships no tool that fills out or clicks an application form. An
+  agent with its own browser tools may be able to; that is the agent's capability, not something
+  career-space provides or controls.
 - Needs a coding agent already running. This isn't a standalone app.
 
 ## Step 4 — write it

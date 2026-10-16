@@ -1,19 +1,26 @@
 <script lang="ts">
 	import CompareRow from '#lib/CompareRow.svelte';
 	import CopyBlock from '#lib/CopyBlock.svelte';
+	import FitCard from '#lib/FitCard.svelte';
+	import ProfileCard from '#lib/ProfileCard.svelte';
 	import {
 		REPO_URL,
 		SITE_URL,
 		agentPrompt,
 		agentSteps,
+		agentSwitch,
 		alternatives,
 		askMore,
-		capabilities,
+		boardAlt,
+		chatPoints,
 		cloneCommand,
 		compareNote,
 		copy,
+		demoNote,
+		demos,
 		flow,
 		forAgents,
+		journey,
 		limits,
 		meta,
 		moreNote,
@@ -51,43 +58,60 @@
 	<section class="hero wrap">
 		<h1>{copy.hero.title}</h1>
 		<p class="lead">{copy.hero.lead}</p>
+		<ul class="pillars">
+			{#each copy.hero.pillars as pillar}
+				<li>{pillar}</li>
+			{/each}
+		</ul>
 		<div class="actions">
 			<a class="button primary" href={REPO_URL}>{copy.hero.primary}</a>
-			<a class="button" href="#why">{copy.hero.secondary}</a>
+			<a class="button" href="#start">{copy.hero.secondary}</a>
+		</div>
+	</section>
+
+	<section id="what" class="section wrap">
+		<h2>{copy.sections.what}</h2>
+		<p class="intro">{demoNote}</p>
+
+		<div class="demos">
+			<article class="demo">
+				<p class="eyebrow">{demos[0].kicker}</p>
+				<h3>{demos[0].title}</h3>
+				<p class="demo-text">{demos[0].text}</p>
+				<div class="artifact narrow"><ProfileCard /></div>
+			</article>
+
+			<article class="demo">
+				<p class="eyebrow">{demos[1].kicker}</p>
+				<h3>{demos[1].title}</h3>
+				<p class="demo-text">{demos[1].text}</p>
+				<div class="artifact narrow"><FitCard /></div>
+			</article>
+
+			<article class="demo">
+				<p class="eyebrow">{demos[2].kicker}</p>
+				<h3>{demos[2].title}</h3>
+				<p class="demo-text">{demos[2].text}</p>
+				<div class="artifact">
+					<img
+						src="/demo/board.webp"
+						alt={boardAlt}
+						width="1770"
+						height="1200"
+						loading="lazy"
+						decoding="async"
+					/>
+				</div>
+			</article>
 		</div>
 
-		<div class="start">
-			<h2 class="eyebrow">{copy.start.heading}</h2>
-			<div class="paths">
-				<div class="path featured">
-					<h3>{copy.start.agent.title}</h3>
-					<p>{copy.start.agent.text}</p>
-					<CopyBlock text={agentPrompt} label={copy.start.agent.copyLabel} />
-					<p class="small">{copy.start.agent.stepsIntro}</p>
-					<ol class="steps">
-						{#each agentSteps as step}
-							<li>{step}</li>
-						{/each}
-					</ol>
-				</div>
-				<div class="path">
-					<h3>{copy.start.manual.title}</h3>
-					<p>{copy.start.manual.text}</p>
-					<CopyBlock text={cloneCommand} label={copy.start.manual.copyLabel} />
-					<p class="small">{copy.start.manual.node}</p>
-				</div>
-			</div>
-			<p class="small agents">{forAgents}</p>
-		</div>
-
-		<div class="say">
-			<h2 class="eyebrow">{copy.say.heading}</h2>
+		<div class="more">
+			<p>{moreNote}</p>
 			<ul class="pills">
-				{#each sayThis as phrase}
+				{#each askMore as phrase}
 					<li><q>{phrase}</q></li>
 				{/each}
 			</ul>
-			<p class="small">{copy.say.note}</p>
 		</div>
 	</section>
 
@@ -100,22 +124,34 @@
 		</div>
 	</section>
 
-	<section id="what" class="section wrap">
-		<h2>{copy.sections.what}</h2>
-		<ol class="cards">
-			{#each capabilities as item, index (item.title)}
-				<li>
-					<span class="num">{String(index + 1).padStart(2, '0')}</span>
-					<h3>{item.title}</h3>
-					<p>{item.text}</p>
-				</li>
+	<section id="journey" class="section wrap">
+		<h2>{copy.sections.journey}</h2>
+		<ol class="journey">
+			{#each journey as step}
+				<li>{step}</li>
 			{/each}
 		</ol>
-		<div class="more">
-			<p>{moreNote}</p>
+	</section>
+
+	<section id="chat" class="section wrap">
+		<h2>{copy.sections.chat.title}</h2>
+		<p class="intro">{copy.sections.chat.intro}</p>
+		<ul class="points">
+			{#each chatPoints as point (point.title)}
+				<li>
+					<h3>{point.title}</h3>
+					<p>{point.text}</p>
+				</li>
+			{/each}
+		</ul>
+
+		<div class="switch">
+			<h3>{agentSwitch.title}</h3>
+			<p>{agentSwitch.text}</p>
+			<p class="small">For example:</p>
 			<ul class="pills">
-				{#each askMore as phrase}
-					<li><q>{phrase}</q></li>
+				{#each agentSwitch.example as line}
+					<li>{line}</li>
 				{/each}
 			</ul>
 		</div>
@@ -133,6 +169,40 @@
 				</li>
 			{/each}
 		</ol>
+	</section>
+
+	<section id="start" class="section wrap">
+		<h2>{copy.start.heading}</h2>
+		<div class="paths">
+			<div class="path featured">
+				<h3>{copy.start.agent.title}</h3>
+				<p>{copy.start.agent.text}</p>
+				<CopyBlock text={agentPrompt} label={copy.start.agent.copyLabel} />
+				<p class="small">{copy.start.agent.stepsIntro}</p>
+				<ol class="steps">
+					{#each agentSteps as step}
+						<li>{step}</li>
+					{/each}
+				</ol>
+			</div>
+			<div class="path">
+				<h3>{copy.start.manual.title}</h3>
+				<p>{copy.start.manual.text}</p>
+				<CopyBlock text={cloneCommand} label={copy.start.manual.copyLabel} />
+				<p class="small">{copy.start.manual.node}</p>
+			</div>
+		</div>
+		<p class="small agents">{forAgents}</p>
+
+		<div class="say">
+			<h3 class="eyebrow">{copy.say.heading}</h3>
+			<ul class="pills">
+				{#each sayThis as phrase}
+					<li><q>{phrase}</q></li>
+				{/each}
+			</ul>
+			<p class="small">{copy.say.note}</p>
+		</div>
 	</section>
 
 	<section id="limits" class="section wrap">
@@ -257,15 +327,11 @@
 		color: var(--accent-ink);
 	}
 
-	.start {
-		margin-top: clamp(2.5rem, 6vw, 4rem);
-	}
-
 	.paths {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		gap: 1rem;
-		margin-top: 0.75rem;
+		margin-top: 1.5rem;
 	}
 
 	.path {
@@ -369,7 +435,6 @@
 		margin-top: 1.25rem;
 	}
 
-	.cards,
 	.flow {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
@@ -379,7 +444,6 @@
 		list-style: none;
 	}
 
-	.cards li,
 	.flow li {
 		padding: 1.25rem;
 		background: var(--surface);
@@ -387,13 +451,11 @@
 		border-radius: var(--radius);
 	}
 
-	.cards h3,
 	.flow h3 {
 		margin-top: 0.5rem;
 		font-size: 1.05rem;
 	}
 
-	.cards p,
 	.flow p {
 		margin-top: 0.4rem;
 		color: var(--muted);
@@ -436,6 +498,131 @@
 		background: var(--muted);
 	}
 
+
+	.pillars {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem 1.5rem;
+		margin: 1.5rem 0 0;
+		padding: 0;
+		list-style: none;
+		font-weight: 600;
+	}
+
+	.pillars li {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.pillars li::before {
+		content: '';
+		width: 0.6rem;
+		height: 0.6rem;
+		border-radius: 50%;
+		background: var(--accent);
+	}
+
+	.demos {
+		display: grid;
+		gap: clamp(2.5rem, 6vw, 4rem);
+		margin-top: 2.25rem;
+	}
+
+	.demo h3 {
+		font-size: 1.3rem;
+	}
+
+	.demo-text {
+		max-width: var(--measure);
+		margin-top: 0.5rem;
+		color: var(--muted);
+	}
+
+	.artifact {
+		margin-top: 1.25rem;
+	}
+
+	.artifact.narrow {
+		max-width: 44rem;
+	}
+
+	.artifact img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+	}
+
+	.journey {
+		display: grid;
+		gap: 0.9rem;
+		max-width: var(--measure);
+		margin: 1.5rem 0 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: step;
+	}
+
+	.journey li {
+		position: relative;
+		padding-left: 2.6rem;
+		counter-increment: step;
+	}
+
+	.journey li::before {
+		content: counter(step);
+		position: absolute;
+		left: 0;
+		top: 0.05rem;
+		display: grid;
+		place-items: center;
+		width: 1.8rem;
+		height: 1.8rem;
+		border: 1px solid var(--accent);
+		border-radius: 50%;
+		color: var(--accent);
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		font-weight: 600;
+	}
+
+	.points {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.5rem;
+		margin: 1.75rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.points h3,
+	.switch h3 {
+		font-size: 1.05rem;
+	}
+
+	.points p {
+		margin-top: 0.4rem;
+		color: var(--muted);
+		font-size: 0.95rem;
+	}
+
+	.switch {
+		max-width: var(--measure);
+		margin-top: 2.5rem;
+		padding-top: 2rem;
+		border-top: 1px solid var(--border);
+	}
+
+	.switch p {
+		margin-top: 0.4rem;
+	}
+
+	.switch .pills {
+		margin: 0.6rem 0 0;
+	}
+
 	.note {
 		max-width: var(--measure);
 	}
@@ -467,7 +654,7 @@
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
 
-		.cards {
+		.points {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
 		}
 
