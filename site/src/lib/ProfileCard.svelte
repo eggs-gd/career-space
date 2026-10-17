@@ -1,26 +1,39 @@
 <script lang="ts">
-	import { profile } from '#lib/demo.ts';
+	import type { Profile } from '#lib/demo.ts';
+
+	let { profile }: { profile: Profile } = $props();
 </script>
 
 <figure class="card">
+	<p class="surface">{profile.label}</p>
 	<h4>{profile.name}</h4>
 	<p class="headline">{profile.headline}</p>
 	<div class="about">
-		{#each profile.about as paragraph}
+		{#each profile.paragraphs as paragraph}
 			<p>{paragraph}</p>
 		{/each}
 	</div>
-	<figcaption>A generated LinkedIn profile, fictional candidate.</figcaption>
+	<figcaption>A generated {profile.label} profile, fictional candidate.</figcaption>
 </figure>
 
 <style>
 	.card {
+		height: 100%;
 		margin: 0;
 		padding: 1.25rem 1.4rem;
 		background: var(--surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		font-size: 0.95rem;
+	}
+
+	.surface {
+		margin-bottom: 0.6rem;
+		color: var(--accent);
+		font-size: 0.78rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
 	}
 
 	h4 {
