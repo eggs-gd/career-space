@@ -1,6 +1,6 @@
 # career-space
 
-A job-search workspace you run by talking to a coding agent — Claude Code, Codex CLI, Gemini
+A career workspace you run by talking to a coding agent — Claude Code, Codex CLI, Gemini
 CLI, Cursor, or anything similar. There's no server, no app, no account. Open this folder in your
 agent of choice and just say what you want in plain language.
 

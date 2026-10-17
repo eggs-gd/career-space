@@ -1,6 +1,6 @@
 # career-space
 
-> A personal career consultant that lives in your coding agent: professional positioning and strategy, tailored CVs and cover letters, public profiles, and a scout that collects vacancies from job boards. Runs through conversation; no server, no app, no account. Personal data stays in a gitignored `data/` folder on the user's machine.
+> A personal career workspace for the AI agent you already use: explore where your experience can go, shape your positioning and strategy, produce CVs, cover letters and public profiles, and look for work when you are ready (a scout collects vacancies from job boards). Runs through conversation; no server, no app, no account. Personal data stays in a gitignored `data/` folder on the user's machine.
 
 ## Set it up for the user
 
