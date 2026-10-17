@@ -34,7 +34,6 @@ export const boardAlt =
 export interface Step {
 	title: string;
 	meta?: string;
-	text: string;
 }
 
 export interface Point {
@@ -74,8 +73,8 @@ export const copy = {
 	why: {
 		title: 'Why it exists',
 		paragraphs: [
-			'career-space is a personal career workspace that happens to be public: a folder of facts, rules and small scripts that a coding agent reads and acts on. Your data stays in a gitignored folder next to it.',
-			'Most job-search tooling starts from the feed of postings and asks how many it can get through. The hard parts are elsewhere: knowing what you are aiming at, saying it consistently on LinkedIn, Djinni, Upwork and in a CV, and stopping a language model from quietly turning “contributed to” into “led”. The rules it follows are there because a real generation once got them wrong.'
+			'Most job-search tools start from the feed of postings and ask how many you can get through. The hard parts are elsewhere: knowing what you are aiming at, saying it consistently on LinkedIn, Djinni, Upwork and in a CV, and stopping a language model from quietly turning “contributed to” into “led”. The rules it follows are there because a real generation once got them wrong.',
+			'So career-space starts with you. It is a personal career workspace that happens to be public: a folder of facts, rules and small scripts that a coding agent reads and acts on. Your data stays in a gitignored folder next to it.'
 		]
 	},
 
@@ -109,6 +108,10 @@ export const copy = {
 	present: {
 		title: 'Present yourself anywhere',
 		intro: 'One professional story, several presentations. LinkedIn, Djinni, Upwork, a portfolio, a targeted CV and a cover letter each get their own audience and limits, and all start from the same facts, so they do not drift apart.',
+		cvCaption:
+			'A CV targeted to the Brightloop vacancy above, rendered by the tool (PDF too). Fictional candidate.',
+		cvAlt:
+			'A targeted CV for a fictional candidate: summary, experience with the achievements ordered for the target role, and skills.',
 		honesty:
 			'Rules against invented facts and inflated ownership guard every draft. They lower the risk, they do not remove it: read what it writes before you send it.'
 	},
@@ -130,30 +133,13 @@ export const copy = {
 				text: 'No subscription, no account, and no second copy of your professional profile to keep up to date.'
 			}
 		] as Point[],
-		flowTitle: 'How the pieces fit',
+		flowTitle: 'Each level sets the frame for the next',
 		flow: [
-			{
-				title: 'Strategy',
-				meta: '10 years',
-				text: 'Where the career is going, and what you want and will not take on the way.'
-			},
-			{
-				title: 'Positioning',
-				meta: 'the next year',
-				text: 'How you want the market to read you in the near term.'
-			},
-			{
-				title: 'Surfaces',
-				text: 'LinkedIn, Djinni, Upwork, a portfolio: every profile in sync with the others and with the strategy.'
-			},
-			{
-				title: 'Opportunities',
-				text: 'Vacancies, client orders, fractional and part-time work in one pipeline.'
-			},
-			{
-				title: 'Feedback',
-				text: 'The board and the history of communication. Log a reply or reconcile with your inbox, and the status change keeps its reason.'
-			}
+			{ title: 'Strategy', meta: '10 years' },
+			{ title: 'Positioning', meta: 'the next year' },
+			{ title: 'Surfaces' },
+			{ title: 'Opportunities' },
+			{ title: 'Feedback' }
 		] as Step[]
 	},
 
