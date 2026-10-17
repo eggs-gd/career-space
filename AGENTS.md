@@ -38,7 +38,8 @@ fresh agent derives correct behavior from this file, not whether the code works;
 `README.md`. Not something a playbook reads, and not something to run as part of one.
 **`site/` is the public landing page** (SvelteKit, prerendered static), published to
 `career.eggs.gd` by `.github/workflows/site.yml`. Not read by a playbook, holds no candidate data;
-its copy lives in `site/src/lib/content.ts`.
+its copy lives in `site/src/lib/content.ts`, its demo output (fictional candidate from `examples/`) in
+`site/src/lib/demo.ts` and `site/static/demo/`.
 
 `jobhunt-agent` (adjacent repo) is reference only, never a dependency and never imported
 directly. `scripts/scout_sources.ts`'s fetchers target the same public ATS/board APIs (public
