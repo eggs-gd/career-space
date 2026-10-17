@@ -97,7 +97,7 @@ export const storyDialog: Turn[] = [
 		who: 'agent',
 		text: 'Then I will write “designed and built”, not “contributed to”. And “close to zero” dropped payments: what was the starting point?'
 	},
-	{ who: 'you', text: 'A few support tickets a week before. Almost none now.' },
+	{ who: 'you', text: 'A handful of support tickets most months before. Almost none now.' },
 	{
 		who: 'agent',
 		text: 'Noted, with that baseline. Last one: across your jobs, what do people keep pulling you into?'
