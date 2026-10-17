@@ -102,6 +102,10 @@
 			<ProfileCard profile={linkedin} />
 			<ProfileCard profile={upwork} />
 		</div>
+		<figure class="artifact narrow cv">
+			<img src="/demo/cv.webp" alt={copy.present.cvAlt} width="1290" height="1050" loading="lazy" decoding="async" />
+			<figcaption class="small">{copy.present.cvCaption}</figcaption>
+		</figure>
 		<p class="small note">{copy.present.honesty}</p>
 	</section>
 
@@ -118,12 +122,11 @@
 		</ul>
 
 		<h3 class="sub">{copy.context.flowTitle}</h3>
-		<ol class="flow">
+		<ol class="strip">
 			{#each copy.context.flow as step, index (step.title)}
 				<li>
-					<span class="num">{index + 1}{#if step.meta}<span class="meta">&nbsp;· {step.meta}</span>{/if}</span>
-					<h4>{step.title}</h4>
-					<p>{step.text}</p>
+					<span class="num">{index + 1}</span>
+					{step.title}{#if step.meta}<span class="meta">&nbsp;· {step.meta}</span>{/if}
 				</li>
 			{/each}
 		</ol>
@@ -418,6 +421,14 @@
 		max-width: 46rem;
 	}
 
+	.cv {
+		margin-inline: 0;
+	}
+
+	.cv figcaption {
+		margin-top: 0.6rem;
+	}
+
 	.artifact img {
 		display: block;
 		width: 100%;
@@ -464,31 +475,21 @@
 		font-size: 1.05rem;
 	}
 
-	.flow {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 1rem;
-		margin: 1.25rem 0 0;
+	.strip {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		margin: 1rem 0 0;
 		padding: 0;
 		list-style: none;
 	}
 
-	.flow li {
-		padding: 1.1rem;
-		background: var(--surface);
+	.strip li {
+		padding: 0.4rem 0.8rem;
 		border: 1px solid var(--border);
-		border-radius: var(--radius);
-	}
-
-	.flow h4 {
-		margin: 0.4rem 0 0;
-		font-size: 1rem;
-	}
-
-	.flow p {
-		margin-top: 0.4rem;
-		color: var(--muted);
-		font-size: 0.9rem;
+		border-radius: 999px;
+		background: var(--surface);
+		font-size: 0.95rem;
 	}
 
 	.num {
@@ -646,10 +647,6 @@
 
 		.points {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
-
-		.flow {
-			grid-template-columns: repeat(5, minmax(0, 1fr));
 		}
 	}
 </style>

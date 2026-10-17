@@ -110,10 +110,10 @@ export const consultDialog: Turn[] = [
 		who: 'agent',
 		text: 'From your CV and your strategy notes:',
 		items: [
-			'Senior Backend or Integrations Engineer: your strongest evidence. The payment integrations map straight onto it.',
-			'Platform-leaning backend: a credible stretch. The performance fix and the service split support it; there is no on-call or SRE work to point at.',
-			'Tech Lead: a small stretch. One mentee and two services taken end to end. I would frame it as technical direction in a scoped area, not as running a team.',
-			'Not worth chasing: Engineering Manager. You decided against it, so I would not let a posting’s “path to EM” count in its favour.'
+			'Senior Backend or Integrations Engineer: your strongest evidence, the payment integrations.',
+			'Platform-leaning backend: a credible stretch, but there is no on-call or SRE work to point at.',
+			'Tech Lead: a small stretch. Frame it as technical direction in a scoped area, not running a team.',
+			'Not worth chasing: Engineering Manager. You decided against it.'
 		]
 	}
 ];
