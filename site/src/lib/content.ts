@@ -49,7 +49,7 @@ export const demos: Demo[] = [
 	{
 		kicker: 'Manage the entire search',
 		title: 'One board for the whole pipeline',
-		text: 'Vacancies and client orders, fractional and part-time work: status, fit, documents and correspondence in a static page that works without JavaScript.'
+		text: 'Vacancies and client orders, fractional and part-time work: status, fit, and links to each one’s documents and correspondence, in a static page that works without JavaScript.'
 	}
 ];
 
@@ -70,7 +70,7 @@ export const journey = [
 	'The scout collects vacancies from job boards and ATS pages.',
 	'Each one is judged against you: fit, gaps, and whether you would actually want it.',
 	'For the ones you pick: a tailored CV and cover letter, and profile updates.',
-	'Every reply, rejection and call is logged with its reason, and the board stays current.'
+	'When replies, rejections and calls come in, ask it to log them or to reconcile the board with your inbox. The reason is kept on each status change, the messages quoted next to it.'
 ];
 
 export interface Point {
@@ -126,7 +126,7 @@ export const flow: Step[] = [
 	},
 	{
 		title: 'Feedback',
-		text: 'The kanban board and the history of communication: every status change keeps its reason, and the raw messages stay next to it.'
+		text: 'The kanban board and the history of communication. Log a reply or reconcile with your inbox, and the status change keeps its reason and the messages stay next to it.'
 	}
 ];
 
