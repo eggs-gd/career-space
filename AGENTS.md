@@ -4,7 +4,7 @@ Canonical instructions file. `CLAUDE.md`, `GEMINI.md`, and `.cursor/rules/agents
 pointers back here; Codex CLI (and any other agent that reads `AGENTS.md` by convention) reads
 this file directly. Edit rules here, not in a pointer.
 
-This is a personal job-search workspace, run entirely through conversation with whichever coding
+This is a personal career workspace, run entirely through conversation with whichever coding
 agent has this repo open — Claude Code, Codex, Gemini, or anything else that can read files, ask
 questions, and write files back. No separate LLM API to call for a playbook's own judgment work
 (generating, assessing, checking) — **you are that engine, right here in the conversation.**

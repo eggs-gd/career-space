@@ -1,6 +1,7 @@
 <script lang="ts">
 	import CompareRow from '#lib/CompareRow.svelte';
 	import CopyBlock from '#lib/CopyBlock.svelte';
+	import Dialog from '#lib/Dialog.svelte';
 	import FitCard from '#lib/FitCard.svelte';
 	import ProfileCard from '#lib/ProfileCard.svelte';
 	import {
@@ -8,24 +9,15 @@
 		SITE_URL,
 		agentPrompt,
 		agentSteps,
-		agentSwitch,
 		alternatives,
-		askMore,
 		boardAlt,
-		chatPoints,
 		cloneCommand,
-		compareNote,
 		copy,
-		demoNote,
-		flow,
 		forAgents,
-		walkthrough,
-		limits,
 		meta,
-		moreNote,
-		origin,
 		sayThis
 	} from '#lib/content.ts';
+	import { consultDialog, linkedin, storyDialog, upwork } from '#lib/demo.ts';
 </script>
 
 <svelte:head>
@@ -57,59 +49,67 @@
 	<section class="hero wrap">
 		<h1>{copy.hero.title}</h1>
 		<p class="lead">{copy.hero.lead}</p>
-		<ul class="pillars">
-			{#each copy.hero.pillars as pillar}
-				<li>{pillar}</li>
+		<p class="small">{copy.hero.note}</p>
+		<div class="actions">
+			<a class="button primary" href="#start">{copy.hero.primary}</a>
+			<a class="button" href={REPO_URL}>{copy.hero.secondary}</a>
+		</div>
+	</section>
+
+	<section id="why" class="section wrap">
+		<h2>{copy.why.title}</h2>
+		<div class="prose">
+			{#each copy.why.paragraphs as paragraph}
+				<p>{paragraph}</p>
+			{/each}
+		</div>
+	</section>
+
+	<section id="story" class="section wrap">
+		<h2>{copy.story.title}</h2>
+		<p class="intro">{copy.story.intro}</p>
+		<div class="split">
+			<div>
+				<p class="small lead-in">{copy.story.asksIntro}</p>
+				<ul class="asks">
+					{#each copy.story.asks as ask}
+						<li>{ask}</li>
+					{/each}
+				</ul>
+			</div>
+			<Dialog turns={storyDialog} caption={copy.story.caption} />
+		</div>
+	</section>
+
+	<section id="explore" class="section wrap">
+		<h2>{copy.explore.title}</h2>
+		<p class="intro">{copy.explore.intro}</p>
+		<p class="small lead-in">{copy.explore.asksIntro}</p>
+		<ul class="pills">
+			{#each copy.explore.asks as ask}
+				<li><q>{ask}</q></li>
 			{/each}
 		</ul>
-		<div class="actions">
-			<a class="button primary" href={REPO_URL}>{copy.hero.primary}</a>
-			<a class="button" href="#start">{copy.hero.secondary}</a>
+		<div class="artifact narrow">
+			<Dialog turns={consultDialog} caption={copy.explore.caption} />
 		</div>
 	</section>
 
-	<section id="what" class="section wrap">
-		<h2>{copy.sections.what}</h2>
-		<p class="intro">{demoNote}</p>
-		<ol class="walk">
-			{#each walkthrough as step}
-				<li>
-					<p>{step.text}</p>
-					{#if step.artifact === 'profile'}
-						<div class="artifact narrow"><ProfileCard /></div>
-					{:else if step.artifact === 'fit'}
-						<div class="artifact narrow"><FitCard /></div>
-					{:else if step.artifact === 'board'}
-						<div class="artifact">
-							<img
-								src="/demo/board.webp"
-								alt={boardAlt}
-								width="1770"
-								height="1200"
-								loading="lazy"
-								decoding="async"
-							/>
-						</div>
-					{/if}
-				</li>
-			{/each}
-		</ol>
-
-		<div class="more">
-			<p>{moreNote}</p>
-			<ul class="pills">
-				{#each askMore as phrase}
-					<li><q>{phrase}</q></li>
-				{/each}
-			</ul>
+	<section id="present" class="section wrap">
+		<h2>{copy.present.title}</h2>
+		<p class="intro">{copy.present.intro}</p>
+		<div class="pair">
+			<ProfileCard profile={linkedin} />
+			<ProfileCard profile={upwork} />
 		</div>
+		<p class="small note">{copy.present.honesty}</p>
 	</section>
 
-	<section id="chat" class="section wrap">
-		<h2>{copy.sections.chat.title}</h2>
-		<p class="intro">{copy.sections.chat.intro}</p>
+	<section id="context" class="section wrap">
+		<h2>{copy.context.title}</h2>
+		<p class="intro">{copy.context.intro}</p>
 		<ul class="points">
-			{#each chatPoints as point (point.title)}
+			{#each copy.context.points as point (point.title)}
 				<li>
 					<h3>{point.title}</h3>
 					<p>{point.text}</p>
@@ -117,43 +117,53 @@
 			{/each}
 		</ul>
 
-		<div class="switch">
-			<h3>{agentSwitch.title}</h3>
-			<p>{agentSwitch.text}</p>
-			<p class="small">For example:</p>
-			<ul class="pills">
-				{#each agentSwitch.example as line}
-					<li>{line}</li>
-				{/each}
-			</ul>
-		</div>
-	</section>
-
-	<section id="why" class="section wrap">
-		<h2>{copy.sections.why}</h2>
-		<div class="prose">
-			{#each origin as paragraph}
-				<p>{paragraph}</p>
-			{/each}
-		</div>
-	</section>
-
-	<section id="how" class="section wrap">
-		<h2>{copy.sections.how.title}</h2>
-		<p class="intro">{copy.sections.how.intro}</p>
+		<h3 class="sub">{copy.context.flowTitle}</h3>
 		<ol class="flow">
-			{#each flow as step, index (step.title)}
+			{#each copy.context.flow as step, index (step.title)}
 				<li>
 					<span class="num">{index + 1}{#if step.meta}<span class="meta">&nbsp;· {step.meta}</span>{/if}</span>
-					<h3>{step.title}</h3>
+					<h4>{step.title}</h4>
 					<p>{step.text}</p>
 				</li>
 			{/each}
 		</ol>
 	</section>
 
+	<section id="search" class="section wrap">
+		<h2>{copy.search.title}</h2>
+		<p class="intro">{copy.search.intro}</p>
+		<ul class="bullets">
+			{#each copy.search.points as point}
+				<li>{point}</li>
+			{/each}
+		</ul>
+
+		<div class="artifact narrow"><FitCard /></div>
+		<div class="artifact">
+			<img src="/demo/board.webp" alt={boardAlt} width="1770" height="1200" loading="lazy" decoding="async" />
+		</div>
+
+		<p class="note submit">{copy.search.submit}</p>
+
+		<div class="more">
+			<p>{copy.search.moreNote}</p>
+			<ul class="pills">
+				{#each copy.search.more as phrase}
+					<li><q>{phrase}</q></li>
+				{/each}
+			</ul>
+		</div>
+	</section>
+
+	<section id="compare" class="section wrap">
+		<h2>{copy.compare.title}</h2>
+		<p class="intro">{copy.compare.intro}</p>
+		<CompareRow items={alternatives} />
+		<p class="small note">{copy.compare.note}</p>
+	</section>
+
 	<section id="start" class="section wrap">
-		<h2>{copy.start.heading}</h2>
+		<h2>{copy.start.title}</h2>
 		<div class="paths">
 			<div class="path featured">
 				<h3>{copy.start.agent.title}</h3>
@@ -170,45 +180,40 @@
 				<h3>{copy.start.manual.title}</h3>
 				<p>{copy.start.manual.text}</p>
 				<CopyBlock text={cloneCommand} label={copy.start.manual.copyLabel} />
-				<p class="small">{copy.start.manual.node}</p>
 			</div>
 		</div>
 		<p class="small agents">{forAgents}</p>
 
 		<div class="say">
-			<h3 class="eyebrow">{copy.say.heading}</h3>
+			<h3 class="eyebrow">{copy.start.sayHeading}</h3>
 			<ul class="pills">
 				{#each sayThis as phrase}
 					<li><q>{phrase}</q></li>
 				{/each}
 			</ul>
-			<p class="small">{copy.say.note}</p>
+			<p class="small">{copy.start.sayNote}</p>
 		</div>
-	</section>
 
-	<section id="limits" class="section wrap">
-		<h2>{copy.sections.limits}</h2>
-		<ul class="limits">
-			{#each limits as line}
-				<li>{line}</li>
-			{/each}
-		</ul>
-	</section>
-
-	<section id="compare" class="section wrap">
-		<h2>{copy.sections.compare.title}</h2>
-		<p class="intro">{copy.sections.compare.intro}</p>
-		<CompareRow items={alternatives} />
-		<p class="small note">{compareNote}</p>
+		<div class="reqs">
+			<h3 class="eyebrow">{copy.start.limitsTitle}</h3>
+			<ul class="limits">
+				{#each copy.start.limits as line}
+					<li>{line}</li>
+				{/each}
+			</ul>
+			<p class="docs">
+				{copy.start.docsLead}
+				{#each copy.start.docs as doc, index (doc.href)}
+					<a href={doc.href}>{doc.label}</a>{index < copy.start.docs.length - 1 ? ' · ' : ''}
+				{/each}
+			</p>
+		</div>
 	</section>
 </main>
 
 <footer class="foot">
 	<div class="wrap">
-		<p>
-			{copy.footer.text}
-			<a href={REPO_URL}>{REPO_URL}</a>
-		</p>
+		<p>{copy.footer.text} <a href={REPO_URL}>{REPO_URL}</a></p>
 	</div>
 </footer>
 
@@ -266,7 +271,7 @@
 
 	h1 {
 		max-width: 20ch;
-		font-size: clamp(2.1rem, 5.4vw, 3.6rem);
+		font-size: clamp(2.3rem, 6vw, 4rem);
 		letter-spacing: -0.025em;
 	}
 
@@ -306,6 +311,239 @@
 		border-color: var(--accent);
 		background: var(--accent);
 		color: var(--accent-ink);
+	}
+
+	.small {
+		margin-top: 0.5rem;
+		color: var(--muted);
+		font-size: 0.9rem;
+	}
+
+	.lead-in {
+		margin: 0 0 0.6rem;
+	}
+
+	.intro + .lead-in {
+		margin-top: 1.25rem;
+	}
+
+	.eyebrow {
+		margin-bottom: 0.5rem;
+		color: var(--accent);
+		font-size: 0.8rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.section {
+		padding-block: clamp(2.5rem, 6vw, 4.5rem);
+		border-top: 1px solid var(--border);
+	}
+
+	.section > h2 {
+		font-size: clamp(1.6rem, 3.4vw, 2.1rem);
+	}
+
+	.intro {
+		max-width: var(--measure);
+		margin-top: 0.75rem;
+		color: var(--muted);
+	}
+
+	.prose {
+		display: grid;
+		gap: 1.1rem;
+		max-width: var(--measure);
+		margin-top: 1.25rem;
+	}
+
+	.split {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.75rem;
+		margin-top: 1.75rem;
+		align-items: start;
+	}
+
+	.asks {
+		display: grid;
+		gap: 0.7rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.asks li {
+		position: relative;
+		padding-left: 1.4rem;
+	}
+
+	.asks li::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0.7em;
+		width: 0.7rem;
+		height: 2px;
+		background: var(--accent);
+	}
+
+	.pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.pills li {
+		padding: 0.4rem 0.8rem;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--surface);
+		font-size: 0.95rem;
+	}
+
+	q {
+		quotes: none;
+	}
+
+	.artifact {
+		margin-top: 1.5rem;
+	}
+
+	.artifact.narrow {
+		max-width: 46rem;
+	}
+
+	.artifact img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+	}
+
+	.pair {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1rem;
+		margin-top: 1.75rem;
+	}
+
+	.note {
+		max-width: var(--measure);
+		margin-top: 1.25rem;
+	}
+
+	.points {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.5rem;
+		margin: 1.75rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.points h3 {
+		font-size: 1.05rem;
+	}
+
+	.points p {
+		margin-top: 0.4rem;
+		color: var(--muted);
+		font-size: 0.95rem;
+	}
+
+	.sub {
+		margin-top: 2.5rem;
+		padding-top: 2rem;
+		border-top: 1px solid var(--border);
+		font-size: 1.05rem;
+	}
+
+	.flow {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1rem;
+		margin: 1.25rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.flow li {
+		padding: 1.1rem;
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+	}
+
+	.flow h4 {
+		margin: 0.4rem 0 0;
+		font-size: 1rem;
+	}
+
+	.flow p {
+		margin-top: 0.4rem;
+		color: var(--muted);
+		font-size: 0.9rem;
+	}
+
+	.num {
+		color: var(--accent);
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+
+	.meta {
+		color: var(--muted);
+		font-weight: 500;
+	}
+
+	.bullets {
+		display: grid;
+		gap: 0.6rem;
+		max-width: var(--measure);
+		margin: 1.25rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.bullets li {
+		position: relative;
+		padding-left: 1.4rem;
+	}
+
+	.bullets li::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		top: 0.7em;
+		width: 0.7rem;
+		height: 2px;
+		background: var(--accent);
+	}
+
+	.submit {
+		color: var(--muted);
+	}
+
+	.more {
+		max-width: var(--measure);
+		margin-top: 1.75rem;
+		color: var(--muted);
+	}
+
+	.more .pills {
+		margin-top: 0.75rem;
+		color: var(--text);
+	}
+
+	.section :global(.row) {
+		margin-top: 1.5rem;
 	}
 
 	.paths {
@@ -350,116 +588,20 @@
 		margin-top: 1rem;
 	}
 
-	.say {
+	.say,
+	.reqs {
 		margin-top: 2.25rem;
 	}
 
-	.say ul {
+	.say .pills {
 		margin: 0.9rem 0 0.75rem;
-	}
-
-	.pills {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.6rem;
-		padding: 0;
-		list-style: none;
-	}
-
-	.pills li,
-	.say li {
-		padding: 0.4rem 0.8rem;
-		border: 1px solid var(--border);
-		border-radius: 999px;
-		background: var(--surface);
-		font-size: 0.95rem;
-	}
-
-	q {
-		quotes: none;
-	}
-
-	.eyebrow {
-		margin-bottom: 0.5rem;
-		color: var(--accent);
-		font-size: 0.8rem;
-		font-weight: 600;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-	}
-
-	.small {
-		margin-top: 0.5rem;
-		color: var(--muted);
-		font-size: 0.9rem;
-	}
-
-	.section {
-		padding-block: clamp(2.5rem, 6vw, 4.5rem);
-		border-top: 1px solid var(--border);
-	}
-
-	.section > h2 {
-		font-size: clamp(1.6rem, 3.4vw, 2.1rem);
-	}
-
-	.intro {
-		max-width: var(--measure);
-		margin-top: 0.75rem;
-		color: var(--muted);
-	}
-
-	.prose {
-		display: grid;
-		gap: 1.1rem;
-		max-width: var(--measure);
-		margin-top: 1.25rem;
-	}
-
-	.flow {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 1rem;
-		margin: 1.75rem 0 0;
-		padding: 0;
-		list-style: none;
-	}
-
-	.flow li {
-		padding: 1.25rem;
-		background: var(--surface);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-	}
-
-	.flow h3 {
-		margin-top: 0.5rem;
-		font-size: 1.05rem;
-	}
-
-	.flow p {
-		margin-top: 0.4rem;
-		color: var(--muted);
-		font-size: 0.95rem;
-	}
-
-	.meta {
-		color: var(--muted);
-		font-weight: 500;
-	}
-
-	.num {
-		color: var(--accent);
-		font-family: var(--font-mono);
-		font-size: 0.85rem;
-		font-weight: 600;
 	}
 
 	.limits {
 		display: grid;
 		gap: 0.6rem;
 		max-width: var(--measure);
-		margin: 1.25rem 0 0;
+		margin: 0.5rem 0 0;
 		padding: 0;
 		list-style: none;
 	}
@@ -479,135 +621,9 @@
 		background: var(--muted);
 	}
 
-
-	.pillars {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem 1.5rem;
-		margin: 1.5rem 0 0;
-		padding: 0;
-		list-style: none;
-		font-weight: 600;
-	}
-
-	.pillars li {
-		display: flex;
-		align-items: center;
-		gap: 0.6rem;
-	}
-
-	.pillars li::before {
-		content: '';
-		width: 0.6rem;
-		height: 0.6rem;
-		border-radius: 50%;
-		background: var(--accent);
-	}
-
-	.walk {
-		display: grid;
-		gap: 1.6rem;
-		margin: 2rem 0 0;
-		padding: 0;
-		list-style: none;
-		counter-reset: step;
-	}
-
-	.walk > li {
-		position: relative;
-		padding-left: 2.8rem;
-		counter-increment: step;
-	}
-
-	.walk > li::before {
-		content: counter(step);
-		position: absolute;
-		left: 0;
-		top: 0.05rem;
-		display: grid;
-		place-items: center;
-		width: 1.8rem;
-		height: 1.8rem;
-		border: 1px solid var(--accent);
-		border-radius: 50%;
-		color: var(--accent);
-		font-family: var(--font-mono);
-		font-size: 0.8rem;
-		font-weight: 600;
-	}
-
-	.walk > li > p {
-		max-width: 48rem;
-	}
-
-	.artifact {
+	.docs {
 		margin-top: 1rem;
-	}
-
-	.artifact.narrow {
-		max-width: 44rem;
-	}
-
-	.artifact img {
-		display: block;
-		width: 100%;
-		height: auto;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-	}
-
-	.points {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		gap: 1.5rem;
-		margin: 1.75rem 0 0;
-		padding: 0;
-		list-style: none;
-	}
-
-	.points h3,
-	.switch h3 {
-		font-size: 1.05rem;
-	}
-
-	.points p {
-		margin-top: 0.4rem;
 		color: var(--muted);
-		font-size: 0.95rem;
-	}
-
-	.switch {
-		max-width: var(--measure);
-		margin-top: 2.5rem;
-		padding-top: 2rem;
-		border-top: 1px solid var(--border);
-	}
-
-	.switch p {
-		margin-top: 0.4rem;
-	}
-
-	.switch .pills {
-		margin: 0.6rem 0 0;
-	}
-
-	.note {
-		max-width: var(--measure);
-	}
-
-	.more {
-		max-width: var(--measure);
-		margin-top: 1.75rem;
-		color: var(--muted);
-	}
-
-	.more .pills {
-		margin: 0.75rem 0 0;
-		color: var(--text);
-	}
-
-	.section :global(.row) {
-		margin-top: 1.5rem;
 	}
 
 	.foot {
@@ -618,6 +634,12 @@
 	}
 
 	@media (min-width: 48rem) {
+		.split {
+			grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+			gap: 2.5rem;
+		}
+
+		.pair,
 		.paths {
 			grid-template-columns: repeat(2, minmax(0, 1fr));
 		}
