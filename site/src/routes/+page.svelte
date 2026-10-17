@@ -507,7 +507,6 @@
 	.walk {
 		display: grid;
 		gap: 1.6rem;
-		max-width: 52rem;
 		margin: 2rem 0 0;
 		padding: 0;
 		list-style: none;
@@ -535,6 +534,10 @@
 		font-family: var(--font-mono);
 		font-size: 0.8rem;
 		font-weight: 600;
+	}
+
+	.walk > li > p {
+		max-width: 48rem;
 	}
 
 	.artifact {
