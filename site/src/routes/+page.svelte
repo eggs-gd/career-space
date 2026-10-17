@@ -17,10 +17,9 @@
 		compareNote,
 		copy,
 		demoNote,
-		demos,
 		flow,
 		forAgents,
-		journey,
+		walkthrough,
 		limits,
 		meta,
 		moreNote,
@@ -72,38 +71,29 @@
 	<section id="what" class="section wrap">
 		<h2>{copy.sections.what}</h2>
 		<p class="intro">{demoNote}</p>
-
-		<div class="demos">
-			<article class="demo">
-				<p class="eyebrow">{demos[0].kicker}</p>
-				<h3>{demos[0].title}</h3>
-				<p class="demo-text">{demos[0].text}</p>
-				<div class="artifact narrow"><ProfileCard /></div>
-			</article>
-
-			<article class="demo">
-				<p class="eyebrow">{demos[1].kicker}</p>
-				<h3>{demos[1].title}</h3>
-				<p class="demo-text">{demos[1].text}</p>
-				<div class="artifact narrow"><FitCard /></div>
-			</article>
-
-			<article class="demo">
-				<p class="eyebrow">{demos[2].kicker}</p>
-				<h3>{demos[2].title}</h3>
-				<p class="demo-text">{demos[2].text}</p>
-				<div class="artifact">
-					<img
-						src="/demo/board.webp"
-						alt={boardAlt}
-						width="1770"
-						height="1200"
-						loading="lazy"
-						decoding="async"
-					/>
-				</div>
-			</article>
-		</div>
+		<ol class="walk">
+			{#each walkthrough as step}
+				<li>
+					<p>{step.text}</p>
+					{#if step.artifact === 'profile'}
+						<div class="artifact narrow"><ProfileCard /></div>
+					{:else if step.artifact === 'fit'}
+						<div class="artifact narrow"><FitCard /></div>
+					{:else if step.artifact === 'board'}
+						<div class="artifact">
+							<img
+								src="/demo/board.webp"
+								alt={boardAlt}
+								width="1770"
+								height="1200"
+								loading="lazy"
+								decoding="async"
+							/>
+						</div>
+					{/if}
+				</li>
+			{/each}
+		</ol>
 
 		<div class="more">
 			<p>{moreNote}</p>
@@ -113,24 +103,6 @@
 				{/each}
 			</ul>
 		</div>
-	</section>
-
-	<section id="why" class="section wrap">
-		<h2>{copy.sections.why}</h2>
-		<div class="prose">
-			{#each origin as paragraph}
-				<p>{paragraph}</p>
-			{/each}
-		</div>
-	</section>
-
-	<section id="journey" class="section wrap">
-		<h2>{copy.sections.journey}</h2>
-		<ol class="journey">
-			{#each journey as step}
-				<li>{step}</li>
-			{/each}
-		</ol>
 	</section>
 
 	<section id="chat" class="section wrap">
@@ -154,6 +126,15 @@
 					<li>{line}</li>
 				{/each}
 			</ul>
+		</div>
+	</section>
+
+	<section id="why" class="section wrap">
+		<h2>{copy.sections.why}</h2>
+		<div class="prose">
+			{#each origin as paragraph}
+				<p>{paragraph}</p>
+			{/each}
 		</div>
 	</section>
 
@@ -523,55 +504,23 @@
 		background: var(--accent);
 	}
 
-	.demos {
+	.walk {
 		display: grid;
-		gap: clamp(2.5rem, 6vw, 4rem);
-		margin-top: 2.25rem;
-	}
-
-	.demo h3 {
-		font-size: 1.3rem;
-	}
-
-	.demo-text {
-		max-width: var(--measure);
-		margin-top: 0.5rem;
-		color: var(--muted);
-	}
-
-	.artifact {
-		margin-top: 1.25rem;
-	}
-
-	.artifact.narrow {
-		max-width: 44rem;
-	}
-
-	.artifact img {
-		display: block;
-		width: 100%;
-		height: auto;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-	}
-
-	.journey {
-		display: grid;
-		gap: 0.9rem;
-		max-width: var(--measure);
-		margin: 1.5rem 0 0;
+		gap: 1.6rem;
+		max-width: 52rem;
+		margin: 2rem 0 0;
 		padding: 0;
 		list-style: none;
 		counter-reset: step;
 	}
 
-	.journey li {
+	.walk > li {
 		position: relative;
-		padding-left: 2.6rem;
+		padding-left: 2.8rem;
 		counter-increment: step;
 	}
 
-	.journey li::before {
+	.walk > li::before {
 		content: counter(step);
 		position: absolute;
 		left: 0;
@@ -586,6 +535,22 @@
 		font-family: var(--font-mono);
 		font-size: 0.8rem;
 		font-weight: 600;
+	}
+
+	.artifact {
+		margin-top: 1rem;
+	}
+
+	.artifact.narrow {
+		max-width: 44rem;
+	}
+
+	.artifact img {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
 	}
 
 	.points {

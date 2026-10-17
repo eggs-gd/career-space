@@ -25,35 +25,11 @@ export const sayThis = [
 export const origin = [
 	'career-space is a personal job-search workspace that happens to be public: a folder of facts, rules and small scripts that a coding agent reads and acts on. Your data stays in a gitignored folder next to it.',
 	'Most job-search tooling starts from the feed of postings and asks how many it can get through. The hard parts of a search are elsewhere: knowing what you are aiming at, saying it consistently on LinkedIn, Djinni, Upwork and in a CV, and stopping a language model from quietly turning “contributed to” into “led”.',
-	'The rules the agent follows exist because a real generation once got them wrong: never invent a fact, keep the exact ownership language, treat a harsh score as a signal and not a bug. They are written into the repository, so a fresh agent with no chat history starts from the same rules.',
-	'One constraint on the project itself: changes are made by an agent reading AGENTS.md, not written by hand. If a manual patch was needed, the instructions have a bug and that is what gets fixed.'
+	'The rules the agent follows exist because a real generation once got them wrong: never invent a fact, keep the exact ownership language, treat a harsh score as a signal and not a bug. They are written into the repository, so a fresh agent with no chat history starts from the same rules.'
 ];
 
-export interface Demo {
-	kicker: string;
-	title: string;
-	text: string;
-}
-
-export const demos: Demo[] = [
-	{
-		kicker: 'Understand your direction',
-		title: 'A profile that follows your strategy',
-		text: 'Positioning is worked out in conversation, then projected onto each profile (LinkedIn, Djinni, Upwork, a portfolio) from one evidence store, so they do not drift apart.'
-	},
-	{
-		kicker: 'Find relevant opportunities',
-		title: 'A blunt read of each vacancy',
-		text: 'The scout collects vacancies from job boards and ATS pages. The model judges the evidence; a fixed weighted formula with a hard cap turns it into the score. Gaps are stated, not softened.'
-	},
-	{
-		kicker: 'Manage the entire search',
-		title: 'One board for the whole pipeline',
-		text: 'Vacancies and client orders, fractional and part-time work: status, fit, and links to each one’s documents and correspondence, in a static page that works without JavaScript.'
-	}
-];
-
-export const demoNote = 'Real output from the tools, on a fictional candidate and fictional postings.';
+export const demoNote =
+	'One search, start to finish. Real output from the tools, on a fictional candidate and fictional postings.';
 
 export const boardAlt =
 	'The career-space vacancy board: vacancies grouped by status (interview, screen, tracked), each with a fit score, a fit label and file badges for fitment, posting, correspondence, CV, cover letter and interview prep.';
@@ -63,14 +39,32 @@ export const moreNote =
 
 export const askMore = ['What else can you do?', 'Where are we, and what did we miss?'];
 
-export const journey = [
-	'You give it your CV or a LinkedIn export.',
-	'You talk through the role you want. Not sure yet? That is a valid answer, and it is kept as an open question.',
-	'It writes down your positioning and strategy.',
-	'The scout collects vacancies from job boards and ATS pages.',
-	'Each one is judged against you: fit, gaps, and whether you would actually want it.',
-	'For the ones you pick: a tailored CV and cover letter, and profile updates.',
-	'When replies, rejections and calls come in, ask it to log them or to reconcile the board with your inbox. The reason is kept on each status change, the messages quoted next to it.'
+export type Artifact = 'profile' | 'fit' | 'board';
+
+export interface WalkStep {
+	text: string;
+	artifact?: Artifact;
+}
+
+export const walkthrough: WalkStep[] = [
+	{ text: 'You give it your CV or a LinkedIn export.' },
+	{
+		text: 'You talk through the role you want. Not sure yet? That is a valid answer, and it is kept as an open question.'
+	},
+	{
+		text: 'It writes down your positioning and strategy, then projects them onto your profiles: LinkedIn, Djinni, Upwork, a portfolio.',
+		artifact: 'profile'
+	},
+	{ text: 'The scout collects vacancies from job boards and company ATS pages.' },
+	{
+		text: 'Each vacancy is compared with what your experience actually shows. Gaps are stated plainly, and the score helps you decide what to apply to first.',
+		artifact: 'fit'
+	},
+	{ text: 'For the ones you pick: a tailored CV and cover letter.' },
+	{
+		text: 'When replies, rejections and calls come in, ask it to log them or to reconcile the board with your inbox. Vacancies and client orders, fractional and part-time work, all sit on one board.',
+		artifact: 'board'
+	}
 ];
 
 export interface Point {
@@ -149,6 +143,13 @@ export interface Alternative {
 
 export const alternatives: Alternative[] = [
 	{
+		name: 'A plain chat with a model',
+		startsFrom: 'Whatever you paste',
+		good: 'Zero setup. Fine for a one-off question.',
+		differs:
+			'Facts, rules and past decisions live in the repo, so each session and each agent starts from the same state. The same evidence gives the same fit score, because the formula is fixed.'
+	},
+	{
 		name: 'Feed-digesting agent pipelines',
 		example: 'e.g. career-ops (open source)',
 		startsFrom: 'The market stream',
@@ -175,13 +176,6 @@ export const alternatives: Alternative[] = [
 		good: 'Flexible, no setup, easy to share.',
 		differs:
 			'The board is rendered from per-opportunity records that keep status history and the observed reason, and statuses are reconciled from email instead of retyped.'
-	},
-	{
-		name: 'A plain chat with a model',
-		startsFrom: 'Whatever you paste',
-		good: 'Zero setup. Fine for a one-off question.',
-		differs:
-			'Facts, rules and past decisions live in the repo, so each session and each agent starts from the same state. The score is computed, not re-guessed.'
 	},
 	{
 		name: 'Career coaches and CV writers',
@@ -215,7 +209,7 @@ export const copy = {
 	github: 'GitHub',
 	hero: {
 		title: 'A job search you run by talking to your coding agent.',
-		lead: 'career-space is a personal career consultant that lives in your coding agent. It helps you understand your direction, finds relevant opportunities and judges each one against you, and keeps the whole search in one place: strategy, documents, pipeline and correspondence. It works through the agent you already use. No separate app, server or account.',
+		lead: 'A personal career consultant that lives in your coding agent. It helps you understand your direction, finds and judges vacancies, and keeps the whole search in one place. No separate app, server or account.',
 		pillars: ['Understand your direction', 'Find relevant opportunities', 'Manage the entire search'],
 		primary: 'View on GitHub',
 		secondary: 'Get started'
@@ -242,7 +236,6 @@ export const copy = {
 	sections: {
 		what: 'What you get',
 		why: 'Why it exists',
-		journey: 'A search, start to finish',
 		chat: {
 			title: 'Why not just ask a chat model?',
 			intro: 'A chat helps with one task. career-space keeps a whole system, where each task starts from the results of the earlier ones.'
