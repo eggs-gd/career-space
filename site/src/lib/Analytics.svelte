@@ -3,6 +3,10 @@
 
 	const KEY = 'analytics-consent';
 	let asked = $state(false);
+	let loaded = false;
+
+	type Gtag = (...args: unknown[]) => void;
+	type Win = Window & { dataLayer?: unknown[]; gtag?: Gtag };
 
 	function stored(): string | null {
 		try {
@@ -12,8 +16,29 @@
 		}
 	}
 
+	// Nothing from Google is requested until the visitor has allowed it.
+	function load() {
+		if (loaded) return;
+		loaded = true;
+		const w = window as Win;
+		w.dataLayer = w.dataLayer || [];
+		w.gtag = function () {
+			// gtag.js reads the `arguments` object, not an array
+			// eslint-disable-next-line prefer-rest-params
+			w.dataLayer!.push(arguments);
+		};
+		w.gtag('js', new Date());
+		w.gtag('config', id);
+		const script = document.createElement('script');
+		script.async = true;
+		script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
+		document.head.append(script);
+	}
+
 	$effect(() => {
-		asked = stored() === null;
+		const choice = stored();
+		if (choice === 'granted') load();
+		asked = choice === null;
 	});
 
 	function decide(granted: boolean) {
@@ -22,21 +47,14 @@
 		} catch {
 			// no storage: the choice lasts for this page view only
 		}
-		(window as unknown as { gtag?: (...args: unknown[]) => void }).gtag?.('consent', 'update', {
-			analytics_storage: granted ? 'granted' : 'denied'
-		});
+		if (granted) load();
 		asked = false;
 	}
 </script>
 
-<svelte:head>
-	{@html `<script async src="https://www.googletagmanager.com/gtag/js?id=${id}"></script>`}
-	{@html `<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied'});try{if(localStorage.getItem('${KEY}')==='granted'){gtag('consent','update',{analytics_storage:'granted'});}}catch(e){}gtag('js',new Date());gtag('config','${id}');</script>`}
-</svelte:head>
-
 {#if asked}
 	<div class="consent" role="region" aria-label="Analytics">
-		<p>This site uses Google Analytics to count visits, only if you allow it.</p>
+		<p>This site can use Google Analytics to count visits. Nothing is loaded unless you allow it.</p>
 		<div class="buttons">
 			<button type="button" class="yes" onclick={() => decide(true)}>Allow</button>
 			<button type="button" onclick={() => decide(false)}>No thanks</button>
