@@ -25,6 +25,8 @@ Use the smallest check that covers the change:
 - `node scripts/dist/rescore.js` (dry run) -- after changing `score_fit.ts`'s formula or caps, to
   see the blast radius across saved `fitment.json` records before deciding to `--write`.
 - `cd site && npm ci && npm run check && npm run build` -- after changing `site/`.
+- `site/static/og.png` bakes the hero headline: after changing it, regenerate from `site/og/og.html`
+  (1200x630 screenshot). Analytics is on only when the build has `GA_MEASUREMENT_ID` (a repo variable in CI).
 - `git diff --check` -- after any tracked-file edit.
 - Manual doc review -- after playbook, policy, example, reference, docs, or `_sb/` edits:
   check current-state wording, role boundaries, cited file paths, and whether a fresh agent can

@@ -24,8 +24,26 @@ export const sayThis = [
 
 export const meta = {
 	title: 'career-space: make more of your experience',
+	siteName: 'career-space',
 	description:
-		'A personal career workspace for the AI agent you already use: explore where your experience can go, shape your positioning, produce CVs and profiles, and look for work when you are ready. Your data stays local.'
+		'A personal career workspace for the AI agent you already use: explore where your experience can go, shape your positioning, produce CVs and profiles, and look for work when you are ready. Your data stays local.',
+	image: `${SITE_URL}og.png`,
+	imageAlt: 'career-space: Make more of your experience. A personal career workspace for the AI agent you already use.',
+	imageWidth: 1200,
+	imageHeight: 630
+};
+
+export const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'SoftwareApplication',
+	name: 'career-space',
+	url: SITE_URL,
+	description: meta.description,
+	applicationCategory: 'BusinessApplication',
+	operatingSystem: 'Any, runs through a coding agent',
+	isAccessibleForFree: true,
+	license: 'https://www.apache.org/licenses/LICENSE-2.0',
+	sameAs: [REPO_URL]
 };
 
 export const boardAlt =

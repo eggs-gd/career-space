@@ -14,6 +14,7 @@
 		cloneCommand,
 		copy,
 		forAgents,
+		jsonLd,
 		meta,
 		sayThis
 	} from '#lib/content.ts';
@@ -24,11 +25,24 @@
 	<title>{meta.title}</title>
 	<meta name="description" content={meta.description} />
 	<link rel="canonical" href={SITE_URL} />
+	<meta name="robots" content="index, follow, max-image-preview:large" />
 	<meta property="og:type" content="website" />
+	<meta property="og:site_name" content={meta.siteName} />
+	<meta property="og:locale" content="en_US" />
 	<meta property="og:title" content={meta.title} />
 	<meta property="og:description" content={meta.description} />
 	<meta property="og:url" content={SITE_URL} />
-	<meta name="twitter:card" content="summary" />
+	<meta property="og:image" content={meta.image} />
+	<meta property="og:image:type" content="image/png" />
+	<meta property="og:image:width" content={String(meta.imageWidth)} />
+	<meta property="og:image:height" content={String(meta.imageHeight)} />
+	<meta property="og:image:alt" content={meta.imageAlt} />
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta name="twitter:title" content={meta.title} />
+	<meta name="twitter:description" content={meta.description} />
+	<meta name="twitter:image" content={meta.image} />
+	<meta name="twitter:image:alt" content={meta.imageAlt} />
+	{@html `<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>`}
 </svelte:head>
 
 <a class="skip-link" href="#main">{copy.skip}</a>
