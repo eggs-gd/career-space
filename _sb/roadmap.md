@@ -45,6 +45,9 @@ and why each one was built lives in git history, not here.
       `ua_categories:` to return anything (exact-match category taxonomies -- see `reference/
       ua-scout-categories.md`); `jobico` searches by track `titles` directly, no extra config.
       `robota.ua`/`work.ua` ruled out (no public API / Cloudflare-blocked) -- don't re-investigate.
+- [x] LinkedIn job alerts -- `scout.md` Step 0.6 reads the alert emails through the host's email
+      capability; `linkedin_alert_intake` parses them, drops known jobs and prefilters, then each job
+      goes through the add-from-url flow.
 - [x] Add a vacancy from a bare URL -- `playbooks/add-from-url.md`. `resolve_vacancy_url`
       recognizes greenhouse.io / lever.co / ashbyhq.com / recruitee.com / jobico.io /
       jobs.workable.com URLs and fetches that exact posting via that platform's own single-item

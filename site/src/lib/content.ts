@@ -165,7 +165,7 @@ export const copy = {
 		title: 'And when you are ready to look for a job',
 		intro: 'Job search follows from everything above rather than replacing it. The same context decides what is worth your time.',
 		points: [
-			'A scout collects vacancies from job boards and company ATS pages, on request.',
+			'A scout collects vacancies from job boards and company ATS pages, on request, and from LinkedIn job-alert emails if your agent can read your mail.',
 			'Each vacancy is compared with what your experience actually shows. Gaps are stated plainly, and the score helps you decide what to apply to first.',
 			'Targeted CVs and cover letters for the ones you pick.',
 			'One board for vacancies, client orders, fractional and part-time work. With an email capability connected, it can reconcile statuses against your inbox.'
@@ -201,7 +201,7 @@ export const copy = {
 		limits: [
 			'Needs an agent that can run shell commands, and Node 22.12 or newer for the bundled MCP server, which installs itself on first use.',
 			'Your data stays on your machine, in a gitignored folder. No account.',
-			'Scouting reads public APIs only: no login-walled boards. It runs when you ask for it.',
+			'Scouting reads public APIs and the job links in your own alert emails: no login-walled boards. It runs when you ask for it.',
 			'It is not a standalone app and not tuned for the largest possible pile of postings.',
 			'It is built on language models, which still get things wrong.'
 		],

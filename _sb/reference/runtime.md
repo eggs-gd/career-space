@@ -45,6 +45,10 @@ interface over it or over `score_fit.ts`'s scoring formula:
   `jobs.workable.com` URL shapes, matched by shape not searched) — `playbooks/add-from-url.md` is
   the caller. `matched: false` for any other URL: the agent reads the page itself and records the
   candidate with no ids (`record_scout_outcomes` computes them).
+- `scripts/linkedin_alerts.ts` — LinkedIn Job Alert email bodies -> unique job links, minus jobs
+  already in the ledger or a vacancy record, prefiltered on the title/company/location the alert
+  shows, capped like the scout. `playbooks/scout.md` Step 0.6 is the caller; the agent reads each
+  returned job's page itself.
 - `scripts/vacancy_store.ts` — the seen-log ledger and each vacancy's own `<slug>/` folder's
   *metadata*: slug generation, vacancy resolving, scout outcome recording, `record.yaml`,
   `posting.md`, status transitions, fit indexes, and eligibility flags. Called by
@@ -84,7 +88,7 @@ interface over it or over `score_fit.ts`'s scoring formula:
 **Prefer the MCP tools if the `career-space` MCP server is connected** — typed arguments, no
 shell-escaping a JSON blob, no constructing a `node ...` invocation by hand. `scripts/mcp_server.ts`
 wraps the same functions: `render_resume`, `render_cover_letter`, `score_fit`, `scout_fetch`,
-`resolve_vacancy_url`, `vacancy_resolve`, `vacancy_mark_seen`, `record_scout_outcomes`,
+`resolve_vacancy_url`, `linkedin_alert_intake`, `vacancy_resolve`, `vacancy_mark_seen`, `record_scout_outcomes`,
 `vacancy_upsert`, `vacancy_set_status`, `vacancy_set_archived`, `vacancy_attach_artifact`,
 `opportunity_log_communication`, `vacancy_list`, `linkedin_searches`, `render_boards`, `render_board`, `workspace_validate`,
 `rescore`, and the engagement set: `engagement_upsert`, `engagement_set_status`,
@@ -99,7 +103,8 @@ upsert still merges onto an existing company+title record rather than duplicatin
 If the server isn't connected, fall back to the CLI form documented in each script's own docstring:
 `node scripts/dist/render_resume.js <file>.md`, `node scripts/dist/render_cover_letter.js
 <file>.md`, `node scripts/dist/score_fit.js <file>.json`, `node scripts/dist/scout_fetch.js`,
-`node scripts/dist/resolve_vacancy_url.js <url>`, `node scripts/dist/vacancy_store.js
+`node scripts/dist/resolve_vacancy_url.js <url>`, `node scripts/dist/linkedin_alerts.js <email-body.txt>...`,
+`node scripts/dist/vacancy_store.js
 <mark-seen|upsert|set-status|set-archived|relocate-archived|attach-artifact|list|record-scout-outcomes|resolve>
 ...`, `node scripts/dist/engagement_store.js <upsert|set-status|set-archived|relocate-archived|attach-artifact|list>
 ...`, `node scripts/dist/communication_log.js --kind <vacancy|engagement> --slug <slug>

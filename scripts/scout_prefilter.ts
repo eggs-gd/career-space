@@ -145,12 +145,16 @@ export function trackMatchLabel(matchedTrack: TrackConfig | null): string | null
  *      has any leadership/architecture shape (a "Jr Software Engineer" needing LLM API
  *      familiarity is not a leadership role just because it mentions LLMs). No-op (passes) only
  *      when neither `tracks` nor `roleSignals` is configured at all. */
-export function passesPrefilter(posting: Posting, config: ScoutConfig): boolean {
+export function passesPrefilter(posting: Posting, config: ScoutConfig, opts: { trackRule?: boolean } = {}): boolean {
   if (wordBoundaryMatch(posting.title, config.titleExclude)) return false;
 
   if (wordBoundaryMatch(`${posting.title} ${posting.description}`, config.hardExclude)) return false;
 
   if (!passesLocationGate(posting, config)) return false;
+
+  // `trackRule: false` stops after the cheap noise checks: for a source that already matched the
+  // candidate's profile itself (LinkedIn job alerts).
+  if (opts.trackRule === false) return true;
 
   const [matchedTrack, strategicMatch] = classifyTrackMatch(posting, config);
   if (matchedTrack !== null) {
@@ -165,8 +169,8 @@ export function passesPrefilter(posting: Posting, config: ScoutConfig): boolean 
   return true;
 }
 
-export function filterPostings(postings: Posting[], config: ScoutConfig): Posting[] {
-  return postings.filter((posting) => passesPrefilter(posting, config));
+export function filterPostings(postings: Posting[], config: ScoutConfig, opts: { trackRule?: boolean } = {}): Posting[] {
+  return postings.filter((posting) => passesPrefilter(posting, config, opts));
 }
 
 /** Collapses the same role republished under several different URLs into one posting -- the

@@ -26,6 +26,7 @@ import { renderBoards } from "./render_boards";
 import { rescore } from "./rescore";
 import { runScout } from "./scout_fetch";
 import { resolveVacancyFromUrl } from "./resolve_vacancy_url";
+import { runAlertIntake } from "./linkedin_alerts";
 import { validateWorkspace } from "./workspace_validate";
 
 /** Expands a leading `~` to the home directory, then resolves to an absolute path. */
@@ -207,15 +208,16 @@ server.registerTool(
   "scout_fetch",
   {
     description:
-      "Fetch configured public job sources, prefilter and dedup postings, and return new candidates plus funnel counts and fetch errors.",
+      "Fetch configured public job sources, prefilter and dedup postings, and return new candidates plus funnel counts and fetch errors. `max_judgments` lowers the per-run cap for this call.",
     inputSchema: {
       sources_path: z.string().optional(),
       feeds: z.array(z.string()).optional(),
+      max_judgments: z.number().int().min(0).optional(),
     },
   },
-  async ({ sources_path, feeds }): Promise<CallToolResult> => {
+  async ({ sources_path, feeds, max_judgments }): Promise<CallToolResult> => {
     const resolved = sources_path ? resolvePath(sources_path) : undefined;
-    return respond(await runScout(resolved, { feeds }));
+    return respond(await runScout(resolved, { feeds, maxJudgments: max_judgments }));
   }
 );
 
@@ -232,6 +234,23 @@ server.registerTool(
   async ({ url, sources_path }): Promise<CallToolResult> => {
     const resolved = sources_path ? resolvePath(sources_path) : undefined;
     return respond(await resolveVacancyFromUrl(url, resolved));
+  }
+);
+
+server.registerTool(
+  "linkedin_alert_intake",
+  {
+    description:
+      "Parse LinkedIn Job Alert email bodies (plain text, as the host's email tool returns them) into unique job links, drop jobs already known, apply a light prefilter (title/hard excludes and the location gate; `full` adds the track rule, `off` skips it) to the title/company/location the alert shows, and return the jobs whose public page the agent reads next (playbooks/scout.md Step 0.6). Judges and writes nothing.",
+    inputSchema: {
+      bodies: z.array(z.string()).min(1),
+      prefilter: z.enum(["light", "full", "off"]).default("light"),
+      sources_path: z.string().optional(),
+    },
+  },
+  async ({ bodies, prefilter, sources_path }): Promise<CallToolResult> => {
+    const resolved = sources_path ? resolvePath(sources_path) : undefined;
+    return respond(runAlertIntake(bodies, { sourcesPath: resolved, prefilter }));
   }
 );
 
