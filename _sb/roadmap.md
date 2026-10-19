@@ -46,7 +46,8 @@ and why each one was built lives in git history, not here.
       ua-scout-categories.md`); `jobico` searches by track `titles` directly, no extra config.
       `robota.ua`/`work.ua` ruled out (no public API / Cloudflare-blocked) -- don't re-investigate.
 - [x] LinkedIn job alerts -- `scout.md` Step 0.6 reads the alert emails through the host's email
-      capability and runs each job link through the add-from-url flow.
+      capability; `linkedin_alert_intake` parses them, drops known jobs and prefilters, then each job
+      goes through the add-from-url flow.
 - [x] Add a vacancy from a bare URL -- `playbooks/add-from-url.md`. `resolve_vacancy_url`
       recognizes greenhouse.io / lever.co / ashbyhq.com / recruitee.com / jobico.io /
       jobs.workable.com URLs and fetches that exact posting via that platform's own single-item
@@ -105,8 +106,6 @@ and why each one was built lives in git history, not here.
 
 ## Later / maybe
 
-- **`linkedin_alert_parse`.** Deterministic extraction of job links (tracking stripped) from an alert
-  email body, so the agent stops hand-parsing HTML. Needs real, anonymized sample emails as fixtures.
 - **Post-interview capture.** Deferred by choice. If ever
   built: only the questions actually asked, the facts the interview corrected (comp, team size,
   stack, remote policy), and the outcome -- never a grade on the candidate's own answers, which

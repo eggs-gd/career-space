@@ -26,6 +26,7 @@ import { renderBoards } from "./render_boards";
 import { rescore } from "./rescore";
 import { runScout } from "./scout_fetch";
 import { resolveVacancyFromUrl } from "./resolve_vacancy_url";
+import { runAlertIntake } from "./linkedin_alerts";
 import { validateWorkspace } from "./workspace_validate";
 
 /** Expands a leading `~` to the home directory, then resolves to an absolute path. */
@@ -232,6 +233,23 @@ server.registerTool(
   async ({ url, sources_path }): Promise<CallToolResult> => {
     const resolved = sources_path ? resolvePath(sources_path) : undefined;
     return respond(await resolveVacancyFromUrl(url, resolved));
+  }
+);
+
+server.registerTool(
+  "linkedin_alert_intake",
+  {
+    description:
+      "Parse LinkedIn Job Alert email bodies (plain text, as the host's email tool returns them) into unique job links, drop jobs already known, apply the scout prefilter to the title/company/location the alert shows, and return the jobs whose public page the agent reads next (playbooks/scout.md Step 0.6). Judges and writes nothing.",
+    inputSchema: {
+      bodies: z.array(z.string()).min(1),
+      prefilter: z.boolean().default(true),
+      sources_path: z.string().optional(),
+    },
+  },
+  async ({ bodies, prefilter, sources_path }): Promise<CallToolResult> => {
+    const resolved = sources_path ? resolvePath(sources_path) : undefined;
+    return respond(runAlertIntake(bodies, { sourcesPath: resolved, prefilter }));
   }
 );
 

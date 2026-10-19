@@ -84,20 +84,24 @@ reconciliation never touches them.
 ## Step 0.6 -- LinkedIn job alerts from email, if the capability is there
 
 Same gate as Step 0.5: a **working** email-read capability, otherwise skip silently. LinkedIn
-mails the candidate job alerts matched to their profile; the links in them are extra candidates,
-read the way `playbooks/add-from-url.md` reads any link. Read-only toward the mailbox.
+mails the candidate job alerts matched to their profile; the jobs in them are extra candidates.
+Read-only toward the mailbox.
 
-1. Search for LinkedIn Job Alert emails from the last 7 days (or the window the candidate names).
-   Alerts repeat the same jobs day after day; `resolve_vacancy_url`'s `already_seen` removes what
-   was judged.
-2. Take each job link (title, company, location as shown) and normalize it to
-   `https://www.linkedin.com/jobs/view/<id>/`, no tracking parameters. Collapse repeats across
-   emails.
-3. For each link, run `playbooks/add-from-url.md` Steps 1-2: `resolve_vacancy_url`, and read the
-   public page yourself on `matched: false`. A posting often also sits on the employer's own ATS;
-   if the page's apply link resolves, use that candidate, its text comes from the ATS's own API.
-   Set the candidate's `source` to `LinkedIn Job Alert` (it normalizes to `linkedin`, the wording
-   kept in `source_detail`). Judge them all before recording any, same as Step 2 -> Step 3.
+1. Search for LinkedIn Job Alert emails (sender `jobalerts-noreply@linkedin.com`) from the last 7
+   days, or the window the candidate names, and read each in plain-text form. There are several
+   a day and they overlap; read them all, no judgment yet.
+2. Call `linkedin_alert_intake` with the bodies (CLI: save each body to a file, `node
+   scripts/dist/linkedin_alerts.js <files>`). It returns the unique jobs not already known (in the
+   seen ledger or a vacancy record) that clear the scout's title/location rules on what the alert
+   shows, plus the funnel counts. `prefilter: false` when the candidate wants every alert job.
+   `emails_without_jobs` or `unparsed_ids` above zero means another email type or a changed
+   template: say so, don't guess.
+3. For each job in `jobs_to_read`, run `playbooks/add-from-url.md` Steps 1-2 on its `url`:
+   `resolve_vacancy_url`, and read the public page yourself on `matched: false`. A posting often
+   also sits on the employer's own ATS; if the page's apply link resolves, use that candidate, its
+   text comes from the ATS's own API. Set the candidate's `source` to `LinkedIn Job Alert` (it
+   normalizes to `linkedin`, the wording kept in `source_detail`). Judge them all before recording
+   any, same as Step 2 -> Step 3.
 4. A page you cannot read (login wall, bot block): do not judge from the alert's snippet. List
    those links for the candidate in Step 4.
 
