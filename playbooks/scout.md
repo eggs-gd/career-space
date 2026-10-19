@@ -92,8 +92,9 @@ Read-only toward the mailbox.
    a day and they overlap; read them all, no judgment yet.
 2. Call `linkedin_alert_intake` with the bodies (CLI: save each body to a file, `node
    scripts/dist/linkedin_alerts.js <files>`). It returns the unique jobs not already known (in the
-   seen ledger or a vacancy record) that clear the scout's title/location rules on what the alert
-   shows, plus the funnel counts. `prefilter: false` when the candidate wants every alert job.
+   seen ledger or a vacancy record) that clear the title/hard excludes and the location gate on what
+   the alert shows, plus the funnel counts; LinkedIn already matched the profile, so the scout's
+   track rule is not applied. `prefilter: "full"` adds it, `"off"` skips every filter.
    `emails_without_jobs` or `unparsed_ids` above zero means another email type or a changed
    template: say so, don't guess.
 3. For each job in `jobs_to_read`, run `playbooks/add-from-url.md` Steps 1-2 on its `url`:

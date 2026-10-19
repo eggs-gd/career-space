@@ -32,14 +32,15 @@ const body = email(
     card("1000000002", "Backend Developer Lead", "Globex", ["Ukraine", "", "This company is actively hiring"]),
     card("1000000003", "Marketing Team Lead", "Initech", ["Kyiv"]),
     card("1000000004", "Tech Lead", "Hooli", ["2 school alumni"]),
+    card("1000000005", "Data Analyst", "Umbrella", ["Kyiv"]),
   ],
-  ["1000000001", "1000000002", "1000000003", "1000000004"]
+  ["1000000001", "1000000002", "1000000003", "1000000004", "1000000005"]
 );
 
 test("parseAlertEmail reads every card: title, company, location, badges, canonical url", () => {
   const parsed = parseAlertEmail(body);
   assert.equal(parsed.alert_name, "Team Lead in Ukraine");
-  assert.deepEqual(parsed.listed_ids, ["1000000001", "1000000002", "1000000003", "1000000004"]);
+  assert.deepEqual(parsed.listed_ids, ["1000000001", "1000000002", "1000000003", "1000000004", "1000000005"]);
   assert.deepEqual(
     parsed.jobs.map((j) => [j.job_id, j.title, j.company, j.location]),
     [
@@ -47,6 +48,7 @@ test("parseAlertEmail reads every card: title, company, location, badges, canoni
       ["1000000002", "Backend Developer Lead", "Globex", "Ukraine"],
       ["1000000003", "Marketing Team Lead", "Initech", "Kyiv"],
       ["1000000004", "Tech Lead", "Hooli", ""],
+      ["1000000005", "Data Analyst", "Umbrella", "Kyiv"],
     ]
   );
   assert.deepEqual(parsed.jobs[0]!.badges, ["1 connection", "Apply with resume & profile"]);
@@ -76,35 +78,41 @@ function config(overrides: Partial<ConstructorParameters<typeof ScoutConfig>[0]>
 test("triage merges repeats across emails and counts them", () => {
   const second = email("Development Manager", [card("1000000001", "Engineering Manager", "Acme", ["Kyiv"])], ["1000000001"]);
   const result = triage([parseAlertEmail(body), parseAlertEmail(second)], { config: config() });
-  assert.equal(result.jobs_listed, 5);
-  assert.equal(result.unique_jobs, 4);
+  assert.equal(result.jobs_listed, 6);
+  assert.equal(result.unique_jobs, 5);
   const acme = result.jobs_to_read.find((j) => j.job_id === "1000000001")!;
   assert.equal(acme.emails, 2);
   assert.deepEqual(acme.alerts, ["Team Lead in Ukraine", "Development Manager"]);
 });
 
-test("triage drops known jobs and applies title and location rules to what the alert shows", () => {
+test("triage drops known jobs and applies the light rules to what the alert shows", () => {
   const result = triage([parseAlertEmail(body)], { config: config(), isKnown: (id) => id === "1000000002" });
   assert.equal(result.already_known, 1);
-  // 1000000003 fails title_exclude; 1000000004 has no location, so the location gate drops it
-  assert.deepEqual(result.jobs_to_read.map((j) => j.job_id), ["1000000001"]);
-  assert.equal(result.survived_prefilter, 1);
-  assert.equal(result.prefilter, "applied");
+  // 1000000003 fails title_exclude; 1000000004 has no location, so the location gate drops it;
+  // 1000000005 matches no track but LinkedIn already matched the profile, so it stays
+  assert.deepEqual(result.jobs_to_read.map((j) => j.job_id), ["1000000001", "1000000005"]);
+  assert.equal(result.prefilter, "light");
 });
 
-test("triage can skip the prefilter, and without a config it says so", () => {
-  const asked = triage([parseAlertEmail(body)], { config: config(), prefilter: false });
-  assert.equal(asked.returned, 4);
-  assert.equal(asked.prefilter, "skipped (asked)");
+test("full mode adds the track rule; off and a missing config skip the filter", () => {
+  assert.deepEqual(
+    triage([parseAlertEmail(body)], { config: config(), prefilter: "full" }).jobs_to_read.map((j) => j.job_id),
+    ["1000000001", "1000000002"],
+    "Data Analyst matches no track"
+  );
+  const off = triage([parseAlertEmail(body)], { config: config(), prefilter: "off" });
+  assert.equal(off.returned, 5);
+  assert.equal(off.prefilter, "off (asked)");
   const none = triage([parseAlertEmail(body)], { config: null });
-  assert.equal(none.returned, 4);
-  assert.equal(none.prefilter, "skipped (no sources.yaml)");
+  assert.equal(none.returned, 5);
+  assert.equal(none.prefilter, "off (no sources.yaml)");
 });
 
 test("triage caps at maxJudgmentsPerRun and reports what was held back", () => {
   const result = triage([parseAlertEmail(body)], { config: config({ maxJudgmentsPerRun: 1, localKeywords: [] }) });
   assert.equal(result.returned, 1);
   assert.equal(result.capped, result.survived_prefilter - result.collapsed - 1);
+  assert.ok(result.capped > 0);
 });
 
 test("ids named by the See all link but missing from the cards are reported", () => {

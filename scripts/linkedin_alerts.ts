@@ -6,7 +6,7 @@
  * agent reads next, as in `playbooks/add-from-url.md`. Judges nothing and writes nothing.
  *
  * CLI: `node scripts/dist/linkedin_alerts.js <email-body.txt>... [--sources data/sources.yaml]
- * [--no-prefilter] [--out-file result.json]`. Prefer the `linkedin_alert_intake` MCP tool.
+ * [--prefilter light|full|off] [--out-file result.json]`. Prefer the `linkedin_alert_intake` MCP tool.
  */
 
 import * as fs from "fs";
@@ -115,10 +115,14 @@ export interface IntakeResult {
   prefilter: string;
 }
 
+/** `light` (default): title/hard excludes and the location gate -- LinkedIn already matched the
+ * candidate's profile. `full`: also the scout's track/role-signal rule. `off`: nothing. */
+export type PrefilterMode = "light" | "full" | "off";
+
 export interface TriageOptions {
   config?: ScoutConfig | null;
   isKnown?: (jobId: string) => boolean;
-  prefilter?: boolean;
+  prefilter?: PrefilterMode;
 }
 
 /** Pure core: merges parsed alerts, drops known jobs, applies the scout's prefilter to what the
@@ -147,7 +151,8 @@ export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeR
   const alreadyKnown = unique.size - fresh.length;
 
   const config = opts.config ?? null;
-  const applyPrefilter = opts.prefilter !== false && config !== null;
+  const mode = opts.prefilter ?? "light";
+  const applyPrefilter = mode !== "off" && config !== null;
   const byUrl = new Map(fresh.map((job) => [job.url, job]));
   let postings = fresh.map(
     (job) =>
@@ -163,7 +168,7 @@ export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeR
         postedAt: "",
       })
   );
-  if (applyPrefilter) postings = filterPostings(postings, config!);
+  if (applyPrefilter) postings = filterPostings(postings, config!, { trackRule: mode === "full" });
   const survived = postings.length;
   const deduped = collapseDuplicates(postings);
   const cap = config?.maxJudgmentsPerRun ?? DEFAULT_CAP;
@@ -181,7 +186,7 @@ export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeR
     collapsed: survived - deduped.length,
     returned: returned.length,
     capped: deduped.length - returned.length,
-    prefilter: opts.prefilter === false ? "skipped (asked)" : config === null ? "skipped (no sources.yaml)" : "applied",
+    prefilter: mode === "off" ? "off (asked)" : config === null ? "off (no sources.yaml)" : mode,
   };
 }
 
@@ -207,7 +212,7 @@ function loadKnown(): (jobId: string) => boolean {
   };
 }
 
-export function runAlertIntake(bodies: string[], opts: { sourcesPath?: string; prefilter?: boolean } = {}): IntakeResult {
+export function runAlertIntake(bodies: string[], opts: { sourcesPath?: string; prefilter?: PrefilterMode } = {}): IntakeResult {
   let config: ScoutConfig | null = null;
   try {
     config = loadScoutConfig(opts.sourcesPath ?? DEFAULT_SOURCES_PATH);
@@ -220,16 +225,20 @@ export function runAlertIntake(bodies: string[], opts: { sourcesPath?: string; p
 function main(): void {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
-    options: { sources: { type: "string" }, "no-prefilter": { type: "boolean" }, "out-file": { type: "string" } },
+    options: { sources: { type: "string" }, prefilter: { type: "string" }, "out-file": { type: "string" } },
   });
   if (positionals.length === 0) {
-    console.error("Usage: node scripts/dist/linkedin_alerts.js <email-body.txt>... [--sources ...] [--no-prefilter]");
+    console.error("Usage: node scripts/dist/linkedin_alerts.js <email-body.txt>... [--sources ...] [--prefilter light|full|off]");
+    process.exit(1);
+  }
+  if (values.prefilter && !["light", "full", "off"].includes(values.prefilter)) {
+    console.error("--prefilter must be light, full or off");
     process.exit(1);
   }
   const bodies = positionals.map((file) => fs.readFileSync(path.resolve(file), "utf-8"));
   const result = runAlertIntake(bodies, {
     sourcesPath: values.sources ? path.resolve(values.sources) : undefined,
-    prefilter: values["no-prefilter"] ? false : undefined,
+    prefilter: values.prefilter as PrefilterMode | undefined,
   });
   const json = JSON.stringify(result, null, 2);
   if (values["out-file"]) {

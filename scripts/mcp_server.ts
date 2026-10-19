@@ -240,10 +240,10 @@ server.registerTool(
   "linkedin_alert_intake",
   {
     description:
-      "Parse LinkedIn Job Alert email bodies (plain text, as the host's email tool returns them) into unique job links, drop jobs already known, apply the scout prefilter to the title/company/location the alert shows, and return the jobs whose public page the agent reads next (playbooks/scout.md Step 0.6). Judges and writes nothing.",
+      "Parse LinkedIn Job Alert email bodies (plain text, as the host's email tool returns them) into unique job links, drop jobs already known, apply a light prefilter (title/hard excludes and the location gate; `full` adds the track rule, `off` skips it) to the title/company/location the alert shows, and return the jobs whose public page the agent reads next (playbooks/scout.md Step 0.6). Judges and writes nothing.",
     inputSchema: {
       bodies: z.array(z.string()).min(1),
-      prefilter: z.boolean().default(true),
+      prefilter: z.enum(["light", "full", "off"]).default("light"),
       sources_path: z.string().optional(),
     },
   },
