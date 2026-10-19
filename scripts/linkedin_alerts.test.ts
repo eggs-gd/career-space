@@ -113,6 +113,7 @@ test("triage caps at maxJudgmentsPerRun and reports what was held back", () => {
   assert.equal(result.returned, 1);
   assert.equal(result.capped, result.survived_prefilter - result.collapsed - 1);
   assert.ok(result.capped > 0);
+  assert.equal(result.max_judgments, 1);
 });
 
 test("ids named by the See all link but missing from the cards are reported", () => {

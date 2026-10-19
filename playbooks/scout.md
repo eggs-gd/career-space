@@ -85,26 +85,30 @@ reconciliation never touches them.
 
 Same gate as Step 0.5: a **working** email-read capability, otherwise skip silently. LinkedIn
 mails the candidate job alerts matched to their profile; the jobs in them are extra candidates.
-Read-only toward the mailbox.
+Read-only toward the mailbox. This step only collects candidates; Steps 2 and 3 judge and record
+them together with Step 1's.
 
 1. Search for LinkedIn Job Alert emails (sender `jobalerts-noreply@linkedin.com`) from the last 7
    days, or the window the candidate names, and read each in plain-text form. There are several
-   a day and they overlap; read them all, no judgment yet.
+   a day and they overlap; read them all.
 2. Call `linkedin_alert_intake` with the bodies (CLI: save each body to a file, `node
    scripts/dist/linkedin_alerts.js <files>`). It returns the unique jobs not already known (in the
-   seen ledger or a vacancy record) that clear the title/hard excludes and the location gate on what
-   the alert shows, plus the funnel counts; LinkedIn already matched the profile, so the scout's
-   track rule is not applied. `prefilter: "full"` adds it, `"off"` skips every filter.
-   `emails_without_jobs` or `unparsed_ids` above zero means another email type or a changed
-   template: say so, don't guess.
-3. For each job in `jobs_to_read`, run `playbooks/add-from-url.md` Steps 1-2 on its `url`:
-   `resolve_vacancy_url`, and read the public page yourself on `matched: false`. A posting often
-   also sits on the employer's own ATS; if the page's apply link resolves, use that candidate, its
-   text comes from the ATS's own API. Set the candidate's `source` to `LinkedIn Job Alert` (it
-   normalizes to `linkedin`, the wording kept in `source_detail`). Judge them all before recording
-   any, same as Step 2 -> Step 3.
-4. A page you cannot read (login wall, bot block): do not judge from the alert's snippet. List
-   those links for the candidate in Step 4.
+   seen ledger or a vacancy record) that clear the title/hard excludes and the location gate on
+   what the alert shows, capped at `max_judgments`, plus the funnel counts; LinkedIn already
+   matched the profile, so the scout's track rule is not applied. `prefilter: "full"` adds it,
+   `"off"` skips every filter. `emails_without_jobs` or `unparsed_ids` above zero means another
+   email type or a changed template: say so, don't guess.
+3. For each job in `jobs_to_read`, read the posting as `playbooks/add-from-url.md` Step 1 does on
+   its `url`. A posting often also sits on the employer's own ATS; if the page's apply link goes
+   through `resolve_vacancy_url`, take the text from that candidate. Build the candidate with
+   `url` = the LinkedIn `url`, `apply_url` = the ATS link when there is one, `source` =
+   `LinkedIn Job Alert` (it normalizes to `linkedin`, the wording kept in `source_detail`), and
+   no `posting_id`/`content_id`, so recording computes them from the LinkedIn url and the next
+   intake knows the job. A page you cannot read (login wall, bot block): do not judge from the
+   alert's snippet; keep it for Step 4.
+4. These candidates use part of the run's judgment budget: Step 1 gets what is left. Pass
+   `max_judgments` = `max_judgments` from the intake result minus the candidates you built (CLI
+   `--max-judgments`); at zero, skip Step 1 and say so in Step 4.
 
 ## Step 1 -- fetch
 
@@ -134,11 +138,12 @@ context has no real network access (a sandboxed shell run without escalation), n
 independent source failed at once. Say so plainly and retry outside the sandbox / with network
 access before concluding anything about fetch results.
 
-If `candidates` is empty, say so plainly and stop -- there's nothing to judge this run.
+If `candidates` is empty and Step 0.6 produced none, say so plainly and stop -- there's nothing to
+judge this run.
 
 ## Step 2 -- judge each candidate
 
-For each posting in `candidates`, run the judgment phase from `playbooks/fitment.md` as a
+For each posting in `candidates` and each Step 0.6 candidate, run the judgment phase from `playbooks/fitment.md` as a
 subroutine, but don't paste the rendered result to the candidate yet. `candidate["job_post_text"]`
 is already shaped like a pasted posting. Keep `fitment.md` as the only place that defines detailed
 scoring semantics; scout only batches judgments and routes outcomes.
@@ -159,12 +164,12 @@ unrecorded while others are recorded.
 
 ## Step 3 -- record every outcome
 
-Run `playbooks/scout-record-outcomes.md` for the judged batch.
+Run `playbooks/scout-record-outcomes.md` for the whole judged batch, Step 1 and Step 0.6 together.
 
 ## Step 4 -- summarize
 
 Tell the candidate, in one pass: how many were fetched/considered/judged (alert emails get their
-own line: links found / already seen / judged / unreadable), how many now have a new
+own line: unique jobs / already known / judged, plus the unreadable links, listed), how many now have a new
 vacancy record (company/title/score, most promising first) versus were rejected (a one-line
 reason each is enough, not the full breakdown -- that's what the ledger is for). For each new
 record, offer the natural next step (`playbooks/fitment.md`'s deeper read, `playbooks/

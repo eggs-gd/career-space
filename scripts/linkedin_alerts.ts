@@ -112,6 +112,8 @@ export interface IntakeResult {
   collapsed: number;
   returned: number;
   capped: number;
+  /** the per-run judgment budget the alert jobs count against */
+  max_judgments: number;
   prefilter: string;
 }
 
@@ -186,6 +188,7 @@ export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeR
     collapsed: survived - deduped.length,
     returned: returned.length,
     capped: deduped.length - returned.length,
+    max_judgments: cap,
     prefilter: mode === "off" ? "off (asked)" : config === null ? "off (no sources.yaml)" : mode,
   };
 }

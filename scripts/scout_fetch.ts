@@ -36,7 +36,10 @@ const DEFAULT_SOURCES_PATH = path.join(REPO_ROOT, "data", "sources.yaml");
  * message asked for it by name. Anything requested but not actually configured comes back in
  * `ignored_feeds` rather than silently vanishing, so the caller can tell the candidate why. `[]`/
  * omitted runs every configured feed. */
-export async function runScout(sourcesPath?: string, opts: { feeds?: string[] } = {}): Promise<Record<string, unknown>> {
+export async function runScout(
+  sourcesPath?: string,
+  opts: { feeds?: string[]; maxJudgments?: number } = {}
+): Promise<Record<string, unknown>> {
   const config = loadScoutConfig(sourcesPath ?? DEFAULT_SOURCES_PATH);
 
   let feeds = [...config.feeds];
@@ -73,7 +76,9 @@ export async function runScout(sourcesPath?: string, opts: { feeds?: string[] } 
   // raw per-source string, never parsed into a real date. Anything past the cap simply isn't
   // returned, so it's never marked seen either -- it's picked up (and re-counted) on a later run
   // rather than being lost.
-  const toJudge = unseen.slice(0, config.maxJudgmentsPerRun);
+  // `maxJudgments` lowers the cap for this call (alert jobs already used part of the budget).
+  const cap = Math.max(0, Math.min(config.maxJudgmentsPerRun, opts.maxJudgments ?? Infinity));
+  const toJudge = unseen.slice(0, cap);
   const cappedCount = unseen.length - toJudge.length;
 
   const candidates = toJudge.map((posting) => {
@@ -104,12 +109,18 @@ export async function runScout(sourcesPath?: string, opts: { feeds?: string[] } 
 
 async function main(): Promise<void> {
   const { values } = parseArgs({
-    options: { sources: { type: "string" }, feeds: { type: "string" }, "out-file": { type: "string" } },
+    options: {
+      sources: { type: "string" },
+      feeds: { type: "string" },
+      "max-judgments": { type: "string" },
+      "out-file": { type: "string" },
+    },
   });
   let result: Record<string, unknown>;
   try {
     result = await runScout(values.sources ? path.resolve(values.sources) : undefined, {
       feeds: values.feeds ? values.feeds.split(",").map((f) => f.trim()) : undefined,
+      maxJudgments: values["max-judgments"] !== undefined ? Number(values["max-judgments"]) : undefined,
     });
   } catch (error) {
     if (error instanceof ScoutConfigError) {

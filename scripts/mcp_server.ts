@@ -208,15 +208,16 @@ server.registerTool(
   "scout_fetch",
   {
     description:
-      "Fetch configured public job sources, prefilter and dedup postings, and return new candidates plus funnel counts and fetch errors.",
+      "Fetch configured public job sources, prefilter and dedup postings, and return new candidates plus funnel counts and fetch errors. `max_judgments` lowers the per-run cap for this call.",
     inputSchema: {
       sources_path: z.string().optional(),
       feeds: z.array(z.string()).optional(),
+      max_judgments: z.number().int().min(0).optional(),
     },
   },
-  async ({ sources_path, feeds }): Promise<CallToolResult> => {
+  async ({ sources_path, feeds, max_judgments }): Promise<CallToolResult> => {
     const resolved = sources_path ? resolvePath(sources_path) : undefined;
-    return respond(await runScout(resolved, { feeds }));
+    return respond(await runScout(resolved, { feeds, maxJudgments: max_judgments }));
   }
 );
 
