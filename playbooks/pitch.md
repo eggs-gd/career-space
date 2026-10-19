@@ -83,8 +83,9 @@ Say this plainly when the format allows more than a one-liner — the same "a ha
 signal, not a bug" discipline this system applies to the candidate's own fit and CV also applies
 to describing the system itself:
 
-- Vacancy discovery (`playbooks/scout.md`) only ever pulls from public ATS/job-board APIs the
-  candidate configured — no scraping, no login-walled boards. It's manually triggered; there's no
+- Vacancy discovery (`playbooks/scout.md`) pulls from public ATS/job-board APIs the candidate
+  configured, plus the job links in the candidate's own LinkedIn alert emails when the host can
+  read their mail — no scraping, no login-walled boards. It's manually triggered; there's no
   background scheduler baked into this repo (an agent's own scheduling nicety, if it has one, can
   sit on top of this, but that's not something career-space itself provides).
 - No auto-submit. career-space ships no tool that fills out or clicks an application form. An

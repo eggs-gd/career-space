@@ -81,6 +81,26 @@ step silently and just go to Step 1 — don't nag about setup on every scout run
 the candidate asks to reconcile directly). New scout finds have no correspondence yet, so
 reconciliation never touches them.
 
+## Step 0.6 -- LinkedIn job alerts from email, if the capability is there
+
+Same gate as Step 0.5: a **working** email-read capability, otherwise skip silently. LinkedIn
+mails the candidate job alerts matched to their profile; the links in them are extra candidates,
+read the way `playbooks/add-from-url.md` reads any link. Read-only toward the mailbox.
+
+1. Search for LinkedIn Job Alert emails from the last 7 days (or the window the candidate names).
+   Alerts repeat the same jobs day after day; `resolve_vacancy_url`'s `already_seen` removes what
+   was judged.
+2. Take each job link (title, company, location as shown) and normalize it to
+   `https://www.linkedin.com/jobs/view/<id>/`, no tracking parameters. Collapse repeats across
+   emails.
+3. For each link, run `playbooks/add-from-url.md` Steps 1-2: `resolve_vacancy_url`, and read the
+   public page yourself on `matched: false`. A posting often also sits on the employer's own ATS;
+   if the page's apply link resolves, use that candidate, its text comes from the ATS's own API.
+   Set the candidate's `source` to `LinkedIn Job Alert` (it normalizes to `linkedin`, the wording
+   kept in `source_detail`). Judge them all before recording any, same as Step 2 -> Step 3.
+4. A page you cannot read (login wall, bot block): do not judge from the alert's snippet. List
+   those links for the candidate in Step 4.
+
 ## Step 1 -- fetch
 
 Call `scout_fetch` (MCP tool, or `node scripts/dist/scout_fetch.js` if the server isn't connected).
@@ -138,7 +158,8 @@ Run `playbooks/scout-record-outcomes.md` for the judged batch.
 
 ## Step 4 -- summarize
 
-Tell the candidate, in one pass: how many were fetched/considered/judged, how many now have a new
+Tell the candidate, in one pass: how many were fetched/considered/judged (alert emails get their
+own line: links found / already seen / judged / unreadable), how many now have a new
 vacancy record (company/title/score, most promising first) versus were rejected (a one-line
 reason each is enough, not the full breakdown -- that's what the ledger is for). For each new
 record, offer the natural next step (`playbooks/fitment.md`'s deeper read, `playbooks/
