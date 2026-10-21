@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import CompareRow from '#lib/CompareRow.svelte';
 	import CopyBlock from '#lib/CopyBlock.svelte';
 	import Dialog from '#lib/Dialog.svelte';
@@ -234,6 +235,16 @@
 		<p class="legal">
 			© 2026 earwiG Games · <a href="https://eggs.gd">eggs.gd</a> ·
 			<a href="https://eggs.gd/privacy">Privacy</a>
+			{#if page.data.gaId}
+				·
+				<button
+					type="button"
+					class="cookie-link"
+					onclick={() => window.dispatchEvent(new Event('analytics:reopen'))}
+				>
+					Cookie settings
+				</button>
+			{/if}
 		</p>
 	</div>
 </footer>
@@ -659,6 +670,16 @@
 	.foot .legal {
 		margin-top: 0.5rem;
 		font-size: 0.85rem;
+	}
+
+	.foot .cookie-link {
+		padding: 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		text-decoration: underline;
+		cursor: pointer;
 	}
 
 	@media (min-width: 48rem) {
