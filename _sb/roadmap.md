@@ -143,16 +143,13 @@ and why each one was built lives in git history, not here.
   in Chrome or similar), never scraping built into career-space itself; (b) agent researches +
   drafts, the person approves and sends, no bulk automation; (c) no new root entity to start --
   `contacts.md` / `outreach.md` in the existing vacancy `<slug>/` folder.
-- **Packaging + flows-in-MCP.** Ship the deterministic layer, the flow resolver, and the
-  bundled actions/policies as a prebuilt npm package run as a local subprocess -- not a server.
-  `data/` stays local; the resolver reads only shallow state (file exists? status field? hash?),
-  so a local subprocess reads it for free and the data-location dilemma dissolves. Splits
-  playbooks into **actions** (prose, model judgement) and **flows** (deterministic orchestration,
-  moved into `resolve()`); collapses `AGENTS.md` to the ground-rules stub; shrinks the user's
-  workspace to `data/` + `.mcp.json`. Its stage 2 (label every playbook action-or-flow) is the
-  same work as "Skill hygiene" in Next Steps, and the resolver delivers the input-slicing lever
-  the cheaper-model item below wants. Staged plan, the hard part (judgment branches in flows),
-  and why a server is not the shape are in local design notes. Not started.
+- **Flow resolver.** One MCP `resolve()` entry point that routes the deterministic orchestration
+  of playbooks over shallow state (does a file exist? what does a status field say? a content
+  hash?), and hands the agent one bounded action at a time. Splits playbooks into **actions**
+  (prose, model judgement) and **flows** (deterministic routing). Labelling every playbook
+  action-or-flow is the same work as "Skill hygiene" in Next Steps, and the resolver delivers the
+  input-slicing lever the cheaper-model item below wants. The hard part is a flow branch that is a
+  model decision. Not started.
 - **Dashboard, expensive path** -- only if the cheap board proves insufficient. SvelteKit +
   static adapter. Not started, not clearly needed yet.
 - **Offload narrow, mechanical LLM sub-steps to a cheaper model, host-capability-gated.**
@@ -161,7 +158,7 @@ and why each one was built lives in git history, not here.
   worth evaluating on that basis when this gets picked up: `fitment.md`'s Step 1
   (requirement-cluster extraction) and cover-letter's mode inference (Step 2 -- now bundled with
   the shape judgment, which asks the candidate when unsure, so less purely mechanical than it was).
-  The "smaller, focused context" this needs is exactly what the flows resolver (Packaging item
+  The "smaller, focused context" this needs is exactly what the flow resolver (item
   above) hands back per action, so this is downstream of that -- the only open question left is
   which model runs it. Local design notes refine the mechanism: an optional local model the MCP discovers, not a host-specific subagent (which the note below
   flags as non-portable). The subagent form (Claude Code's `Agent`/Task tool with a pinned cheap
