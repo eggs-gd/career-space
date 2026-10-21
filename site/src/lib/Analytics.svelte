@@ -1,9 +1,11 @@
 <script lang="ts">
 	let { id }: { id: string } = $props();
 
-	const KEY = 'analytics-consent';
+	const KEY = 'analyticsConsent';
+	/** The footer's "Cookie settings" button dispatches this to show the banner again. */
+	const REOPEN = 'analytics:reopen';
+
 	let asked = $state(false);
-	let barHeight = $state(0);
 
 	function stored(): string | null {
 		try {
@@ -15,14 +17,9 @@
 
 	$effect(() => {
 		asked = stored() === null;
-	});
-
-	// the bar is fixed, so give the page the same height of bottom padding while it is shown
-	$effect(() => {
-		document.body.style.paddingBottom = asked ? `${barHeight}px` : '';
-		return () => {
-			document.body.style.paddingBottom = '';
-		};
+		const reopen = () => (asked = true);
+		window.addEventListener(REOPEN, reopen);
+		return () => window.removeEventListener(REOPEN, reopen);
 	});
 
 	function decide(granted: boolean) {
@@ -44,46 +41,65 @@
 </svelte:head>
 
 {#if asked}
-	<div class="consent" role="region" aria-label="Analytics" bind:clientHeight={barHeight}>
-		<p>We count visits with Google Analytics. Cookies only if you allow them; otherwise anonymous, cookie-free counts.</p>
-		<div class="buttons">
-			<button type="button" class="yes" onclick={() => decide(true)}>Allow</button>
-			<button type="button" onclick={() => decide(false)}>No thanks</button>
+	<aside class="consent" aria-label="Analytics cookies">
+		<p>
+			This site uses Google Analytics to count visits. Cookies are set only if you accept; without
+			them it sends only cookieless pings.
+			<a href="https://eggs.gd/privacy">Privacy policy</a>
+		</p>
+		<div class="consent-actions">
+			<button type="button" onclick={() => decide(false)}>Decline</button>
+			<button type="button" onclick={() => decide(true)}>Accept</button>
 		</div>
-	</div>
+	</aside>
 {/if}
 
 <style>
+	/* Same card as on the other eggs.gd sites; colours come from this site's tokens. */
 	.consent {
 		position: fixed;
-		inset: auto 0 0 0;
-		z-index: 20;
+		z-index: 60;
+		right: 1rem;
+		bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+		left: 1rem;
+		max-width: 35rem;
+		margin-left: auto;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		justify-content: space-between;
-		gap: 0.75rem 1.5rem;
-		padding: 0.85rem var(--gutter);
+		gap: 0.75rem 1rem;
+		padding: 0.85rem 1rem;
+		border: 1px solid var(--border);
+		border-radius: 0.5rem;
 		background: var(--surface);
-		border-top: 1px solid var(--border);
-		font-size: 0.92rem;
+		color: var(--text);
+		font-size: 0.875rem;
+		line-height: 1.45;
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 	}
 
 	p {
+		flex: 1 1 15rem;
 		margin: 0;
+		color: var(--muted);
 	}
 
-	.buttons {
+	p a {
+		color: inherit;
+		text-decoration: underline;
+	}
+
+	.consent-actions {
 		display: flex;
 		gap: 0.5rem;
 	}
 
 	button {
-		min-height: 2.5rem;
+		min-height: 2.25rem;
 		padding: 0 1rem;
 		border: 1px solid var(--border);
-		border-radius: 8px;
-		background: var(--surface);
+		border-radius: 0.375rem;
+		background: transparent;
 		color: var(--text);
 		font: inherit;
 		cursor: pointer;
@@ -93,9 +109,8 @@
 		border-color: var(--accent);
 	}
 
-	button.yes {
-		border-color: var(--accent);
-		background: var(--accent);
-		color: var(--accent-ink);
+	button:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
 	}
 </style>
