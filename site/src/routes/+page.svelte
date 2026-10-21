@@ -231,6 +231,10 @@
 <footer class="foot">
 	<div class="wrap">
 		<p>{copy.footer.text} <a href={REPO_URL}>{REPO_URL}</a></p>
+		<p class="legal">
+			© 2026 earwiG Games · <a href="https://eggs.gd">eggs.gd</a> ·
+			<a href="https://eggs.gd/privacy">Privacy</a>
+		</p>
 	</div>
 </footer>
 
@@ -646,6 +650,15 @@
 		border-top: 1px solid var(--border);
 		color: var(--muted);
 		font-size: 0.95rem;
+	}
+
+	.foot p {
+		margin: 0;
+	}
+
+	.foot .legal {
+		margin-top: 0.5rem;
+		font-size: 0.85rem;
 	}
 
 	@media (min-width: 48rem) {
