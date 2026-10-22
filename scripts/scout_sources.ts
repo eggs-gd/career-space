@@ -786,16 +786,17 @@ export const AGGREGATOR_FETCHERS: Record<string, FeedFetcher> = {
 
 // ---------------------------------------------------------------------- regional boards
 
-/** justjoin.it -- Poland/EU IT board, salary-transparent. The list API only returns
+/** justjoin.it -- Poland/EU IT board, salary-transparent. The list endpoint is the site's own
+ * same-origin one; `api.justjoin.it` answers 503 to everything. The list API only returns
  * title+skill-tags+level, not JD text -- a title worth judging (see `worthDetailFetch`) gets one
  * extra detail fetch for the real requirements/description text. */
 async function fetchJustjoin({ trackTitles, roleSignals }: FeedFetchOpts, pages = 3): Promise<FetchResult> {
   const postings: Posting[] = [];
   for (let page = 1; page <= pages; page++) {
-    const url = `https://api.justjoin.it/v2/user-panel/offers?page=${page}&sortBy=published&orderBy=DESC&perPage=100`;
+    const url = `https://justjoin.it/api/candidate-api/offers?sortBy=newest&from=${(page - 1) * 100}&itemsCount=100`;
     let data: any;
     try {
-      data = await getJson(url, { Version: "2" });
+      data = await getJson(url);
     } catch (error) {
       return [postings, `JustJoin.it (page ${page}): ${errorMessage(error)}`];
     }
