@@ -89,3 +89,5 @@ trap and the rule -- not the story.
   `data` under `site/` (or anywhere else tracked).
 - `vite preview` snapshots its file list at start: after `npm run build` restart it, or the new
   hashed assets 404 and the page renders unstyled.
+- JustJoin: the list endpoint is `justjoin.it/api/candidate-api/offers?sortBy=newest&from=<n>&itemsCount=<n>`
+  (`page`/`perPage` are ignored, `itemsCount` goes to 1000). `api.justjoin.it` answers 503 to every request.

@@ -1,15 +1,16 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
-import { fetchWithTimeout, fetchDjinniCompany } from "./scout_sources";
+import { fetchWithTimeout, fetchDjinniCompany, FEED_FETCHERS } from "./scout_sources";
 
 /** Stubs `global.fetch` with a queue of responses/throws, one per call. Restores the real `fetch`
  * via `t.after()` -- runs after this test specifically, pass or fail, not just at process exit --
  * so a later test that forgets to stub its own fetch fails loudly instead of silently inheriting
  * a stale mock. */
-function stubFetch(t: TestContext, ...behaviors: Array<(() => Response) | Error>): { calls: number } {
+function stubFetch(t: TestContext, ...behaviors: Array<(() => Response) | Error>): { calls: number; urls: string[] } {
   const real = global.fetch;
-  const state = { calls: 0 };
-  global.fetch = (async () => {
+  const state = { calls: 0, urls: [] as string[] };
+  global.fetch = (async (input: unknown) => {
+    state.urls.push(String(input));
     const behavior = behaviors[state.calls];
     state.calls += 1;
     if (behavior instanceof Error) throw behavior;
@@ -78,4 +79,37 @@ test('fetchDjinniCompany returns null (caller keeps "?") when the page doesn\'t 
   stubFetch(t, () => new Response("<title>Something else entirely</title>", { status: 200 }));
   const company = await fetchDjinniCompany("https://djinni.co/jobs/4/", "Engineering Manager");
   assert.equal(company, null);
+});
+
+test("justjoin lists through the site's own endpoint (api.justjoin.it is dead) and pages by `from`", async (t) => {
+  const offer = {
+    title: "Backend Engineer",
+    slug: "acme--backend-engineer--warszawa",
+    companyName: "Acme",
+    city: "Warszawa",
+    workplaceType: "remote",
+    experienceLevel: "senior",
+    publishedAt: "2026-10-22T09:20:02Z",
+    requiredSkills: [{ name: "Python" }],
+    niceToHaveSkills: [],
+  };
+  const state = stubFetch(
+    t,
+    () => new Response(JSON.stringify({ data: [offer] }), { status: 200 }),
+    () => new Response(JSON.stringify({ data: [] }), { status: 200 })
+  );
+  const [postings, error] = await FEED_FETCHERS.justjoin!({ trackTitles: [], roleSignals: [], uaCategories: [] });
+  assert.equal(error, null);
+  assert.deepEqual(
+    state.urls.map((u) => new URL(u).pathname + new URL(u).search),
+    [
+      "/api/candidate-api/offers?sortBy=newest&from=0&itemsCount=100",
+      "/api/candidate-api/offers?sortBy=newest&from=100&itemsCount=100",
+    ]
+  );
+  assert.ok(state.urls.every((u) => new URL(u).hostname === "justjoin.it"));
+  assert.equal(postings.length, 1);
+  assert.equal(postings[0]!.company, "Acme");
+  assert.equal(postings[0]!.url, "https://justjoin.it/job-offer/acme--backend-engineer--warszawa");
+  assert.equal(postings[0]!.remote, true);
 });
