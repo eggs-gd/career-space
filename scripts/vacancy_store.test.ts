@@ -286,3 +286,23 @@ test("upsertVacancy stores a canonical source and keeps free text in source_deta
   assert.equal(scout.source, "djinni");
   assert.equal("source_detail" in scout, false);
 });
+
+test("a DOU posting never keeps a location_exception_candidate label; other sources and hard blocks do", () => {
+  const upsert = (source: string, status: "location_exception_candidate" | "hard_location_block") => {
+    const root = tempVacanciesDir();
+    const rec = upsertVacancy({
+      dataDir: root,
+      company: "Acme",
+      title: "Engineering Manager",
+      url: `https://example.test/${source}`,
+      source,
+      postingText: "A role.",
+      eligibility: { location: { status } },
+    });
+    return rec.eligibility as { location?: { status: string } } | undefined;
+  };
+  assert.equal(upsert("douua", "location_exception_candidate"), undefined);
+  assert.equal(upsert("douua", "hard_location_block")?.location?.status, "hard_location_block");
+  assert.equal(upsert("nofluff", "location_exception_candidate")?.location?.status, "location_exception_candidate");
+  assert.equal(upsert("djinni", "location_exception_candidate")?.location?.status, "location_exception_candidate");
+});

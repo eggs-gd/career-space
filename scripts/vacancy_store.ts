@@ -10,7 +10,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as yaml from "js-yaml";
 import { parseArgs } from "util";
-import { Eligibility, isLocationEligibilityStatus, normalizeEligibility } from "./eligibility";
+import { Eligibility, eligibilityForSource, isLocationEligibilityStatus, normalizeEligibility } from "./eligibility";
 import { listOpportunityDirs, moveToHome, opportunityDir, relocateArchived } from "./opportunity_dirs";
 import * as postingIds from "./posting_ids";
 import { normalizeSource } from "./source_channel";
@@ -460,7 +460,7 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   } else {
     setdefault(record, "fit", { score: null, category: null, reason: null });
   }
-  const eligibility = normalizeEligibility(opts.eligibility);
+  const eligibility = eligibilityForSource(String(record.source ?? ""), normalizeEligibility(opts.eligibility));
   if (eligibility !== undefined) record.eligibility = eligibility;
   setdefault(record, "location", "");
   setdefault(record, "remote", false);

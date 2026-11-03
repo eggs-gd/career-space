@@ -80,7 +80,8 @@ drops ids already present in `seen.jsonl`. Returned candidates are judged throug
 for matched postings.
 
 The prefilter is intentionally cheap. Nuanced eligibility such as
-`location_exception_candidate` is classified during fitment and stored in the vacancy record.
+`location_exception_candidate` is classified during fitment and stored in the vacancy record
+(`upsertVacancy` drops it for a local-board source, see `eligibility.ts`).
 
 ## Rendering
 
