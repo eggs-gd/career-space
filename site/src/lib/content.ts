@@ -81,7 +81,7 @@ export const copy = {
 
 	hero: {
 		title: 'Make more of your experience.',
-		lead: 'career-space is a personal career workspace for the AI agent you already use. You bring your CVs, notes and career history; it helps you see where your experience can go, shape how you present it, and turn that into a CV, profiles and job leads.',
+		lead: 'career-space is a career consultant that lives in the AI assistant you already use. It gets to know your experience, helps you see where it can take you, presents you well in your CV and profiles, and finds jobs or freelance work that fit.',
 		primary: 'Try it in two minutes',
 		secondary: 'View on GitHub'
 	},
@@ -89,15 +89,15 @@ export const copy = {
 	about: [
 		{
 			title: 'What it is',
-			text: 'A folder of your career facts, plus rules and small tools that an AI agent (Claude Code, Codex CLI, Gemini CLI or Cursor) reads and uses. No app, no server, no account. Your data stays on your machine. It is open source.'
+			text: 'A career consultant you talk to in plain language. It learns your story from the CVs and notes you already have, then helps you present it and find work worth your time. Free and open source.'
 		},
 		{
 			title: 'What it is for',
-			text: 'Turning old CVs, notes and half-remembered projects into one clear professional story, then using it: a CV for a specific role, a LinkedIn profile that says the same thing, a cover letter, and one place to follow the search.'
+			text: 'Going from “I have a lot of experience but cannot explain it well” to a clear CV, a LinkedIn profile that says the same thing, a cover letter for a specific job, and a list of jobs or orders that actually suit you.'
 		},
 		{
 			title: 'Why it exists',
-			text: 'Most job-search tools start from a feed of postings. The hard parts are elsewhere: knowing what you are aiming at, saying it consistently everywhere, and stopping a language model from quietly turning “contributed to” into “led”. The rules in it are there because a real generation once got them wrong.'
+			text: 'Job sites just show you a pile of postings. The hard part is deciding what you are aiming at and saying it clearly everywhere, without an AI quietly inflating what you did. This one keeps to the facts you gave it and remembers you between conversations. Your files stay on your own computer.'
 		}
 	] as Point[],
 
