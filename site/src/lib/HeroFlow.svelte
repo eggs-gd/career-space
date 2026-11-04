@@ -2,20 +2,20 @@
 	import { copy } from '#lib/content.ts';
 
 	const flow = copy.flow;
-	const docs = ['linkedin', 'cv', 'profile'];
+	const docs = ['linkedin', 'cv', 'upwork'];
 	// eight vacancies per cycle; the indexes in `fit` make it through, the rest are dropped
 	const stream = Array.from({ length: 8 }, (_, i) => i);
 	const fit = [1, 4, 6];
 </script>
 
 {#snippet icon(kind: string)}
-	<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+	<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
 		{#if kind === 'linkedin'}
 			<rect x="3.5" y="3.5" width="17" height="17" rx="3" /><path d="M8 11v5M8 8v.01M12 16v-5m0 2.5c0-1.4 1-2.5 2.3-2.5S16.5 12 16.5 13.5V16" />
 		{:else if kind === 'cv'}
-			<path d="M6 3.5h8l4 4V20.5H6z" /><path d="M14 3.5v4h4M9 12h6M9 15.5h6" />
+			<path d="M5.5 3.5h9l4 4v13h-13z" /><path d="M14.5 3.5v4h4" /><text x="12" y="16.6" text-anchor="middle" font-size="7.6" font-weight="800" font-family="ui-sans-serif, system-ui, sans-serif" fill="currentColor" stroke="none">CV</text>
 		{:else}
-			<circle cx="12" cy="9" r="3.2" /><path d="M5.5 19.5c.6-3.3 3.2-5 6.5-5s5.9 1.7 6.5 5" />
+			<rect x="3.5" y="3.5" width="17" height="17" rx="3" /><text x="12" y="16" text-anchor="middle" font-size="10.4" font-weight="800" font-family="ui-sans-serif, system-ui, sans-serif" fill="currentColor" stroke="none">Up</text>
 		{/if}
 	</svg>
 {/snippet}
@@ -37,6 +37,11 @@
 			<span>{flow.manager}</span>
 		</div>
 
+		<div class="boards">
+			<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="4.5" rx="1.2" /><rect x="3.5" y="10" width="17" height="4.5" rx="1.2" /><rect x="3.5" y="16" width="17" height="4.5" rx="1.2" /></svg>
+			<span>{flow.boards}</span>
+		</div>
+
 		<div class="lane a">
 			<span class="cap left">{flow.profiles}</span>
 			{#each docs as kind, i}
@@ -47,7 +52,6 @@
 
 		<div class="lane b">
 			<span class="cap left">{flow.matches}</span>
-			<span class="cap right">{flow.boards}</span>
 			{#each stream as i}
 				{#if fit.includes(i)}
 					{@const k = fit.indexOf(i)}
@@ -77,6 +81,8 @@
 		--warn-bg: #fbf3df;
 		--bad: #c53030;
 		--ok: var(--accent);
+		--dim-border: color-mix(in srgb, var(--muted) 50%, transparent);
+		--dim-bg: color-mix(in srgb, var(--muted) 9%, var(--surface));
 		margin: 2.25rem 0 0;
 		max-width: 40rem;
 	}
@@ -106,7 +112,7 @@
 	}
 
 	.lane.a {
-		height: 3.6rem;
+		height: 4rem;
 	}
 
 	.lane.b {
@@ -125,10 +131,6 @@
 
 	.cap.left {
 		left: 0;
-	}
-
-	.cap.right {
-		right: 0;
 	}
 
 	/* the manager sits in the middle and covers whatever slides behind it */
@@ -155,6 +157,29 @@
 		font-weight: 600;
 		line-height: 1.2;
 		animation: pulse 12s ease-in-out infinite;
+	}
+
+	/* job boards: a full-height panel on the right that the vacancies slide out of */
+	.boards {
+		position: absolute;
+		z-index: 2;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		width: 20%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 0.35rem;
+		padding: 0.4rem;
+		color: var(--muted);
+		background: color-mix(in srgb, var(--muted) 9%, var(--surface));
+		border-left: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent);
+		text-align: center;
+		font-size: 0.66rem;
+		font-weight: 600;
+		line-height: 1.2;
 	}
 
 	.badge {
@@ -191,14 +216,21 @@
 	.doc {
 		position: absolute;
 		top: 1.35rem;
-		left: calc(var(--i) * 2.45rem);
+		--sz: clamp(2rem, 11.5cqw, 2.4rem);
+		--go: calc(50cqw - var(--i) * (var(--sz) + 0.3rem) - var(--sz) / 2);
+		left: calc(var(--i) * (var(--sz) + 0.3rem));
 		display: grid;
 		place-items: center;
-		width: 2.05rem;
-		height: 2.05rem;
+		width: var(--sz);
+		height: var(--sz);
 		border-radius: 8px;
 		border: 1px solid var(--border);
 		overflow: visible;
+	}
+
+	.doc svg {
+		width: 72%;
+		height: auto;
 	}
 
 	.doc.raw {
@@ -243,7 +275,7 @@
 	.job {
 		position: absolute;
 		top: calc(1.35rem + var(--row) * 1.6rem);
-		left: 72cqw;
+		left: 83cqw;
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
@@ -251,8 +283,8 @@
 		width: 28cqw;
 		height: 1.4rem;
 		padding: 0 0.5rem;
-		background: var(--warn-bg);
-		border: 1px solid var(--warn);
+		background: var(--dim-bg);
+		border: 1px solid var(--dim-border);
 		border-radius: 7px;
 		animation-duration: 10s;
 		animation-iteration-count: infinite;
@@ -265,10 +297,15 @@
 		right: -0.3rem;
 	}
 
+	.job .badge.q {
+		color: var(--surface);
+		background: var(--muted);
+	}
+
 	.bar {
 		display: block;
 		height: 0.26rem;
-		background: color-mix(in srgb, var(--warn) 40%, transparent);
+		background: color-mix(in srgb, var(--muted) 38%, transparent);
 		border-radius: 2px;
 	}
 
@@ -339,13 +376,13 @@
 	@keyframes bring {
 		0% { opacity: 0; transform: translateX(-3cqw); }
 		8%, 20% { opacity: 1; transform: translateX(0); }
-		38% { opacity: 1; transform: translateX(33cqw); }
-		42%, 100% { opacity: 0; transform: translateX(33cqw); }
+		38% { opacity: 1; transform: translateX(var(--go)); }
+		42%, 100% { opacity: 0; transform: translateX(var(--go)); }
 	}
 
 	@keyframes back {
-		0%, 46% { opacity: 0; transform: translateX(33cqw); }
-		54% { opacity: 1; transform: translateX(33cqw); }
+		0%, 46% { opacity: 0; transform: translateX(var(--go)); }
+		54% { opacity: 1; transform: translateX(var(--go)); }
 		68%, 90% { opacity: 1; transform: translateX(0); }
 		97%, 100% { opacity: 0; transform: translateX(0); }
 	}
@@ -367,22 +404,23 @@
 
 	/* dropped: stops at the manager, flashes a red cross and sinks away */
 	@keyframes reject {
-		0% { opacity: 0; transform: translateX(0); border-color: var(--warn); }
-		8% { opacity: 1; transform: translateX(0); }
-		30% { opacity: 1; transform: translateX(-12cqw); border-color: var(--warn); }
+		0% { opacity: 0; transform: translateX(0); border-color: var(--dim-border); }
+		6% { opacity: 0; transform: translateX(-2cqw); }
+		10% { opacity: 1; transform: translateX(-4cqw); }
+		30% { opacity: 1; transform: translateX(-21cqw); border-color: var(--dim-border); }
 		34%, 42% { border-color: var(--bad); }
-		38% { border-color: var(--warn); }
-		52% { opacity: 0; transform: translateX(-13cqw) translateY(0.9rem) rotate(-8deg); border-color: var(--bad); }
-		100% { opacity: 0; transform: translateX(-13cqw) translateY(0.9rem) rotate(-8deg); }
+		38% { border-color: var(--dim-border); }
+		52% { opacity: 0; transform: translateX(-22cqw) translateY(0.9rem) rotate(-8deg); border-color: var(--bad); }
+		100% { opacity: 0; transform: translateX(-22cqw) translateY(0.9rem) rotate(-8deg); }
 	}
 
 	/* selected: turns green at the manager, passes behind it and comes out toward you */
 	@keyframes select {
-		0% { opacity: 0; transform: translateX(72cqw); border-color: var(--warn); background: var(--warn-bg); }
-		6% { opacity: 1; transform: translateX(72cqw); }
-		30% { opacity: 1; transform: translateX(58cqw); border-color: var(--warn); background: var(--warn-bg); }
+		0%, 5% { opacity: 0; transform: translateX(83cqw); border-color: var(--dim-border); background: var(--dim-bg); }
+		9% { opacity: 1; transform: translateX(79cqw); }
+		30% { opacity: 1; transform: translateX(62cqw); border-color: var(--dim-border); background: var(--dim-bg); }
 		36% { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
-		44% { opacity: 0; transform: translateX(44cqw); }
+		44% { opacity: 0; transform: translateX(48cqw); }
 		52% { opacity: 0; transform: translateX(36cqw); }
 		58% { opacity: 1; transform: translateX(28cqw); }
 		70%, 92% { opacity: 1; transform: translateX(0); border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
@@ -395,7 +433,7 @@
 	}
 
 	@keyframes tint {
-		0%, 34% { background: color-mix(in srgb, var(--warn) 40%, transparent); }
+		0%, 34% { background: color-mix(in srgb, var(--muted) 38%, transparent); }
 		40%, 100% { background: color-mix(in srgb, var(--ok) 55%, transparent); }
 	}
 
