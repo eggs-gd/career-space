@@ -88,15 +88,11 @@ export const copy = {
 
 	flow: {
 		caption:
-			'You hand over your LinkedIn profile and a couple of CVs. The manager digests them and sends back edits for each profile. Meanwhile it reads vacancies from job boards, drops most of them and sends you only the ones that fit.',
+			'You hand over your LinkedIn profile and a couple of CVs. The manager makes sense of them and gives them back improved. Meanwhile job boards send it vacancies: it drops most of them and passes only the ones that fit you.',
 		manager: 'Career manager',
-		bring: 'You bring',
-		get: 'You get',
+		profiles: 'Your profiles',
+		matches: 'Your matches',
 		boards: 'Job boards',
-		matches: 'Worth your time',
-		inputs: ['LinkedIn', 'CV', 'Old CV'],
-		outputs: ['LinkedIn', 'CV', 'Djinni'],
-		edited: 'edited',
 		jobs: ['Head of Eng', 'Eng Manager', 'Director']
 	},
 

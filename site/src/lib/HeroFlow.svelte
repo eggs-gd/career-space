@@ -2,10 +2,31 @@
 	import { copy } from '#lib/content.ts';
 
 	const flow = copy.flow;
-	// ten vacancies per cycle; the indexes in `fit` make it through, the rest are dropped
-	const stream = Array.from({ length: 10 }, (_, i) => i);
-	const fit = [2, 5, 8];
+	const docs = ['linkedin', 'cv', 'profile'];
+	// eight vacancies per cycle; the indexes in `fit` make it through, the rest are dropped
+	const stream = Array.from({ length: 8 }, (_, i) => i);
+	const fit = [1, 4, 6];
 </script>
+
+{#snippet icon(kind: string)}
+	<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+		{#if kind === 'linkedin'}
+			<rect x="3.5" y="3.5" width="17" height="17" rx="3" /><path d="M8 11v5M8 8v.01M12 16v-5m0 2.5c0-1.4 1-2.5 2.3-2.5S16.5 12 16.5 13.5V16" />
+		{:else if kind === 'cv'}
+			<path d="M6 3.5h8l4 4V20.5H6z" /><path d="M14 3.5v4h4M9 12h6M9 15.5h6" />
+		{:else}
+			<circle cx="12" cy="9" r="3.2" /><path d="M5.5 19.5c.6-3.3 3.2-5 6.5-5s5.9 1.7 6.5 5" />
+		{/if}
+	</svg>
+{/snippet}
+
+{#snippet check()}
+	<svg viewBox="0 0 12 12" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.4l2.3 2.3L9.5 3.6" /></svg>
+{/snippet}
+
+{#snippet cross()}
+	<svg viewBox="0 0 12 12" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3l6 6M9 3l-6 6" /></svg>
+{/snippet}
 
 <figure class="flow">
 	<div class="stage" aria-hidden="true">
@@ -17,30 +38,31 @@
 		</div>
 
 		<div class="lane a">
-			<span class="cap left">{flow.bring}</span>
-			<span class="cap right">{flow.get}</span>
-			{#each flow.inputs as label, i}
-				<span class="chip in" style="--i:{i}">{label}</span>
-			{/each}
-			{#each flow.outputs as label, i}
-				<span class="chip out" style="--i:{i}">{label}<b>{flow.edited}</b></span>
+			<span class="cap left">{flow.profiles}</span>
+			{#each docs as kind, i}
+				<span class="doc raw" style="--i:{i}">{@render icon(kind)}<i class="badge q">?</i></span>
+				<span class="doc ready" style="--i:{i}">{@render icon(kind)}<i class="badge ok">{@render check()}</i></span>
 			{/each}
 		</div>
 
 		<div class="lane b">
-			<span class="cap left">{flow.boards}</span>
-			<span class="cap right">{flow.matches}</span>
+			<span class="cap left">{flow.matches}</span>
+			<span class="cap right">{flow.boards}</span>
 			{#each stream as i}
 				{#if fit.includes(i)}
 					{@const k = fit.indexOf(i)}
 					<span class="job fit" style="--d:{i}; --row:{k}">
 						<span class="t">{flow.jobs[k]}</span>
 						<span class="bar"></span>
+						<i class="badge q">?</i>
+						<i class="badge ok">{@render check()}</i>
 					</span>
 				{:else}
 					<span class="job drop" style="--d:{i}; --row:{i % 3}">
 						<span class="bar"></span>
 						<span class="bar short"></span>
+						<i class="badge q">?</i>
+						<i class="badge no">{@render cross()}</i>
 					</span>
 				{/if}
 			{/each}
@@ -51,14 +73,26 @@
 
 <style>
 	.flow {
+		--warn: #b7791f;
+		--warn-bg: #fbf3df;
+		--bad: #c53030;
+		--ok: var(--accent);
 		margin: 2.25rem 0 0;
 		max-width: 40rem;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.flow {
+			--warn: #e0b341;
+			--warn-bg: #2a2412;
+			--bad: #f26d6d;
+		}
 	}
 
 	.stage {
 		position: relative;
 		display: grid;
-		gap: 1.25rem;
+		gap: 1rem;
 		padding: 1.1rem 1rem 1.25rem;
 		background: var(--surface);
 		border: 1px solid var(--border);
@@ -68,8 +102,15 @@
 
 	.lane {
 		position: relative;
-		height: 6.1rem;
 		container-type: inline-size;
+	}
+
+	.lane.a {
+		height: 3.6rem;
+	}
+
+	.lane.b {
+		height: 6.2rem;
 	}
 
 	.cap {
@@ -116,66 +157,118 @@
 		animation: pulse 12s ease-in-out infinite;
 	}
 
-	.chip,
-	.job {
+	.badge {
 		position: absolute;
-		display: flex;
-		align-items: center;
-		width: 28cqw;
-		height: 1.55rem;
-		padding: 0 0.5rem;
-		background: var(--bg);
-		border: 1px solid var(--border);
-		border-radius: 7px;
-		color: var(--text);
-		font-size: 0.7rem;
+		top: -0.35rem;
+		right: -0.35rem;
+		display: grid;
+		place-items: center;
+		width: 0.95rem;
+		height: 0.95rem;
+		border-radius: 50%;
+		font-size: 0.6rem;
+		font-style: normal;
+		font-weight: 700;
 		line-height: 1;
-		white-space: nowrap;
 	}
 
-	.chip {
-		top: calc(1.2rem + var(--i) * 1.65rem);
+	.badge.q {
+		color: #3b2a05;
+		background: var(--warn);
 	}
 
-	.chip.in {
-		left: 0;
+	.badge.ok {
+		color: var(--accent-ink);
+		background: var(--ok);
+	}
+
+	.badge.no {
+		color: #fff;
+		background: var(--bad);
+	}
+
+	/* ---- profiles: yellow and unclear going in, green and shiny coming back ---- */
+	.doc {
+		position: absolute;
+		top: 1.35rem;
+		left: calc(var(--i) * 2.45rem);
+		display: grid;
+		place-items: center;
+		width: 2.05rem;
+		height: 2.05rem;
+		border-radius: 8px;
+		border: 1px solid var(--border);
+		overflow: visible;
+	}
+
+	.doc.raw {
+		color: var(--warn);
+		background: var(--warn-bg);
+		border-color: var(--warn);
 		animation: bring 12s ease-in-out infinite;
 		animation-delay: calc(var(--i) * 0.35s);
 		animation-fill-mode: backwards;
 	}
 
-	.chip.out {
-		right: 0;
-		justify-content: space-between;
+	.doc.ready {
+		color: var(--accent);
 		border-color: var(--accent);
-		animation: get 12s ease-in-out infinite;
+		background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+		animation: back 12s ease-in-out infinite;
 		animation-delay: calc(var(--i) * 0.35s);
 		animation-fill-mode: backwards;
 	}
 
-	.chip b {
-		margin-left: 0.3rem;
-		color: var(--accent);
-		font-size: 0.58rem;
-		font-weight: 600;
+	.doc.ready::after,
+	.job.fit::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, #fff 70%, transparent) 50%, transparent 65%);
+		background-size: 250% 100%;
+		background-position: 130% 0;
+		pointer-events: none;
+		animation: shine 12s ease-in-out infinite;
+		animation-delay: calc(var(--i, 0) * 0.35s);
 	}
 
+	.job.fit::after {
+		animation-duration: 10s;
+		animation-delay: calc(var(--d) * -1.25s);
+		animation-name: shine-job;
+	}
+
+	/* ---- vacancies: unclear coming in from the boards, green ones carry on to you ---- */
 	.job {
-		top: calc(1.2rem + var(--row) * 1.65rem);
+		position: absolute;
+		top: calc(1.35rem + var(--row) * 1.6rem);
+		left: 72cqw;
+		display: flex;
 		flex-direction: column;
-		align-items: stretch;
 		justify-content: center;
 		gap: 0.22rem;
+		width: 28cqw;
+		height: 1.4rem;
+		padding: 0 0.5rem;
+		background: var(--warn-bg);
+		border: 1px solid var(--warn);
+		border-radius: 7px;
 		animation-duration: 10s;
 		animation-iteration-count: infinite;
 		animation-timing-function: ease-in-out;
-		animation-delay: calc(var(--d) * -1s);
+		animation-delay: calc(var(--d) * -1.25s);
+	}
+
+	.job .badge {
+		top: -0.4rem;
+		right: -0.3rem;
 	}
 
 	.bar {
 		display: block;
-		height: 0.28rem;
-		background: var(--border);
+		height: 0.26rem;
+		background: color-mix(in srgb, var(--warn) 40%, transparent);
 		border-radius: 2px;
 	}
 
@@ -183,40 +276,88 @@
 		width: 55%;
 	}
 
-	.job.drop {
-		left: 0;
-		animation-name: reject;
-	}
-
-	.job.fit {
-		right: 0;
-		border-color: var(--accent);
-		animation-name: select;
-	}
-
 	.job .t {
 		color: var(--text);
 		font-size: 0.66rem;
 		font-weight: 600;
+		line-height: 1;
+		white-space: nowrap;
+		animation: reveal 10s ease-in-out infinite;
+		animation-delay: calc(var(--d) * -1.25s);
+	}
+
+	.job.fit {
+		left: 0;
+		animation-name: select;
 	}
 
 	.job.fit .bar {
-		width: 70%;
-		background: var(--accent);
-		opacity: 0.55;
+		animation: tint 10s ease-in-out infinite;
+		animation-delay: calc(var(--d) * -1.25s);
+	}
+
+	.job.fit .badge.q {
+		animation: fade-out 10s ease-in-out infinite;
+		animation-delay: calc(var(--d) * -1.25s);
+	}
+
+	.job.fit .badge.ok {
+		animation: fade-in 10s ease-in-out infinite;
+		animation-delay: calc(var(--d) * -1.25s);
+	}
+
+	.job.fit,
+	.job.fit .t {
+		/* keep the title readable even before the keyframes begin */
+		color: var(--text);
+	}
+
+	.job.drop {
+		animation-name: reject;
+	}
+
+	.job.drop .badge.q {
+		animation: fade-out 10s ease-in-out infinite;
+		animation-delay: calc(var(--d) * -1.25s);
+	}
+
+	.job.drop .badge.no {
+		animation: blink 10s ease-in-out infinite;
+		animation-delay: calc(var(--d) * -1.25s);
+	}
+
+	/* base state (also what reduced motion shows) */
+	.badge.no,
+	.doc.raw {
+		opacity: 0;
+	}
+
+	.badge.q {
+		opacity: 0;
 	}
 
 	@keyframes bring {
 		0% { opacity: 0; transform: translateX(-3cqw); }
 		8%, 20% { opacity: 1; transform: translateX(0); }
-		40% { opacity: 1; transform: translateX(26cqw); }
-		44%, 100% { opacity: 0; transform: translateX(26cqw); }
+		38% { opacity: 1; transform: translateX(33cqw); }
+		42%, 100% { opacity: 0; transform: translateX(33cqw); }
 	}
 
-	@keyframes get {
-		0%, 46% { opacity: 0; transform: translateX(-24cqw); }
-		62%, 90% { opacity: 1; transform: translateX(0); }
+	@keyframes back {
+		0%, 46% { opacity: 0; transform: translateX(33cqw); }
+		54% { opacity: 1; transform: translateX(33cqw); }
+		68%, 90% { opacity: 1; transform: translateX(0); }
 		97%, 100% { opacity: 0; transform: translateX(0); }
+	}
+
+	@keyframes shine {
+		0%, 66% { background-position: 130% 0; }
+		80%, 100% { background-position: -30% 0; }
+	}
+
+	@keyframes shine-job {
+		0%, 58% { background-position: 130% 0; }
+		74%, 100% { background-position: -30% 0; }
 	}
 
 	@keyframes pulse {
@@ -224,23 +365,55 @@
 		42% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 18%, transparent); }
 	}
 
-	/* dropped: stops at the manager and sinks away */
+	/* dropped: stops at the manager, flashes a red cross and sinks away */
 	@keyframes reject {
-		0% { opacity: 0; transform: translateX(0); }
+		0% { opacity: 0; transform: translateX(0); border-color: var(--warn); }
 		8% { opacity: 1; transform: translateX(0); }
-		38% { opacity: 1; transform: translateX(12cqw) rotate(0); }
-		48% { opacity: 0; transform: translateX(13cqw) translateY(0.9rem) rotate(8deg); }
-		100% { opacity: 0; transform: translateX(13cqw) translateY(0.9rem) rotate(8deg); }
+		30% { opacity: 1; transform: translateX(-12cqw); border-color: var(--warn); }
+		34%, 42% { border-color: var(--bad); }
+		38% { border-color: var(--warn); }
+		52% { opacity: 0; transform: translateX(-13cqw) translateY(0.9rem) rotate(-8deg); border-color: var(--bad); }
+		100% { opacity: 0; transform: translateX(-13cqw) translateY(0.9rem) rotate(-8deg); }
 	}
 
-	/* selected: slides behind the manager and comes out the other side */
+	/* selected: turns green at the manager, passes behind it and comes out toward you */
 	@keyframes select {
-		0% { opacity: 0; transform: translateX(-72cqw); }
-		6% { opacity: 1; transform: translateX(-72cqw); }
-		40% { opacity: 1; transform: translateX(-34cqw); }
-		54% { opacity: 1; transform: translateX(-20cqw); }
-		68%, 92% { opacity: 1; transform: translateX(0); }
+		0% { opacity: 0; transform: translateX(72cqw); border-color: var(--warn); background: var(--warn-bg); }
+		6% { opacity: 1; transform: translateX(72cqw); }
+		30% { opacity: 1; transform: translateX(58cqw); border-color: var(--warn); background: var(--warn-bg); }
+		36% { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
+		44% { opacity: 0; transform: translateX(44cqw); }
+		52% { opacity: 0; transform: translateX(36cqw); }
+		58% { opacity: 1; transform: translateX(28cqw); }
+		70%, 92% { opacity: 1; transform: translateX(0); border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
 		100% { opacity: 0; transform: translateX(0); }
+	}
+
+	@keyframes reveal {
+		0%, 52% { opacity: 0; }
+		60%, 100% { opacity: 1; }
+	}
+
+	@keyframes tint {
+		0%, 34% { background: color-mix(in srgb, var(--warn) 40%, transparent); }
+		40%, 100% { background: color-mix(in srgb, var(--ok) 55%, transparent); }
+	}
+
+	@keyframes fade-out {
+		0%, 24% { opacity: 1; }
+		32%, 100% { opacity: 0; }
+	}
+
+	@keyframes fade-in {
+		0%, 34% { opacity: 0; }
+		42%, 100% { opacity: 1; }
+	}
+
+	@keyframes blink {
+		0%, 30% { opacity: 0; }
+		33%, 37%, 41% { opacity: 1; }
+		35%, 39% { opacity: 0.2; }
+		50%, 100% { opacity: 0; }
 	}
 
 	figcaption {
@@ -251,13 +424,27 @@
 
 	@media (prefers-reduced-motion: reduce) {
 		.manager,
-		.chip,
-		.job {
+		.doc,
+		.job,
+		.job *,
+		.doc::after,
+		.job::after {
 			animation: none;
 		}
 
-		.job.drop {
+		.doc.raw,
+		.job.drop,
+		.badge.q {
 			display: none;
+		}
+
+		.job.fit .bar {
+			background: color-mix(in srgb, var(--ok) 55%, transparent);
+		}
+
+		.job.fit {
+			border-color: var(--ok);
+			background: color-mix(in srgb, var(--ok) 10%, var(--surface));
 		}
 	}
 </style>
