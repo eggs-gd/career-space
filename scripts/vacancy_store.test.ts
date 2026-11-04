@@ -306,3 +306,12 @@ test("a DOU posting never keeps a location_exception_candidate label; other sour
   assert.equal(upsert("nofluff", "location_exception_candidate")?.location?.status, "location_exception_candidate");
   assert.equal(upsert("djinni", "location_exception_candidate")?.location?.status, "location_exception_candidate");
 });
+
+test("re-assessing an existing DOU record as location_exception_candidate clears the stored label", () => {
+  const root = tempVacanciesDir();
+  const base = { dataDir: root, company: "Acme", title: "Engineering Manager", url: "https://example.test/dou-1", source: "douua", postingText: "A role." };
+  const first = upsertVacancy({ ...base, eligibility: { location: { status: "hard_location_block" } } });
+  assert.equal((first.eligibility as { location?: { status: string } } | undefined)?.location?.status, "hard_location_block");
+  const again = upsertVacancy({ ...base, eligibility: { location: { status: "location_exception_candidate" } } });
+  assert.equal(again.eligibility, undefined);
+});

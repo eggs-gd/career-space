@@ -460,8 +460,10 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   } else {
     setdefault(record, "fit", { score: null, category: null, reason: null });
   }
-  const eligibility = eligibilityForSource(String(record.source ?? ""), normalizeEligibility(opts.eligibility));
+  const incoming = normalizeEligibility(opts.eligibility);
+  const eligibility = eligibilityForSource(String(record.source ?? ""), incoming);
   if (eligibility !== undefined) record.eligibility = eligibility;
+  else if (incoming !== undefined) delete record.eligibility; // suppressed on a local board: back to the default, no label
   setdefault(record, "location", "");
   setdefault(record, "remote", false);
   setdefault(record, "source", "");
