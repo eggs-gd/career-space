@@ -72,28 +72,57 @@ export const copy = {
 	brand: 'career-space',
 	navLabel: 'Sections',
 	nav: [
-		{ label: 'Your story', href: '#story' },
-		{ label: 'Explore', href: '#explore' },
-		{ label: 'Job search', href: '#search' },
+		{ label: 'Easy start', href: '#start' },
+		{ label: 'Details', href: '#details' },
 		{ label: 'Compare', href: '#compare' },
-		{ label: 'Get started', href: '#start' }
+		{ label: 'Install yourself', href: '#manual' }
 	],
 	github: 'GitHub',
 
 	hero: {
 		title: 'Make more of your experience.',
-		lead: 'Bring your CVs, notes and career history. Explore where your experience can go, shape how you present it, and turn it into CVs, profiles and job leads, with the AI agent you already use.',
-		note: 'No separate app, server or account.',
-		primary: 'Get started',
+		lead: 'career-space is a personal career workspace for the AI agent you already use. You bring your CVs, notes and career history; it helps you see where your experience can go, shape how you present it, and turn that into a CV, profiles and job leads.',
+		primary: 'Try it in two minutes',
 		secondary: 'View on GitHub'
 	},
 
-	why: {
-		title: 'Why it exists',
-		paragraphs: [
-			'Most job-search tools start from the feed of postings and ask how many you can get through. The hard parts are elsewhere: knowing what you are aiming at, saying it consistently on LinkedIn, Djinni, Upwork and in a CV, and stopping a language model from quietly turning “contributed to” into “led”. The rules it follows are there because a real generation once got them wrong.',
-			'So career-space starts with you. It is a personal career workspace that happens to be public: a folder of facts, rules and small scripts that a coding agent reads and acts on. Your data stays in a gitignored folder next to it.'
-		]
+	about: [
+		{
+			title: 'What it is',
+			text: 'A folder of your career facts, plus rules and small tools that an AI agent (Claude Code, Codex CLI, Gemini CLI or Cursor) reads and uses. No app, no server, no account. Your data stays on your machine. It is open source.'
+		},
+		{
+			title: 'What it is for',
+			text: 'Turning old CVs, notes and half-remembered projects into one clear professional story, then using it: a CV for a specific role, a LinkedIn profile that says the same thing, a cover letter, and one place to follow the search.'
+		},
+		{
+			title: 'Why it exists',
+			text: 'Most job-search tools start from a feed of postings. The hard parts are elsewhere: knowing what you are aiming at, saying it consistently everywhere, and stopping a language model from quietly turning “contributed to” into “led”. The rules in it are there because a real generation once got them wrong.'
+		}
+	] as Point[],
+
+	easy: {
+		title: 'Easy start',
+		intro: 'Give your agent the link. It sets everything up and starts the conversation.',
+		steps: [
+			'Open Claude Code, Codex CLI, Gemini CLI or Cursor. Any agent that can run shell commands will do.',
+			'Paste this:',
+			'Talk to it in plain language, the way you would to a consultant. It asks about your CV and goals, and it leads you from there.'
+		],
+		copyLabel: 'Copy the prompt for your agent',
+		asksIntro: 'Not sure what comes next? Just ask:',
+		asks: [
+			'What should I do next to get a better result?',
+			'What else can you do?',
+			'Which other roles should I apply for?',
+			'Where are we, and what did we miss?'
+		],
+		happens: 'Behind the scenes, the agent:'
+	},
+
+	details: {
+		title: 'Details, if you want',
+		intro: 'Everything below is optional reading: what it asks, what you get, how it fits together, and how it compares.'
 	},
 
 	story: {
@@ -182,19 +211,10 @@ export const copy = {
 		note: 'Categories, not product reviews: individual tools vary. career-ops was read in September 2026; the rest is described in general terms. The scouting approach was inspired by jobhunt-agent.'
 	},
 
-	start: {
-		title: 'Get started',
-		agent: {
-			title: 'Hand it to your agent',
-			text: 'Paste this into Claude Code, Codex CLI, Gemini CLI or Cursor. The agent reads this page and sets everything up by itself, then pulls you into the conversation.',
-			copyLabel: 'Copy the prompt for your agent',
-			stepsIntro: 'It needs an agent that can run shell commands. It:'
-		},
-		manual: {
-			title: 'Or do it yourself',
-			text: 'Clone it, open the folder in your agent and say anything. It explains itself and walks you through setup.',
-			copyLabel: 'Copy the clone commands'
-		},
+	manual: {
+		title: 'Install it yourself',
+		text: 'Prefer to do it by hand? Clone it, open the folder in your agent and say anything. It explains itself and walks you through setup.',
+		copyLabel: 'Copy the clone commands',
 		sayHeading: 'Then, in plain language',
 		sayNote: 'Close paraphrases work. There is no syntax to memorize.',
 		limitsTitle: 'Requirements and limits',
