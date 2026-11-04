@@ -751,7 +751,10 @@
 			gap: 2.5rem;
 		}
 
-		.pair,
+		.pair {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+
 		.about {
 			grid-template-columns: repeat(3, minmax(0, 1fr));
 			gap: 2rem;
