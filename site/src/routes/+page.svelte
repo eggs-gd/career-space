@@ -4,6 +4,7 @@
 	import CopyBlock from '#lib/CopyBlock.svelte';
 	import Dialog from '#lib/Dialog.svelte';
 	import FitCard from '#lib/FitCard.svelte';
+	import HeroFlow from '#lib/HeroFlow.svelte';
 	import ProfileCard from '#lib/ProfileCard.svelte';
 	import {
 		REPO_URL,
@@ -60,10 +61,23 @@
 	</div>
 </header>
 
+{#snippet actions()}
+	<div class="actions">
+		<a class="button primary" href="#start">{copy.hero.primary}</a>
+		<a class="button" href={REPO_URL}>{copy.hero.secondary}</a>
+	</div>
+{/snippet}
+
 <main id="main">
 	<section class="hero wrap">
 		<h1>{copy.hero.title}</h1>
 		<p class="lead">{copy.hero.lead}</p>
+		{@render actions()}
+		<HeroFlow />
+		<figure class="artifact board">
+			<div class="scroll"><img src="/demo/board.webp" alt={boardAlt} width="1960" height="1586" decoding="async" /></div>
+			<figcaption class="small">{copy.hero.boardCaption}</figcaption>
+		</figure>
 		<div class="about">
 			{#each copy.about as item (item.title)}
 				<div>
@@ -72,10 +86,7 @@
 				</div>
 			{/each}
 		</div>
-		<div class="actions">
-			<a class="button primary" href="#start">{copy.hero.primary}</a>
-			<a class="button" href={REPO_URL}>{copy.hero.secondary}</a>
-		</div>
+		{@render actions()}
 	</section>
 
 	<section id="start" class="section wrap">
@@ -188,9 +199,6 @@
 		</ul>
 
 		<div class="artifact narrow"><FitCard /></div>
-		<div class="artifact">
-			<img src="/demo/board.webp" alt={boardAlt} width="1770" height="1200" loading="lazy" decoding="async" />
-		</div>
 
 		<p class="note submit">{copy.search.submit}</p>
 
@@ -465,8 +473,24 @@
 		margin-inline: 0;
 	}
 
-	.cv figcaption {
+	.cv figcaption,
+	.board figcaption {
 		margin-top: 0.6rem;
+	}
+
+	/* the screenshot is a desktop-width board; on a phone it scrolls sideways instead of shrinking */
+	.board .scroll {
+		overflow-x: auto;
+		border-radius: var(--radius);
+	}
+
+	.board .scroll img {
+		min-width: 44rem;
+	}
+
+	.board {
+		max-width: 61rem;
+		margin: 2rem 0 0;
 	}
 
 	.artifact img {

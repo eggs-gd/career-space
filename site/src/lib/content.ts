@@ -83,7 +83,20 @@ export const copy = {
 		title: 'Make more of your experience.',
 		lead: 'career-space is a career consultant that lives in the AI assistant you already use. It gets to know your experience, helps you see where it can take you, presents you well in your CV and profiles, and finds jobs or freelance work that fit.',
 		primary: 'Try it in two minutes',
-		secondary: 'View on GitHub'
+		secondary: 'View on GitHub',
+		boardCaption:
+			'Where it ends up: your own board, with every vacancy scored, grouped by status, and its files one click away. Illustrative data, fictional candidate.'
+	},
+
+	flow: {
+		caption:
+			'You hand over your LinkedIn profile and a couple of CVs. The manager makes sense of them and gives them back improved. Meanwhile job boards send it vacancies: it drops most of them and passes only the ones that fit you.',
+		manager: 'Career manager',
+		profiles: 'Your profiles',
+		matches: 'Your matches',
+		boards: 'Job boards',
+		boardNames: ['LinkedIn', 'DOU', 'JustJoin', 'Greenhouse', 'Lever', 'RemoteOK'],
+		jobs: ['Head of Eng', 'Eng Manager', 'Director']
 	},
 
 	about: [
