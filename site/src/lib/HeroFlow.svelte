@@ -6,6 +6,8 @@
 	// eight vacancies per cycle; the indexes in `fit` make it through, the rest are dropped
 	const stream = Array.from({ length: 8 }, (_, i) => i);
 	const fit = [1, 4, 6];
+	// where each vacancy spawns inside the boards panel (rem from the top of the stage)
+	const spawn = [2.7, 8.4, 5.2, 10.5, 3.9, 7.1, 9.6, 2.6];
 </script>
 
 {#snippet icon(kind: string)}
@@ -38,8 +40,12 @@
 		</div>
 
 		<div class="boards">
-			<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="4.5" rx="1.2" /><rect x="3.5" y="10" width="17" height="4.5" rx="1.2" /><rect x="3.5" y="16" width="17" height="4.5" rx="1.2" /></svg>
-			<span>{flow.boards}</span>
+			<span class="title">{flow.boards}</span>
+			<ul>
+				{#each flow.boardNames as name}
+					<li>{name}</li>
+				{/each}
+			</ul>
 		</div>
 
 		<div class="lane a">
@@ -52,17 +58,19 @@
 
 		<div class="lane b">
 			<span class="cap left">{flow.matches}</span>
+		</div>
+		<div class="jobs">
 			{#each stream as i}
 				{#if fit.includes(i)}
 					{@const k = fit.indexOf(i)}
-					<span class="job fit" style="--d:{i}; --row:{k}">
+					<span class="job fit" style="--d:{i}; --row:{k}; --sy:{spawn[i]}rem">
 						<span class="t">{flow.jobs[k]}</span>
 						<span class="bar"></span>
 						<i class="badge q">?</i>
 						<i class="badge ok">{@render check()}</i>
 					</span>
 				{:else}
-					<span class="job drop" style="--d:{i}; --row:{i % 3}">
+					<span class="job drop" style="--d:{i}; --sy:{spawn[i]}rem">
 						<span class="bar"></span>
 						<span class="bar short"></span>
 						<i class="badge q">?</i>
@@ -159,27 +167,62 @@
 		animation: pulse 12s ease-in-out infinite;
 	}
 
-	/* job boards: a full-height panel on the right that the vacancies slide out of */
+	/* job boards: a full-height panel on the right, behind the vacancy cards */
 	.boards {
 		position: absolute;
-		z-index: 2;
 		top: 0;
 		right: 0;
 		bottom: 0;
-		width: 20%;
+		width: 28%;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		justify-content: center;
-		gap: 0.35rem;
-		padding: 0.4rem;
+		gap: 0.7rem;
+		padding: 1.1rem 0.4rem 0.8rem;
 		color: var(--muted);
 		background: color-mix(in srgb, var(--muted) 9%, var(--surface));
 		border-left: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent);
 		text-align: center;
+	}
+
+	.boards .title {
 		font-size: 0.66rem;
 		font-weight: 600;
+		letter-spacing: 0.07em;
+		text-transform: uppercase;
+	}
+
+	.boards ul {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		justify-content: space-evenly;
+		align-items: center;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.boards li {
+		padding: 0.12rem 0.5rem;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: var(--surface);
+		font-size: 0.62rem;
 		line-height: 1.2;
+		white-space: nowrap;
+	}
+
+	/* a layer over the panel, under the manager, where the vacancy cards move */
+	.jobs {
+		position: absolute;
+		z-index: 1;
+		top: 0;
+		bottom: 0;
+		left: 1rem;
+		right: 1rem;
+		container-type: inline-size;
+		pointer-events: none;
 	}
 
 	.badge {
@@ -274,8 +317,8 @@
 	/* ---- vacancies: unclear coming in from the boards, green ones carry on to you ---- */
 	.job {
 		position: absolute;
-		top: calc(1.35rem + var(--row) * 1.6rem);
-		left: 83cqw;
+		top: var(--sy);
+		left: 73cqw;
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
@@ -324,6 +367,9 @@
 	}
 
 	.job.fit {
+		--top: calc(7.45rem + var(--row) * 1.6rem);
+		--dy: calc(var(--sy) - var(--top));
+		top: var(--top);
 		left: 0;
 		animation-name: select;
 	}
@@ -405,26 +451,25 @@
 	/* dropped: stops at the manager, flashes a red cross and sinks away */
 	@keyframes reject {
 		0% { opacity: 0; transform: translateX(0); border-color: var(--dim-border); }
-		6% { opacity: 0; transform: translateX(-2cqw); }
-		10% { opacity: 1; transform: translateX(-4cqw); }
-		30% { opacity: 1; transform: translateX(-21cqw); border-color: var(--dim-border); }
+		6% { opacity: 1; transform: translateX(-1cqw); }
+		30% { opacity: 1; transform: translateX(-11cqw); border-color: var(--dim-border); }
 		34%, 42% { border-color: var(--bad); }
 		38% { border-color: var(--dim-border); }
-		52% { opacity: 0; transform: translateX(-22cqw) translateY(0.9rem) rotate(-8deg); border-color: var(--bad); }
-		100% { opacity: 0; transform: translateX(-22cqw) translateY(0.9rem) rotate(-8deg); }
+		52% { opacity: 0; transform: translateX(-12cqw) translateY(0.9rem) rotate(-8deg); border-color: var(--bad); }
+		100% { opacity: 0; transform: translateX(-12cqw) translateY(0.9rem) rotate(-8deg); }
 	}
 
-	/* selected: turns green at the manager, passes behind it and comes out toward you */
+	/* selected: turns green at the manager, passes behind it and comes out in your matches */
 	@keyframes select {
-		0%, 5% { opacity: 0; transform: translateX(83cqw); border-color: var(--dim-border); background: var(--dim-bg); }
-		9% { opacity: 1; transform: translateX(79cqw); }
-		30% { opacity: 1; transform: translateX(62cqw); border-color: var(--dim-border); background: var(--dim-bg); }
+		0%, 3% { opacity: 0; transform: translate(73cqw, var(--dy)); border-color: var(--dim-border); background: var(--dim-bg); }
+		7% { opacity: 1; transform: translate(72cqw, var(--dy)); }
+		30% { opacity: 1; transform: translate(62cqw, var(--dy)); border-color: var(--dim-border); background: var(--dim-bg); }
 		36% { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
-		44% { opacity: 0; transform: translateX(48cqw); }
-		52% { opacity: 0; transform: translateX(36cqw); }
-		58% { opacity: 1; transform: translateX(28cqw); }
-		70%, 92% { opacity: 1; transform: translateX(0); border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
-		100% { opacity: 0; transform: translateX(0); }
+		44% { opacity: 0; transform: translate(48cqw, var(--dy)); }
+		52% { opacity: 0; transform: translate(36cqw, calc(var(--dy) * 0.6)); }
+		58% { opacity: 1; transform: translate(28cqw, calc(var(--dy) * 0.3)); }
+		70%, 92% { opacity: 1; transform: translate(0, 0); border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
+		100% { opacity: 0; transform: translate(0, 0); }
 	}
 
 	@keyframes reveal {

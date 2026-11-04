@@ -93,6 +93,7 @@ export const copy = {
 		profiles: 'Your profiles',
 		matches: 'Your matches',
 		boards: 'Job boards',
+		boardNames: ['LinkedIn', 'DOU', 'JustJoin', 'Greenhouse', 'Lever', 'RemoteOK'],
 		jobs: ['Head of Eng', 'Eng Manager', 'Director']
 	},
 
