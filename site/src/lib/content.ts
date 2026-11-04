@@ -86,6 +86,20 @@ export const copy = {
 		secondary: 'View on GitHub'
 	},
 
+	flow: {
+		caption:
+			'You hand over your LinkedIn profile and a couple of CVs. The manager digests them and sends back edits for each profile. Meanwhile it reads vacancies from job boards, drops most of them and sends you only the ones that fit.',
+		manager: 'Career manager',
+		bring: 'You bring',
+		get: 'You get',
+		boards: 'Job boards',
+		matches: 'Worth your time',
+		inputs: ['LinkedIn', 'CV', 'Old CV'],
+		outputs: ['LinkedIn', 'CV', 'Djinni'],
+		edited: 'edited',
+		jobs: ['Head of Eng', 'Eng Manager', 'Director']
+	},
+
 	about: [
 		{
 			title: 'What it is',

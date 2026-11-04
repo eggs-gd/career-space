@@ -4,6 +4,7 @@
 	import CopyBlock from '#lib/CopyBlock.svelte';
 	import Dialog from '#lib/Dialog.svelte';
 	import FitCard from '#lib/FitCard.svelte';
+	import HeroFlow from '#lib/HeroFlow.svelte';
 	import ProfileCard from '#lib/ProfileCard.svelte';
 	import {
 		REPO_URL,
@@ -64,6 +65,7 @@
 	<section class="hero wrap">
 		<h1>{copy.hero.title}</h1>
 		<p class="lead">{copy.hero.lead}</p>
+		<HeroFlow />
 		<div class="about">
 			{#each copy.about as item (item.title)}
 				<div>
