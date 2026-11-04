@@ -93,7 +93,7 @@ export const copy = {
 		},
 		{
 			title: 'What it is for',
-			text: 'Going from “I have a lot of experience but cannot explain it well” to a clear CV, a LinkedIn profile that says the same thing, a cover letter for a specific job, and a list of jobs or orders that actually suit you.'
+			text: 'Going from “I have a lot of experience but cannot explain it well” to a clear CV, profiles that say the same thing wherever you have them (LinkedIn, Djinni, Upwork, a portfolio, anything else), a cover letter for a specific job, and a list of jobs or orders that actually suit you.'
 		},
 		{
 			title: 'Why it exists',
@@ -105,7 +105,7 @@ export const copy = {
 		title: 'Easy start',
 		intro: 'Give your agent the link. It sets everything up and starts the conversation.',
 		steps: [
-			'Open Claude Code, Codex CLI, Gemini CLI or Cursor. Any agent that can run shell commands will do.',
+			'Open Claude Code, Codex, Gemini or Cursor. Any agent that can run shell commands will do.',
 			'Paste this:',
 			'Talk to it in plain language, the way you would to a consultant. It asks about your CV and goals, and it leads you from there.'
 		],
@@ -144,7 +144,7 @@ export const copy = {
 		asksIntro: 'Things you can simply ask:',
 		asks: [
 			'Which other roles should I apply for with my profile?',
-			'Is my LinkedIn headline pointing where I want to go?',
+			'Is my profile headline pointing where I want to go?',
 			'What would I need to be credible for a Staff role?',
 			'Where are we, and what did we miss?'
 		],
@@ -173,7 +173,7 @@ export const copy = {
 			},
 			{
 				title: 'Any compatible agent',
-				text: 'Start in Cursor, continue in Claude Code, come back through Codex or Gemini CLI. The next one reads the same files and rules.'
+				text: 'Start in Cursor, continue in Claude Code, come back through Codex or Gemini. The next one reads the same files and rules.'
 			},
 			{
 				title: 'No extra platform',
