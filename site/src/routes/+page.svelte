@@ -75,7 +75,7 @@
 		{@render actions()}
 		<HeroFlow />
 		<figure class="artifact board">
-			<img src="/demo/board.webp" alt={boardAlt} width="1005" height="2994" decoding="async" />
+			<img src="/demo/board.webp" alt={boardAlt} width="1005" height="2691" decoding="async" />
 			<figcaption class="small">{copy.hero.boardCaption}</figcaption>
 		</figure>
 		<div class="about">
