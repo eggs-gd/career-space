@@ -75,7 +75,7 @@
 		{@render actions()}
 		<HeroFlow />
 		<figure class="artifact board">
-			<img src="/demo/board.webp" alt={boardAlt} width="1005" height="2691" decoding="async" />
+			<div class="scroll"><img src="/demo/board.webp" alt={boardAlt} width="1960" height="1586" decoding="async" /></div>
 			<figcaption class="small">{copy.hero.boardCaption}</figcaption>
 		</figure>
 		<div class="about">
@@ -478,8 +478,18 @@
 		margin-top: 0.6rem;
 	}
 
+	/* the screenshot is a desktop-width board; on a phone it scrolls sideways instead of shrinking */
+	.board .scroll {
+		overflow-x: auto;
+		border-radius: var(--radius);
+	}
+
+	.board .scroll img {
+		min-width: 44rem;
+	}
+
 	.board {
-		max-width: 21rem;
+		max-width: 61rem;
 		margin: 2rem 0 0;
 	}
 
