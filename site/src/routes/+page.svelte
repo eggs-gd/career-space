@@ -64,20 +64,51 @@
 	<section class="hero wrap">
 		<h1>{copy.hero.title}</h1>
 		<p class="lead">{copy.hero.lead}</p>
-		<p class="small">{copy.hero.note}</p>
+		<div class="about">
+			{#each copy.about as item (item.title)}
+				<div>
+					<h2 class="eyebrow">{item.title}</h2>
+					<p>{item.text}</p>
+				</div>
+			{/each}
+		</div>
 		<div class="actions">
 			<a class="button primary" href="#start">{copy.hero.primary}</a>
 			<a class="button" href={REPO_URL}>{copy.hero.secondary}</a>
 		</div>
 	</section>
 
-	<section id="why" class="section wrap">
-		<h2>{copy.why.title}</h2>
-		<div class="prose">
-			{#each copy.why.paragraphs as paragraph}
-				<p>{paragraph}</p>
+	<section id="start" class="section wrap">
+		<h2>{copy.easy.title}</h2>
+		<p class="intro">{copy.easy.intro}</p>
+		<ol class="easy">
+			<li><p>{copy.easy.steps[0]}</p></li>
+			<li>
+				<p>{copy.easy.steps[1]}</p>
+				<CopyBlock text={agentPrompt} label={copy.easy.copyLabel} />
+			</li>
+			<li>
+				<p>{copy.easy.steps[2]}</p>
+				<p class="small lead-in">{copy.easy.asksIntro}</p>
+				<ul class="pills">
+					{#each copy.easy.asks as ask}
+						<li><q>{ask}</q></li>
+					{/each}
+				</ul>
+			</li>
+		</ol>
+		<p class="small">{copy.easy.happens}</p>
+		<ol class="steps">
+			{#each agentSteps as step}
+				<li>{step}</li>
 			{/each}
-		</div>
+		</ol>
+		<p class="small agents">{forAgents}</p>
+	</section>
+
+	<section id="details" class="section wrap">
+		<h2>{copy.details.title}</h2>
+		<p class="intro">{copy.details.intro}</p>
 	</section>
 
 	<section id="story" class="section wrap">
@@ -180,49 +211,36 @@
 		<p class="small note">{copy.compare.note}</p>
 	</section>
 
-	<section id="start" class="section wrap">
-		<h2>{copy.start.title}</h2>
+	<section id="manual" class="section wrap">
+		<h2>{copy.manual.title}</h2>
 		<div class="paths">
-			<div class="path featured">
-				<h3>{copy.start.agent.title}</h3>
-				<p>{copy.start.agent.text}</p>
-				<CopyBlock text={agentPrompt} label={copy.start.agent.copyLabel} />
-				<p class="small">{copy.start.agent.stepsIntro}</p>
-				<ol class="steps">
-					{#each agentSteps as step}
-						<li>{step}</li>
-					{/each}
-				</ol>
-			</div>
 			<div class="path">
-				<h3>{copy.start.manual.title}</h3>
-				<p>{copy.start.manual.text}</p>
-				<CopyBlock text={cloneCommand} label={copy.start.manual.copyLabel} />
+				<p>{copy.manual.text}</p>
+				<CopyBlock text={cloneCommand} label={copy.manual.copyLabel} />
 			</div>
 		</div>
-		<p class="small agents">{forAgents}</p>
 
 		<div class="say">
-			<h3 class="eyebrow">{copy.start.sayHeading}</h3>
+			<h3 class="eyebrow">{copy.manual.sayHeading}</h3>
 			<ul class="pills">
 				{#each sayThis as phrase}
 					<li><q>{phrase}</q></li>
 				{/each}
 			</ul>
-			<p class="small">{copy.start.sayNote}</p>
+			<p class="small">{copy.manual.sayNote}</p>
 		</div>
 
 		<div class="reqs">
-			<h3 class="eyebrow">{copy.start.limitsTitle}</h3>
+			<h3 class="eyebrow">{copy.manual.limitsTitle}</h3>
 			<ul class="limits">
-				{#each copy.start.limits as line}
+				{#each copy.manual.limits as line}
 					<li>{line}</li>
 				{/each}
 			</ul>
 			<p class="docs">
-				{copy.start.docsLead}
-				{#each copy.start.docs as doc, index (doc.href)}
-					<a href={doc.href}>{doc.label}</a>{index < copy.start.docs.length - 1 ? ' · ' : ''}
+				{copy.manual.docsLead}
+				{#each copy.manual.docs as doc, index (doc.href)}
+					<a href={doc.href}>{doc.label}</a>{index < copy.manual.docs.length - 1 ? ' · ' : ''}
 				{/each}
 			</p>
 		</div>
@@ -381,13 +399,6 @@
 		max-width: var(--measure);
 		margin-top: 0.75rem;
 		color: var(--muted);
-	}
-
-	.prose {
-		display: grid;
-		gap: 1.1rem;
-		max-width: var(--measure);
-		margin-top: 1.25rem;
 	}
 
 	.split {
@@ -593,15 +604,7 @@
 		border-radius: var(--radius);
 	}
 
-	.path.featured {
-		border-color: var(--accent);
-	}
-
-	.path h3 {
-		font-size: 1.1rem;
-	}
-
-	.path .small {
+	.path p {
 		margin: 0;
 	}
 
@@ -682,6 +685,66 @@
 		cursor: pointer;
 	}
 
+	.about {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.5rem;
+		margin-top: 2rem;
+	}
+
+	.about p {
+		margin-top: 0.15rem;
+		color: var(--muted);
+		font-size: 0.98rem;
+	}
+
+	.easy {
+		display: grid;
+		gap: 1.4rem;
+		max-width: 46rem;
+		margin: 1.75rem 0 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: easy;
+	}
+
+	.easy > li {
+		position: relative;
+		display: grid;
+		gap: 0.75rem;
+		padding-left: 2.8rem;
+		counter-increment: easy;
+	}
+
+	.easy > li::before {
+		content: counter(easy);
+		position: absolute;
+		left: 0;
+		top: 0;
+		display: grid;
+		place-items: center;
+		width: 1.9rem;
+		height: 1.9rem;
+		border: 1px solid var(--accent);
+		border-radius: 50%;
+		color: var(--accent);
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+
+	.easy p {
+		margin: 0;
+	}
+
+	.easy .lead-in {
+		margin: 0;
+	}
+
+	.steps {
+		margin-top: 0.5rem;
+	}
+
 	@media (min-width: 48rem) {
 		.split {
 			grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
@@ -689,8 +752,9 @@
 		}
 
 		.pair,
-		.paths {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
+		.about {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 2rem;
 		}
 
 		.points {
