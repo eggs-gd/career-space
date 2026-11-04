@@ -37,6 +37,12 @@ Classify `eligibility.location.status` before scoring requirement clusters:
   security, clearance, payroll, or work-authorization gate. Treat this as an operational risk
   worth surfacing, not a content mismatch: do not create a blocking cluster solely for this and
   do not lower the content score by hand.
+- A posting from a local board (`LOCAL_BOARD_SOURCES` in `scripts/eligibility.ts`: DOU) hires from
+  the candidate's own country by default; its «за кордоном» / «віддалено» says where the company
+  is, not a scope. Never `location_exception_candidate` for it, and no status to say "Ukraine
+  unconfirmed": leave `eligibility` unset. Only an explicit restriction in the text (EU residency,
+  work authorization) makes it a `hard_location_block`. Djinni is not a local board: it lists
+  EU-only roles.
 - `hard_location_block`: the posting is on-site outside the candidate's local scope, remote only
   for a region/country the candidate is outside of with explicit residency/payroll/work-
   authorization language, US-only-style scope, clearance, or no-sponsorship language that makes
