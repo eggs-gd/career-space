@@ -66,6 +66,10 @@
 		<h1>{copy.hero.title}</h1>
 		<p class="lead">{copy.hero.lead}</p>
 		<HeroFlow />
+		<figure class="artifact board">
+			<img src="/demo/board.webp" alt={boardAlt} width="1770" height="1200" decoding="async" />
+			<figcaption class="small">{copy.hero.boardCaption}</figcaption>
+		</figure>
 		<div class="about">
 			{#each copy.about as item (item.title)}
 				<div>
@@ -190,9 +194,6 @@
 		</ul>
 
 		<div class="artifact narrow"><FitCard /></div>
-		<div class="artifact">
-			<img src="/demo/board.webp" alt={boardAlt} width="1770" height="1200" loading="lazy" decoding="async" />
-		</div>
 
 		<p class="note submit">{copy.search.submit}</p>
 
@@ -467,8 +468,13 @@
 		margin-inline: 0;
 	}
 
-	.cv figcaption {
+	.cv figcaption,
+	.board figcaption {
 		margin-top: 0.6rem;
+	}
+
+	.board {
+		margin: 2rem 0 0;
 	}
 
 	.artifact img {
