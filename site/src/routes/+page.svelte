@@ -61,10 +61,18 @@
 	</div>
 </header>
 
+{#snippet actions()}
+	<div class="actions">
+		<a class="button primary" href="#start">{copy.hero.primary}</a>
+		<a class="button" href={REPO_URL}>{copy.hero.secondary}</a>
+	</div>
+{/snippet}
+
 <main id="main">
 	<section class="hero wrap">
 		<h1>{copy.hero.title}</h1>
 		<p class="lead">{copy.hero.lead}</p>
+		{@render actions()}
 		<HeroFlow />
 		<figure class="artifact board">
 			<img src="/demo/board.webp" alt={boardAlt} width="1770" height="1200" decoding="async" />
@@ -78,10 +86,7 @@
 				</div>
 			{/each}
 		</div>
-		<div class="actions">
-			<a class="button primary" href="#start">{copy.hero.primary}</a>
-			<a class="button" href={REPO_URL}>{copy.hero.secondary}</a>
-		</div>
+		{@render actions()}
 	</section>
 
 	<section id="start" class="section wrap">
