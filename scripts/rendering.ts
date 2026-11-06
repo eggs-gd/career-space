@@ -738,14 +738,41 @@ export function writeTxt(text: string, txtPath: string): void {
   fs.writeFileSync(txtPath, text.trim() + "\n", "utf-8");
 }
 
-/** Returns false (and prints a note) instead of throwing if the PDF step fails -- the HTML file
+/** Why launching Chrome would abort here, or `null` when it is safe to try. On macOS, Chrome started
+ * from inside an OS sandbox (Codex's seatbelt, Claude Code's sandbox runtime) aborts in
+ * HIServices `RegisterApplication` -- for Chrome for Testing and the system Chrome alike -- and macOS
+ * files a crash report per attempt. A launch can't be probed (the probe is the crash), so this reads
+ * the sandbox markers those hosts put in the environment, before the first attempt.
+ * `CAREER_SPACE_PDF_FORCE=1` skips the check if it ever misfires. */
+export function pdfLaunchBlocker(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform
+): string | null {
+  if (platform !== "darwin" || env.CAREER_SPACE_PDF_FORCE === "1") return null;
+  const marker = env.CODEX_SANDBOX ? `CODEX_SANDBOX=${env.CODEX_SANDBOX}` : env.SANDBOX_RUNTIME ? "SANDBOX_RUNTIME" : "";
+  if (!marker) return null;
+  return `this process runs inside an OS sandbox (${marker}), where Chrome aborts at launch on macOS; run the same render outside the sandbox (an approved escalation), do not swap the browser`;
+}
+
+export interface PdfResult {
+  ok: boolean;
+  /** why no PDF was written; absent when `ok` */
+  reason?: string;
+}
+
+/** Reports (and prints a note) instead of throwing if the PDF step fails -- the HTML file
  * is still useful on its own (open it, print to PDF from a browser). Puppeteer (headless Chromium)
  * because the templates are real styled HTML+CSS documents (font stacks, `@page` print rules) --
  * turning that into a PDF that matches the HTML preview needs an actual browser print pipeline,
  * not a text-to-PDF library. `preferCSSPageSize: true` so each template's own
  * `@page { size: A4; margin: 14mm; }` (or the board/cover-letter variants' own margins) governs
  * the output instead of Puppeteer's API-level defaults. */
-export async function writePdf(html: string, pdfPath: string): Promise<boolean> {
+export async function writePdfDetailed(html: string, pdfPath: string): Promise<PdfResult> {
+  const blocked = pdfLaunchBlocker();
+  if (blocked) {
+    console.error(`[rendering] PDF skipped: ${blocked} -- HTML is ready at ${pdfPath.replace(/\.pdf$/, ".html")}`);
+    return { ok: false, reason: blocked };
+  }
   // `any`, not `typeof import("puppeteer")`: under Node16/NodeNext module resolution a type-only
   // import of an ESM-shaped package from this CommonJS file needs an explicit resolution-mode
   // attribute, which isn't worth the ceremony for a lazily-loaded, deliberately-optional
@@ -755,7 +782,7 @@ export async function writePdf(html: string, pdfPath: string): Promise<boolean> 
     puppeteer = await import("puppeteer");
   } catch {
     console.error(`[rendering] puppeteer not installed -- skipping PDF, HTML is ready at ${pdfPath.replace(/\.pdf$/, ".html")}`);
-    return false;
+    return { ok: false, reason: "puppeteer is not installed" };
   }
   try {
     // macOS: without these flags every `browser.close()` pops a crash dialog per helper process.
@@ -779,11 +806,16 @@ export async function writePdf(html: string, pdfPath: string): Promise<boolean> 
     } finally {
       await browser.close();
     }
-    return true;
+    return { ok: true };
   } catch (error) {
     console.error(
       `[rendering] PDF rendering failed (${(error as Error).message}) -- skipping PDF, HTML is ready at ${pdfPath.replace(/\.pdf$/, ".html")}`
     );
-    return false;
+    return { ok: false, reason: `PDF rendering failed (${(error as Error).message})` };
   }
+}
+
+/** Boolean form of `writePdfDetailed` for callers that only need to know whether a PDF exists. */
+export async function writePdf(html: string, pdfPath: string): Promise<boolean> {
+  return (await writePdfDetailed(html, pdfPath)).ok;
 }

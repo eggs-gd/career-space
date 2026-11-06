@@ -85,6 +85,12 @@ trap and the rule -- not the story.
 - Puppeteer's bundled Chromium is only ad-hoc signed: on macOS `browser.close()` ends its helpers
   with SIGABRT and every PDF render pops a "quit unexpectedly" dialog per helper. Keep
   `--disable-crash-reporter --disable-breakpad` in `writePdf`'s launch args.
+- Chrome (Chrome for Testing and the system one) also aborts at launch (`SIGABRT`, HIServices
+  `RegisterApplication`) when started inside an OS sandbox -- Codex's seatbelt (`CODEX_SANDBOX`) or
+  Claude Code's (`SANDBOX_RUNTIME`) -- one crash report per attempt, whatever browser you point
+  `PUPPETEER_EXECUTABLE_PATH` at. A launch can't be probed, so `pdfLaunchBlocker` checks those env
+  markers first and `writePdfDetailed` returns the reason; the render must be re-run outside the
+  sandbox. `CAREER_SPACE_PDF_FORCE=1` skips the check.
 - `.gitignore`'s `data/` matches a directory of that name at any depth -- never name a folder
   `data` under `site/` (or anywhere else tracked).
 - `vite preview` snapshots its file list at start: after `npm run build` restart it, or the new
