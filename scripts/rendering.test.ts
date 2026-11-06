@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { renderBoardHtml, renderEngagementsHtml, renderEngagementsMd } from "./rendering";
+import { pdfLaunchBlocker, renderBoardHtml, renderEngagementsHtml, renderEngagementsMd, writePdfDetailed } from "./rendering";
 
 test("board renders location-exception metadata as a visible badge", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "career-space-board-"));
@@ -130,4 +130,36 @@ test("engagements board groups by status, shows category, shares the Employment/
   const md = renderEngagementsMd(engagements);
   assert.match(md, /# Engagements board/);
   assert.match(md, /\| tracked \| 8 \| good_bet \| Nimbus \| Go invoice sync \|/);
+});
+
+test("pdfLaunchBlocker stops a macOS launch inside an OS sandbox before the first attempt", () => {
+  assert.match(pdfLaunchBlocker({ CODEX_SANDBOX: "seatbelt" }, "darwin") ?? "", /CODEX_SANDBOX=seatbelt.*outside the sandbox/);
+  assert.match(pdfLaunchBlocker({ SANDBOX_RUNTIME: "1" }, "darwin") ?? "", /SANDBOX_RUNTIME/);
+  assert.equal(pdfLaunchBlocker({}, "darwin"), null);
+  assert.equal(pdfLaunchBlocker({ CODEX_SANDBOX: "seatbelt" }, "linux"), null);
+  assert.equal(pdfLaunchBlocker({ CODEX_SANDBOX: "seatbelt", CAREER_SPACE_PDF_FORCE: "1" }, "darwin"), null);
+});
+
+test("writePdfDetailed reports the sandbox reason and writes no PDF", async () => {
+  const saved = { sandbox: process.env.CODEX_SANDBOX, force: process.env.CAREER_SPACE_PDF_FORCE };
+  const realPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
+  process.env.CODEX_SANDBOX = "seatbelt";
+  delete process.env.CAREER_SPACE_PDF_FORCE;
+  Object.defineProperty(process, "platform", { value: "darwin" });
+  const errors: string[] = [];
+  const origError = console.error;
+  console.error = (...a: unknown[]) => void errors.push(a.join(" "));
+  try {
+    const out = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "career-space-pdf-")), "cv.pdf");
+    const result = await writePdfDetailed("<p>x</p>", out);
+    assert.equal(result.ok, false);
+    assert.match(result.reason ?? "", /OS sandbox/);
+    assert.equal(fs.existsSync(out), false);
+    assert.match(errors.join("\n"), /PDF skipped/);
+  } finally {
+    console.error = origError;
+    Object.defineProperty(process, "platform", realPlatform);
+    if (saved.sandbox === undefined) delete process.env.CODEX_SANDBOX; else process.env.CODEX_SANDBOX = saved.sandbox;
+    if (saved.force !== undefined) process.env.CAREER_SPACE_PDF_FORCE = saved.force;
+  }
 });

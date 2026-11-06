@@ -122,14 +122,15 @@ server.registerTool(
     fs.writeFileSync(htmlPath, html, "utf-8");
 
     const pdfPath = path.join(path.dirname(resolved), `${stem}.pdf`);
-    const pdfWritten = await rendering.writePdf(html, pdfPath);
+    const pdf = await rendering.writePdfDetailed(html, pdfPath);
+    const pdfWritten = pdf.ok;
 
     return respond({
       html_path: htmlPath,
       pdf_path: pdfWritten ? pdfPath : null,
       note: pdfWritten
         ? null
-        : "PDF rendering failed in this server's environment -- HTML written, open it in a browser and print to PDF as a fallback.",
+        : `PDF not written: ${pdf.reason} -- HTML written, open it in a browser and print to PDF as a fallback.`,
     });
   }
 );
@@ -158,7 +159,8 @@ server.registerTool(
     fs.writeFileSync(htmlPath, html, "utf-8");
 
     const pdfPath = path.join(path.dirname(resolved), `${stem}.pdf`);
-    const pdfWritten = await rendering.writePdf(html, pdfPath);
+    const pdf = await rendering.writePdfDetailed(html, pdfPath);
+    const pdfWritten = pdf.ok;
 
     return respond({
       txt_path: txtPath,
@@ -166,7 +168,7 @@ server.registerTool(
       pdf_path: pdfWritten ? pdfPath : null,
       note: pdfWritten
         ? null
-        : "PDF rendering failed in this server's environment -- .txt and HTML written, open the HTML in a browser and print to PDF as a fallback.",
+        : `PDF not written: ${pdf.reason} -- .txt and HTML written, open the HTML in a browser and print to PDF as a fallback.`,
     });
   }
 );

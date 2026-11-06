@@ -367,6 +367,11 @@ already happened, on the content. Ask again only when the content or the decisio
 changing. (A host that pops its own `Allow` prompt for the tool is separate — that's the host's
 sandbox, not something a playbook controls or should pre-empt with a question of its own.)
 
+**A PDF in a macOS sandbox is skipped, not retried.** Chrome aborts at launch inside an OS sandbox
+(Codex's included) and macOS files a crash report per attempt. The renderer detects that before
+launching and returns the HTML with the reason (`note` / stderr). Re-run the same render outside the
+sandbox (an approved escalation); don't swap the browser via `PUPPETEER_EXECUTABLE_PATH` or retry in place.
+
 **A status or archive change returns a fresh board, automatically, MCP or CLI.**
 `vacancy_resolve`, `vacancy_set_status`, `vacancy_set_archived`, and `record_scout_outcomes` all
 re-render the board themselves when they change board-visible state — the MCP tools and their

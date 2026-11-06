@@ -40,4 +40,5 @@ strong generic CV?
 ## Step 5 -- save, show, render
 
 Save to `data/vacancies/<slug>/cv.md` and show the full document in chat. Then render it with
-`render_resume` (MCP tool, or `node scripts/dist/render_resume.js <file>.md`).
+`render_resume` (MCP tool, or `node scripts/dist/render_resume.js <file>.md`). If it returns no PDF
+because it ran inside an OS sandbox, re-run it outside the sandbox (see AGENTS.md); never swap the browser.
