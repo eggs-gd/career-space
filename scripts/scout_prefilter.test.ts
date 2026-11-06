@@ -58,3 +58,32 @@ test("a genuinely remote posting ('work from anywhere') still passes", () => {
   const survivors = filterPostings([genuinelyRemote], config);
   assert.equal(survivors.length, 1, "the tightened phrase must still catch the real remote phrasing it exists for");
 });
+
+test("a short acronym title ('cto') matches as a word, not inside 'Director'", () => {
+  const config = new ScoutConfig({
+    tracks: new Map([["lead", { kind: "primary", label: "Lead", titles: ["cto", "chief technical officer"], hiringTitles: [], uaCategories: [] }]]),
+    titleExclude: [],
+    hardExclude: [],
+    companies: [],
+    feeds: [],
+    localKeywords: [],
+  });
+  const titles = (list: string[]) => filterPostings(list.map((title) => posting({ title, remote: true })), config).map((p) => p.title);
+  assert.deepEqual(
+    titles(["CTO iGaming-платформи", "Field / Site CTO — Founding", "Chief Technical Officer", "Marketing Director", "Doctor Who"]),
+    ["CTO iGaming-платформи", "Field / Site CTO — Founding", "Chief Technical Officer"]
+  );
+});
+
+test("an empty or blank track title matches nothing and does not hang the prefilter", () => {
+  const config = new ScoutConfig({
+    tracks: new Map([["lead", { kind: "primary", label: "Lead", titles: ["", "  ", "engineering manager"], hiringTitles: [], uaCategories: [] }]]),
+    titleExclude: [],
+    hardExclude: [],
+    companies: [],
+    feeds: [],
+    localKeywords: [],
+  });
+  const titles = ["Engineering Manager", "Pastry Chef"].map((title) => posting({ title, remote: true }));
+  assert.deepEqual(filterPostings(titles, config).map((p) => p.title), ["Engineering Manager"]);
+});

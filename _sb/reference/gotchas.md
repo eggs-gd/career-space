@@ -97,3 +97,5 @@ trap and the rule -- not the story.
   hashed assets 404 and the page renders unstyled.
 - JustJoin: the list endpoint is `justjoin.it/api/candidate-api/offers?sortBy=newest&from=<n>&itemsCount=<n>`
   (`page`/`perPage` are ignored, `itemsCount` goes to 1000). `api.justjoin.it` answers 503 to every request.
+- Djinni: the RSS item has no location and its text rarely says "remote"; work mode and countries are only on the job page
+  (`parseDjinniPage`). Track titles under 5 characters (`cto`, `svp`) match as whole words, never inside "Dire**cto**r".
