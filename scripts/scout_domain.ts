@@ -281,7 +281,7 @@ export class ScoutConfig {
   matchingTrack(titleLower: string): TrackConfig | null {
     let fallbackMatch: TrackConfig | null = null;
     for (const track of this.tracks.values()) {
-      if (!track.titles.some((phrase) => titleLower.includes(phrase))) continue;
+      if (!track.titles.some((phrase) => titleHasPhrase(titleLower, phrase))) continue;
       if (track.kind === TRACK_KIND_FALLBACK) {
         if (fallbackMatch === null) fallbackMatch = track;
         continue;
@@ -290,6 +290,25 @@ export class ScoutConfig {
     }
     return fallbackMatch;
   }
+}
+
+/** Longest title phrase that is matched as a whole word instead of a substring. "cto" and "svp"
+ * are real titles, but as plain substrings they sit inside "Marketing Dire*cto*r" and similar. */
+const SHORT_PHRASE_MAX = 4;
+
+/** True if `titleLower` (already lowercased) contains `phrase`. A short phrase (an acronym such as
+ * "cto") must stand alone between non-letters; a longer one stays a plain substring, so
+ * "architect" still matches "Architecture Lead" and "Cloud Architect" alike. */
+export function titleHasPhrase(titleLower: string, phrase: string): boolean {
+  if (phrase.length > SHORT_PHRASE_MAX) return titleLower.includes(phrase);
+  let from = titleLower.indexOf(phrase);
+  while (from !== -1) {
+    const before = titleLower.charAt(from - 1);
+    const after = titleLower.charAt(from + phrase.length);
+    if (!/[\p{L}\p{N}]/u.test(before) && !/[\p{L}\p{N}]/u.test(after)) return true;
+    from = titleLower.indexOf(phrase, from + 1);
+  }
+  return false;
 }
 
 function asStringTuple(value: unknown): string[] {

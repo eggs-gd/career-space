@@ -1,6 +1,6 @@
 import { test, type TestContext } from "node:test";
 import assert from "node:assert/strict";
-import { fetchWithTimeout, fetchDjinniCompany, FEED_FETCHERS } from "./scout_sources";
+import { fetchWithTimeout, fetchDjinniCompany, parseDjinniPage, FEED_FETCHERS, REGIONAL_FETCHERS } from "./scout_sources";
 
 /** Stubs `global.fetch` with a queue of responses/throws, one per call. Restores the real `fetch`
  * via `t.after()` -- runs after this test specifically, pass or fail, not just at process exit --
@@ -111,5 +111,47 @@ test("justjoin lists through the site's own endpoint (api.justjoin.it is dead) a
   assert.equal(postings.length, 1);
   assert.equal(postings[0]!.company, "Acme");
   assert.equal(postings[0]!.url, "https://justjoin.it/job-offer/acme--backend-engineer--warszawa");
+  assert.equal(postings[0]!.remote, true);
+});
+
+function djinniPage(title: string, mode: string, countries: string): string {
+  return `<title>${title}</title><ul class="list-unstyled">
+    <li><div><strong class="font-weight-600">Виключно від 5 років досвіду</strong></div></li>
+    <li><strong class="d-block font-weight-600">${mode}</strong></li>
+    <li><strong class="d-block font-weight-600"><span class="location-text">${countries}</span></strong>
+      <div class="font-size-extra-small">Країни, де розглядаємо кандидатів</div></li>
+    <li><strong>Англійська B2</strong></li></ul>`;
+}
+
+test("parseDjinniPage reads work mode and countries from the facts list", () => {
+  const page = parseDjinniPage(djinniPage("CTO iGaming-платформи в HiringBand – Djinni", "Тільки віддалено", "Країни Європи та Україна"), "CTO iGaming-платформи");
+  assert.equal(page.company, "HiringBand");
+  assert.equal(page.remote, true);
+  assert.equal(page.location, "Країни Європи та Україна (тільки віддалено)");
+});
+
+test("parseDjinniPage: office and hybrid are not remote, a mixed 'remote or hybrid' line is", () => {
+  assert.equal(parseDjinniPage(djinniPage("X в Y – Djinni", "Тільки офіс", "Україна"), "X").remote, false);
+  assert.equal(parseDjinniPage(djinniPage("X в Y – Djinni", "Офіс, Гібридний формат роботи", "Україна"), "X").remote, false);
+  assert.equal(parseDjinniPage(djinniPage("X в Y – Djinni", "Віддалена робота, Гібридний формат роботи", "Весь світ"), "X").remote, true);
+});
+
+test("parseDjinniPage: a page without the facts list leaves remote undecided", () => {
+  const page = parseDjinniPage("<title>X в Y – Djinni</title><p>nothing</p>", "X");
+  assert.equal(page.remote, null);
+  assert.equal(page.location, "");
+});
+
+test("fetchDjinni keeps a remote-from-Ukraine posting whose RSS text never says so", async (t) => {
+  const rss = `<rss><channel><item><title>CTO iGaming-платформи</title><link>https://djinni.co/jobs/1-cto/</link>
+    <description>&lt;p&gt;Шукаємо CTO для платформи.&lt;/p&gt;</description><pubDate>x</pubDate></item></channel></rss>`;
+  stubFetch(
+    t,
+    () => new Response(rss, { status: 200 }),
+    () => new Response(djinniPage("CTO iGaming-платформи в HiringBand – Djinni", "Тільки віддалено", "Країни Європи та Україна"), { status: 200 })
+  );
+  const [postings] = await REGIONAL_FETCHERS.djinni!({ uaCategories: ["cto"], trackTitles: ["cto"], roleSignals: [] } as never);
+  assert.equal(postings.length, 1);
+  assert.equal(postings[0]!.company, "HiringBand");
   assert.equal(postings[0]!.remote, true);
 });

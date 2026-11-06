@@ -10,7 +10,7 @@
  */
 
 import { decode as decodeHtmlEntities } from "he";
-import { CompanyConfig, Posting } from "./scout_domain";
+import { CompanyConfig, Posting, titleHasPhrase } from "./scout_domain";
 
 const TAG_RE = /<[^>]+>/g;
 const WS_RE = /[ \t]+/g;
@@ -284,7 +284,7 @@ function trackQueries(trackTitles: string[], limit = 8): string[] {
  * need the whole ScoutConfig, not just two string lists. */
 function worthDetailFetch(title: string, trackTitles: string[], roleSignals: string[]): boolean {
   const titleL = title.toLowerCase();
-  return trackTitles.some((t) => titleL.includes(t)) || roleSignals.some((t) => titleL.includes(t));
+  return trackTitles.some((t) => titleHasPhrase(titleL, t)) || roleSignals.some((t) => titleL.includes(t));
 }
 
 async function fetchWorkable({ trackTitles }: FeedFetchOpts): Promise<FetchResult> {
@@ -879,23 +879,59 @@ async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promis
   return [postings, null];
 }
 
-/** Djinni's RSS has no company field (see `fetchDjinni`); the job page's own `<title>` does, as
- * `"<job title> в <Company> – Djinni"` (confirmed live against several postings; "в" is Cyrillic
- * "at", U+0432 -- doesn't collide with Latin "in", e.g. "Head of QA (in Warsaw)"). Strips the
- * known RSS title as an exact prefix rather than guessing where " в " splits, with a regex
- * fallback for a title/page mismatch; `null` (caller keeps `"?"`) if neither parses. */
-export async function fetchDjinniCompany(jobUrl: string, rssTitle: string): Promise<string | null> {
-  const html = await getText(jobUrl);
+/** What a Djinni job page says that its RSS item does not: the company, how the work is done and
+ * which countries are considered. `remote` is `null` when the page names no work mode. */
+export interface DjinniPage {
+  company: string | null;
+  location: string;
+  remote: boolean | null;
+}
+
+/** Reads a Djinni job page (Ukrainian UI). The company is in the `<title>` as
+ * `"<job title> в <Company> – Djinni"` ("в" is Cyrillic "at", U+0432 -- doesn't collide with Latin
+ * "in", e.g. "Head of QA (in Warsaw)"); the RSS title is stripped as an exact prefix instead of
+ * guessing where " в " splits, with a regex fallback for a title/page mismatch.
+ *
+ * The RSS description never says where the job can be done, but the page's facts list does: a
+ * work-mode line ("Тільки віддалено", "Офіс, Гібридний формат роботи", ...) and a
+ * `<span class="location-text">` with the countries considered ("Країни Європи та Україна",
+ * "Весь світ"). Without them a remote-from-Ukraine posting looked on-site to the location gate. */
+export function parseDjinniPage(html: string, rssTitle: string): DjinniPage {
   const pageTitle = decodeHtmlEntities(/<title>([^<]*)<\/title>/.exec(html)?.[1]?.trim() ?? "");
   const suffix = " – Djinni";
-  if (!pageTitle.endsWith(suffix)) return null;
-  const withoutSuffix = pageTitle.slice(0, -suffix.length);
-  const prefix = `${rssTitle} в `;
-  if (withoutSuffix.startsWith(prefix)) {
-    return withoutSuffix.slice(prefix.length).trim() || null;
+  let company: string | null = null;
+  if (pageTitle.endsWith(suffix)) {
+    const withoutSuffix = pageTitle.slice(0, -suffix.length);
+    const prefix = `${rssTitle} в `;
+    if (withoutSuffix.startsWith(prefix)) {
+      company = withoutSuffix.slice(prefix.length).trim() || null;
+    } else {
+      const fallback = / в (.+)$/.exec(withoutSuffix);
+      company = fallback ? fallback[1]!.trim() || null : null;
+    }
   }
-  const fallback = / в (.+)$/.exec(withoutSuffix);
-  return fallback ? fallback[1]!.trim() || null : null;
+
+  let countries = "";
+  let mode = "";
+  const facts = /<ul[^>]*>((?:(?!<\/ul>)[\s\S])*location-text(?:(?!<\/ul>)[\s\S])*)<\/ul>/.exec(html)?.[1];
+  if (facts) {
+    for (const item of facts.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)) {
+      const raw = item[1] ?? "";
+      const text = decodeHtmlEntities(raw.replace(TAG_RE, " ")).replace(/\s+/g, " ").trim();
+      if (raw.includes("location-text")) {
+        countries = decodeHtmlEntities(/class="location-text"[^>]*>([^<]*)</.exec(raw)?.[1] ?? "").trim();
+      } else if (!mode && /віддален|офіс|гібрид/i.test(text)) {
+        mode = text;
+      }
+    }
+  }
+  const remote = mode ? /віддален/i.test(mode) : null;
+  const location = [countries, mode ? `(${mode.toLowerCase()})` : ""].filter(Boolean).join(" ");
+  return { company, location, remote };
+}
+
+export async function fetchDjinniCompany(jobUrl: string, rssTitle: string): Promise<string | null> {
+  return parseDjinniPage(await getText(jobUrl), rssTitle).company;
 }
 
 /** djinni.co -- Ukraine's largest tech job board. RSS confirmed live at `/jobs/rss/`, and
@@ -913,12 +949,11 @@ export async function fetchDjinniCompany(jobUrl: string, rssTitle: string): Prom
  * slug form (`"engineering_manager"`) is safest since it's already all-lowercase and is exactly
  * what `reference/ua-scout-categories.md` lists. An item has no structured company/location
  * field at all (`title`, `link`, `description`, `category` [the matched keyword, not useful as a
- * real category], `pubDate`, `guid` only, confirmed live) -- so company comes from one extra
- * fetch of the item's own page (like `fetchJustjoin`'s detail fetch, gated the same way by
- * `worthDetailFetch` so we're not fetching every single RSS item's page). Falls back to `"?"`,
- * same as several other fetchers already do, if that detail fetch fails or the page doesn't
- * parse; remote/location relies entirely on the existing description-text fallback
- * (Ukrainian-aware, see `REMOTE_WORDS`). */
+ * real category], `pubDate`, `guid` only, confirmed live) -- so company, work mode and countries
+ * come from one extra fetch of the item's own page (see `parseDjinniPage`; like `fetchJustjoin`'s
+ * detail fetch, gated by `worthDetailFetch` so we're not fetching every single RSS item's page).
+ * Falls back to `"?"` and the description-text remote check (Ukrainian-aware, see `REMOTE_WORDS`)
+ * if that detail fetch fails or the page doesn't parse. */
 async function fetchDjinni({ uaCategories, trackTitles, roleSignals }: FeedFetchOpts): Promise<FetchResult> {
   if (uaCategories.length === 0) return [[], "Djinni: no ua_categories configured for this candidate"];
   const postings: Posting[] = [];
@@ -940,20 +975,21 @@ async function fetchDjinni({ uaCategories, trackTitles, roleSignals }: FeedFetch
       };
       const title = field("title");
       const link = field("link");
-      let company = "?";
+      let page: DjinniPage = { company: null, location: "", remote: null };
       if (link && worthDetailFetch(title, trackTitles, roleSignals)) {
         try {
-          company = (await fetchDjinniCompany(link, title)) ?? "?";
+          page = parseDjinniPage(await getText(link), title);
         } catch {
-          // best effort -- a failed detail fetch keeps the posting, just without a company name
+          // best effort -- a failed detail fetch keeps the posting, without company and location
         }
       }
       postings.push(
         makePosting({
           source: "djinni",
-          company,
+          company: page.company ?? "?",
           title,
-          location: "",
+          location: page.location,
+          remoteOverride: page.remote,
           url: link,
           description: stripHtml(field("description")),
           postedAt: field("pubDate"),
