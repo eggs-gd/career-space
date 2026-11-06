@@ -74,3 +74,16 @@ test("a short acronym title ('cto') matches as a word, not inside 'Director'", (
     ["CTO iGaming-платформи", "Field / Site CTO — Founding", "Chief Technical Officer"]
   );
 });
+
+test("an empty or blank track title matches nothing and does not hang the prefilter", () => {
+  const config = new ScoutConfig({
+    tracks: new Map([["lead", { kind: "primary", label: "Lead", titles: ["", "  ", "engineering manager"], hiringTitles: [], uaCategories: [] }]]),
+    titleExclude: [],
+    hardExclude: [],
+    companies: [],
+    feeds: [],
+    localKeywords: [],
+  });
+  const titles = ["Engineering Manager", "Pastry Chef"].map((title) => posting({ title, remote: true }));
+  assert.deepEqual(filterPostings(titles, config).map((p) => p.title), ["Engineering Manager"]);
+});

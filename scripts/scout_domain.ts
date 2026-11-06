@@ -300,6 +300,9 @@ const SHORT_PHRASE_MAX = 4;
  * "cto") must stand alone between non-letters; a longer one stays a plain substring, so
  * "architect" still matches "Architecture Lead" and "Cloud Architect" alike. */
 export function titleHasPhrase(titleLower: string, phrase: string): boolean {
+  // An empty or blank phrase (a stray `- ""` in sources.yaml) matches nothing. It would otherwise
+  // match every title as a substring, or spin the boundary scan below forever.
+  if (phrase.trim() === "") return false;
   if (phrase.length > SHORT_PHRASE_MAX) return titleLower.includes(phrase);
   let from = titleLower.indexOf(phrase);
   while (from !== -1) {
