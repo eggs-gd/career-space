@@ -17,6 +17,7 @@ import { formatCvMarkdown } from "./markdown_normalize";
 import { opportunityDir } from "./opportunity_dirs";
 import { vacancyDir as defaultVacancyDir } from "./vacancy_store";
 import { matchesLocalKeywords } from "./scout_prefilter";
+import { oneLine, trimChar } from "./text_utils";
 
 const TEMPLATE_DIR = path.join(__dirname, "..", "templates");
 const CONFIG_PATH = path.join(REPO_ROOT, "data", "config.yaml");
@@ -44,11 +45,16 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&#34;");
 }
 
+/** One markdown table cell: a single line, backslashes and pipes escaped. */
+function markdownCell(value: string | null | undefined): string {
+  return oneLine(value ?? "").replaceAll("\\", String.raw`\\`).replaceAll("|", String.raw`\|`);
+}
+
 /** One filename-safe segment: non-alphanumerics collapse to a single underscore, no leading/
  * trailing underscore. Used to build recruiter-facing output filenames -- never applied to
  * anything that ends up as page content, only to the literal filename. */
 function filenamePart(text: string): string {
-  return text.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return trimChar(text.replace(/[^A-Za-z0-9]+/g, "_"), "_");
 }
 
 /** `shared.full_name` from `data/config.yaml`. Falls back to a generic label rather than
@@ -336,8 +342,6 @@ export function renderBoardMd(vacancies: Rec[]): string {
     return String(a.company ?? "").localeCompare(String(b.company ?? ""));
   });
 
-  const cell = (v: unknown): string => String(v ?? "").replace(/\s*\n\s*/g, " ").replace(/\|/g, "\\|").trim();
-
   const lines = [
     "# Vacancy board",
     "",
@@ -351,10 +355,10 @@ export function renderBoardMd(vacancies: Rec[]): string {
     "|---|---|---|---|---|---|---|---|",
   ];
   for (const v of rows) {
-    const status = cell(v.status ?? "new") + (v.archived ? " · archived" : "");
+    const status = markdownCell(v.status ?? "new") + (v.archived ? " · archived" : "");
     const fit = v.fit_score !== null && v.fit_score !== undefined ? String(v.fit_score) : "–";
     lines.push(
-      `| ${status} | ${fit} | ${cell(v.fit_category)} | ${cell(v.company)} | ${cell(v.title)} | ${cell(boardUpdatedShort(v.updated_at ?? ""))} | ${cell(v.slug)} | ${cell(v.url)} |`
+      `| ${status} | ${fit} | ${markdownCell(v.fit_category)} | ${markdownCell(v.company)} | ${markdownCell(v.title)} | ${markdownCell(boardUpdatedShort(v.updated_at ?? ""))} | ${markdownCell(v.slug)} | ${markdownCell(v.url)} |`
     );
   }
   lines.push("");
@@ -563,7 +567,6 @@ export function renderEngagementsMd(engagements: Rec[]): string {
     if (fa !== fb) return fa - fb;
     return String(a.client ?? "").localeCompare(String(b.client ?? ""));
   });
-  const cell = (v: unknown): string => String(v ?? "").replace(/\s*\n\s*/g, " ").replace(/\|/g, "\\|").trim();
   const lines = [
     "# Engagements board",
     "",
@@ -577,12 +580,12 @@ export function renderEngagementsMd(engagements: Rec[]): string {
     "|---|---|---|---|---|---|---|---|",
   ];
   for (const o of rows) {
-    const status = cell(o.status ?? "new") + (o.archived ? " · archived" : "");
+    const status = markdownCell(o.status ?? "new") + (o.archived ? " · archived" : "");
     const fit = o.fit_score !== null && o.fit_score !== undefined ? String(o.fit_score) : "–";
     lines.push(
-      `| ${status} | ${fit} | ${cell(o.fit_category)} | ${cell(o.client)} | ${cell(o.title)} | ${cell(
+      `| ${status} | ${fit} | ${markdownCell(o.fit_category)} | ${markdownCell(o.client)} | ${markdownCell(o.title)} | ${markdownCell(
         boardUpdatedShort(o.judged_at ?? "")
-      )} | ${cell(o.slug)} | ${cell(o.url)} |`
+      )} | ${markdownCell(o.slug)} | ${markdownCell(o.url)} |`
     );
   }
   lines.push("");

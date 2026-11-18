@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { pdfLaunchBlocker, renderBoardHtml, renderEngagementsHtml, renderEngagementsMd, writePdfDetailed } from "./rendering";
+import { pdfLaunchBlocker, renderBoardHtml, renderBoardMd, renderEngagementsHtml, renderEngagementsMd, writePdfDetailed } from "./rendering";
 
 test("board renders location-exception metadata as a visible badge", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "career-space-board-"));
@@ -162,4 +162,11 @@ test("writePdfDetailed reports the sandbox reason and writes no PDF", async () =
     if (saved.sandbox === undefined) delete process.env.CODEX_SANDBOX; else process.env.CODEX_SANDBOX = saved.sandbox;
     if (saved.force !== undefined) process.env.CAREER_SPACE_PDF_FORCE = saved.force;
   }
+});
+
+test("a markdown board cell is one line with its pipes and backslashes escaped", () => {
+  const vacancies = [{ status: "tracked", fit_score: 7, company: "Acme | Co", title: "Dev\\|Ops\n  Lead", slug: "acme", url: "", fit_category: null }];
+  const md = renderBoardMd(vacancies);
+  assert.ok(md.includes(String.raw`| Acme \| Co | Dev\\\|Ops Lead |`), md);
+  assert.equal(md.split("\n").filter((line) => line.includes("Acme")).length, 1, "one row, the newline became a space");
 });

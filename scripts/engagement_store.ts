@@ -26,6 +26,7 @@ import { REPO_ROOT } from "./repo_paths";
 import { listOpportunityDirs, opportunityDir, relocateArchived } from "./opportunity_dirs";
 import * as postingIds from "./posting_ids";
 import { VALID_STATUSES, VacancyStoreError, makeSlug, setStatus, setArchived, attachArtifact } from "./vacancy_store";
+import { compareText } from "./text_utils";
 
 function isValidStatus(value: string): boolean {
   return (VALID_STATUSES as readonly string[]).includes(value);
@@ -174,7 +175,7 @@ export function listEngagements(opts: { includeArchived?: boolean; dataDir?: str
       .readdirSync(folder, { withFileTypes: true })
       .filter((e) => e.isFile())
       .map((e) => e.name)
-      .sort();
+      .sort(compareText);
     const fit = record.fit ?? {};
     out.push({
       slug: record.slug ?? path.basename(folder),

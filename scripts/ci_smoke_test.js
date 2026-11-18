@@ -23,7 +23,7 @@ const path = require('path');
 const REPO_ROOT = path.resolve(__dirname, '..');
 const TIMEOUT_MS = 180_000; // generous: first run also runs npm ci + npm run build (Puppeteer's Chromium download included)
 
-const child = spawn('node', ['scripts/mcp_bootstrap.js'], {
+const child = spawn(process.execPath, ['scripts/mcp_bootstrap.js'], {
   cwd: REPO_ROOT,
   // 'pipe' everywhere, not 'inherit' -- keeps these fds ours, not the CI step's own stdout, so
   // killing this process cleanly ends the step regardless of anything a descendant process

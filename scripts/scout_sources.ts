@@ -12,7 +12,7 @@
 import { decode as decodeHtmlEntities } from "he";
 import { CompanyConfig, Posting, titleHasPhrase } from "./scout_domain";
 
-const TAG_RE = /<[^>]+>/g;
+const TAG_RE = /<[^<>]+>/g;
 const WS_RE = /[ \t]+/g;
 // "віддалено"/"дистанційно" (Ukrainian for "remotely") added alongside the English words once
 // dou.ua/Djinni -- both predominantly Ukrainian-language -- were added as sources; every English
@@ -80,7 +80,7 @@ export async function fetchWithTimeout(
   try {
     return await attempt();
   } catch (error) {
-    const httpStatus = error instanceof Error ? Number(/^HTTP (\d{3})/.exec(error.message)?.[1]) : NaN;
+    const httpStatus = error instanceof Error ? Number(/^HTTP (\d{3})/.exec(error.message)?.[1]) : Number.NaN;
     if (httpStatus >= 400 && httpStatus < 500) throw error; // deterministic client error, no retry
     await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
     return attempt();

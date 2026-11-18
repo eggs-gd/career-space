@@ -5,6 +5,8 @@
  * sandboxes with no network/package access.
  */
 
+import { replaceDashes } from "./text_utils";
+
 const FENCE_START_RE = /^\s{0,3}```/;
 const ATX_HEADING_RE = /^\s{0,3}#{1,6}\s+/;
 const BULLET_RE = /^(\s{0,7})([-*+])\s+/;
@@ -13,7 +15,6 @@ const THEMATIC_BREAK_RE = /^\s{0,3}(\*{3,}|-{3,}|_{3,})\s*$/;
 
 const CODE_FENCE_STRIP_RE = /^```(?:md|markdown)?\s*/i;
 const TRAILING_FENCE_RE = /\n```$/;
-const DASH_RE = /\s*[–—]\s*/g; // en dash / em dash
 const MULTI_BLANK_RE = /\n{3,}/g;
 
 /** Strip a stray leading/trailing code fence some models wrap answers in. */
@@ -115,7 +116,7 @@ export function applyAsciiTypographyToText(text: string): string {
   let result = text;
   result = result.replace(/­/g, ""); // soft hyphen
   result = result.replace(/‑/g, "-"); // non-breaking hyphen
-  result = result.replace(DASH_RE, " - "); // en dash / em dash -> always spaced hyphen
+  result = replaceDashes(result, " - "); // en dash / em dash -> always spaced hyphen
   result = result.replace(/−/g, "-"); // minus sign
   result = result.replace(/ /g, " "); // nbsp
   result = result.replace(/ /g, " "); // narrow nbsp
