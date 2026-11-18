@@ -66,6 +66,56 @@ function validateConfig(dataDir: string, issues: ValidationIssue[]): void {
   }
 }
 
+function checkTracks(tracks: unknown, filePath: string, issues: ValidationIssue[]): void {
+  if (tracks === undefined) return;
+  if (!isRecord(tracks)) {
+    issues.push(issue("error", "sources_tracks_shape", filePath, "tracks must be a mapping."));
+    return;
+  }
+  for (const [key, value] of Object.entries(tracks)) {
+    if (!isRecord(value)) {
+      issues.push(issue("error", "sources_track_shape", filePath, `tracks.${key} must be a mapping.`));
+      continue;
+    }
+    const kind = value.kind ?? TRACK_KIND_PRIMARY;
+    if (kind !== TRACK_KIND_PRIMARY && kind !== TRACK_KIND_FALLBACK) {
+      issues.push(issue("error", "sources_track_kind", filePath, `tracks.${key}.kind must be primary or fallback.`));
+    }
+    if (!Array.isArray(value.titles)) {
+      issues.push(issue("warning", "sources_track_titles_missing", filePath, `tracks.${key}.titles is missing or not an array.`));
+    }
+  }
+}
+
+function checkFeeds(feeds: unknown, filePath: string, issues: ValidationIssue[]): void {
+  if (!Array.isArray(feeds)) return;
+  const allowedFeeds = new Set(Object.keys(FEED_FETCHERS));
+  for (const feed of feeds) {
+    if (!allowedFeeds.has(String(feed).trim().toLowerCase())) {
+      issues.push(issue("error", "sources_unknown_feed", filePath, `Unknown feed ${JSON.stringify(feed)}.`));
+    }
+  }
+}
+
+function checkCompanies(companies: unknown, filePath: string, issues: ValidationIssue[]): void {
+  if (!Array.isArray(companies)) return;
+  const allowedAts = new Set(Object.keys(PER_COMPANY_FETCHERS));
+  companies.forEach((entry, index) => {
+    if (!isRecord(entry)) {
+      issues.push(issue("error", "sources_company_shape", filePath, `companies[${index}] must be a mapping.`));
+      return;
+    }
+    for (const required of ["name", "ats", "slug"]) {
+      if (!(required in entry)) {
+        issues.push(issue("error", "sources_company_required", filePath, `companies[${index}] missing ${required}.`));
+      }
+    }
+    if (typeof entry.ats === "string" && !allowedAts.has(entry.ats)) {
+      issues.push(issue("error", "sources_unknown_ats", filePath, `companies[${index}].ats is not supported.`));
+    }
+  });
+}
+
 function validateSources(dataDir: string, issues: ValidationIssue[]): void {
   const filePath = path.join(dataDir, "sources.yaml");
   if (!fs.existsSync(filePath)) return;
@@ -78,52 +128,9 @@ function validateSources(dataDir: string, issues: ValidationIssue[]): void {
     issues.push(issue("error", "sources_load_failed", filePath, error instanceof Error ? error.message : String(error)));
   }
 
-  const tracks = raw.tracks;
-  if (tracks !== undefined && !isRecord(tracks)) {
-    issues.push(issue("error", "sources_tracks_shape", filePath, "tracks must be a mapping."));
-  } else if (isRecord(tracks)) {
-    for (const [key, value] of Object.entries(tracks)) {
-      if (!isRecord(value)) {
-        issues.push(issue("error", "sources_track_shape", filePath, `tracks.${key} must be a mapping.`));
-        continue;
-      }
-      const kind = value.kind ?? TRACK_KIND_PRIMARY;
-      if (kind !== TRACK_KIND_PRIMARY && kind !== TRACK_KIND_FALLBACK) {
-        issues.push(issue("error", "sources_track_kind", filePath, `tracks.${key}.kind must be primary or fallback.`));
-      }
-      if (!Array.isArray(value.titles)) {
-        issues.push(issue("warning", "sources_track_titles_missing", filePath, `tracks.${key}.titles is missing or not an array.`));
-      }
-    }
-  }
-
-  if (Array.isArray(raw.feeds)) {
-    const allowedFeeds = new Set(Object.keys(FEED_FETCHERS));
-    for (const feed of raw.feeds) {
-      const normalized = String(feed).trim().toLowerCase();
-      if (!allowedFeeds.has(normalized)) {
-        issues.push(issue("error", "sources_unknown_feed", filePath, `Unknown feed ${JSON.stringify(feed)}.`));
-      }
-    }
-  }
-
-  if (Array.isArray(raw.companies)) {
-    const allowedAts = new Set(Object.keys(PER_COMPANY_FETCHERS));
-    raw.companies.forEach((entry, index) => {
-      if (!isRecord(entry)) {
-        issues.push(issue("error", "sources_company_shape", filePath, `companies[${index}] must be a mapping.`));
-        return;
-      }
-      for (const required of ["name", "ats", "slug"]) {
-        if (!(required in entry)) {
-          issues.push(issue("error", "sources_company_required", filePath, `companies[${index}] missing ${required}.`));
-        }
-      }
-      if (typeof entry.ats === "string" && !allowedAts.has(entry.ats)) {
-        issues.push(issue("error", "sources_unknown_ats", filePath, `companies[${index}].ats is not supported.`));
-      }
-    });
-  }
+  checkTracks(raw.tracks, filePath, issues);
+  checkFeeds(raw.feeds, filePath, issues);
+  checkCompanies(raw.companies, filePath, issues);
 
   if (raw.min_fit_score !== undefined && !Number.isFinite(Number(raw.min_fit_score))) {
     issues.push(issue("error", "sources_min_fit_score", filePath, "min_fit_score must be numeric."));
@@ -143,38 +150,64 @@ function checkArchivePlacement(kind: "vacancy" | "engagement", folder: string, f
   }
 }
 
-function validateVacancyRecord(folder: string, filePath: string, issues: ValidationIssue[]): void {
-  const record = loadYaml(filePath, issues);
-  if (record === null) return;
-  const slug = path.basename(folder);
+type RecordKind = "vacancy" | "engagement";
 
+/** What a vacancy and an engagement record share: slug = folder name, archive placement, required
+ * keys, status and its history, and the fit score. */
+function checkCommonRecord(
+  kind: RecordKind,
+  requiredKeys: string[],
+  folder: string,
+  filePath: string,
+  record: Rec,
+  issues: ValidationIssue[]
+): void {
+  const slug = path.basename(folder);
   if (record.slug !== slug) {
-    issues.push(issue("error", "vacancy_slug_mismatch", filePath, `record slug must match folder name ${slug}.`));
+    issues.push(issue("error", `${kind}_slug_mismatch`, filePath, `record slug must match folder name ${slug}.`));
   }
-  checkArchivePlacement("vacancy", folder, filePath, record, issues);
-  for (const required of ["posting_id", "content_id", "company", "title", "status", "status_history"]) {
+  checkArchivePlacement(kind, folder, filePath, record, issues);
+  for (const required of requiredKeys) {
     if (!(required in record)) {
-      issues.push(issue("error", "vacancy_required_key", filePath, `record.yaml missing ${required}.`));
+      issues.push(issue("error", `${kind}_required_key`, filePath, `record.yaml missing ${required}.`));
     }
   }
   if (typeof record.status === "string" && !(VALID_STATUSES as readonly string[]).includes(record.status)) {
-    issues.push(issue("error", "vacancy_status", filePath, `Invalid status ${record.status}.`));
+    issues.push(issue("error", `${kind}_status`, filePath, `Invalid status ${record.status}.`));
   }
   if (!Array.isArray(record.status_history)) {
-    issues.push(issue("error", "vacancy_status_history", filePath, "status_history must be an array."));
+    issues.push(issue("error", `${kind}_status_history`, filePath, "status_history must be an array."));
   }
+  checkFit(kind, filePath, record.fit, issues);
+}
 
-  const fit = record.fit;
-  if (fit !== undefined) {
-    if (!isRecord(fit)) {
-      issues.push(issue("error", "vacancy_fit_shape", filePath, "fit must be a mapping."));
-    } else if (fit.score !== undefined && fit.score !== null) {
-      const score = Number(fit.score);
-      if (!Number.isInteger(score) || score < 1 || score > 10) {
-        issues.push(issue("error", "vacancy_fit_score", filePath, "fit.score must be an integer from 1 to 10."));
-      }
-    }
+function checkFit(kind: RecordKind, filePath: string, fit: unknown, issues: ValidationIssue[]): void {
+  if (fit === undefined) return;
+  if (!isRecord(fit)) {
+    issues.push(issue("error", `${kind}_fit_shape`, filePath, "fit must be a mapping."));
+    return;
   }
+  if (fit.score === undefined || fit.score === null) return;
+  const score = Number(fit.score);
+  if (!Number.isInteger(score) || score < 1 || score > 10) {
+    issues.push(issue("error", `${kind}_fit_score`, filePath, "fit.score must be an integer from 1 to 10."));
+  }
+}
+
+function checkAlsoSeen(alsoSeen: unknown, filePath: string, issues: ValidationIssue[]): void {
+  if (alsoSeen === undefined) return;
+  const shapeOk =
+    Array.isArray(alsoSeen) &&
+    alsoSeen.every((entry: unknown) => isRecord(entry) && typeof entry.url === "string" && entry.url !== "" && typeof entry.source === "string");
+  if (!shapeOk) {
+    issues.push(issue("warning", "vacancy_also_seen", filePath, "also_seen must be a list of { source, url } entries."));
+  }
+}
+
+function validateVacancyRecord(folder: string, filePath: string, issues: ValidationIssue[]): void {
+  const record = loadYaml(filePath, issues);
+  if (record === null) return;
+  checkCommonRecord("vacancy", ["posting_id", "content_id", "company", "title", "status", "status_history"], folder, filePath, record, issues);
 
   const eligibility = record.eligibility;
   if (isRecord(eligibility) && isRecord(eligibility.location)) {
@@ -183,15 +216,7 @@ function validateVacancyRecord(folder: string, filePath: string, issues: Validat
       issues.push(issue("error", "vacancy_location_status", filePath, "eligibility.location.status is invalid."));
     }
   }
-
-  if (record.also_seen !== undefined) {
-    const shapeOk =
-      Array.isArray(record.also_seen) &&
-      record.also_seen.every((entry: unknown) => isRecord(entry) && typeof entry.url === "string" && entry.url !== "" && typeof entry.source === "string");
-    if (!shapeOk) {
-      issues.push(issue("warning", "vacancy_also_seen", filePath, "also_seen must be a list of { source, url } entries."));
-    }
-  }
+  checkAlsoSeen(record.also_seen, filePath, issues);
 
   if (!fs.existsSync(path.join(folder, "posting.md"))) {
     // A record imported from an earlier tool never had its posting text captured -- can't be recovered.
@@ -226,34 +251,7 @@ function validateVacancies(dataDir: string, issues: ValidationIssue[]): void {
 function validateEngagementRecord(folder: string, filePath: string, issues: ValidationIssue[]): void {
   const record = loadYaml(filePath, issues);
   if (record === null) return;
-  const slug = path.basename(folder);
-
-  if (record.slug !== slug) {
-    issues.push(issue("error", "engagement_slug_mismatch", filePath, `record slug must match folder name ${slug}.`));
-  }
-  checkArchivePlacement("engagement", folder, filePath, record, issues);
-  for (const required of ["title", "status", "status_history"]) {
-    if (!(required in record)) {
-      issues.push(issue("error", "engagement_required_key", filePath, `record.yaml missing ${required}.`));
-    }
-  }
-  if (typeof record.status === "string" && !(VALID_STATUSES as readonly string[]).includes(record.status)) {
-    issues.push(issue("error", "engagement_status", filePath, `Invalid status ${record.status}.`));
-  }
-  if (!Array.isArray(record.status_history)) {
-    issues.push(issue("error", "engagement_status_history", filePath, "status_history must be an array."));
-  }
-  const fit = record.fit;
-  if (fit !== undefined) {
-    if (!isRecord(fit)) {
-      issues.push(issue("error", "engagement_fit_shape", filePath, "fit must be a mapping."));
-    } else if (fit.score !== undefined && fit.score !== null) {
-      const score = Number(fit.score);
-      if (!Number.isInteger(score) || score < 1 || score > 10) {
-        issues.push(issue("error", "engagement_fit_score", filePath, "fit.score must be an integer from 1 to 10."));
-      }
-    }
-  }
+  checkCommonRecord("engagement", ["title", "status", "status_history"], folder, filePath, record, issues);
   if (!fs.existsSync(path.join(folder, "posting.md"))) {
     issues.push(issue("error", "engagement_missing_posting", path.join(folder, "posting.md"), "Engagement folder must contain posting.md."));
   }
