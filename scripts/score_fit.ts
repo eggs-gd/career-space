@@ -297,6 +297,32 @@ export function render(assessment: Assessment): string {
   return result.markdown;
 }
 
+function clusterPrefix(cluster: Cluster): string {
+  if (cluster.blocking) return "**blocking** — ";
+  if (cluster.importance === "critical") return "**critical requirement** — ";
+  if (cluster.importance === "nice_to_have") return "nice-to-have — ";
+  return "";
+}
+
+/** The per-state bullet lists, strongest evidence last-listed per `STATE_ORDER`. */
+function clusterLines(clusters: Cluster[]): string[] {
+  const grouped: Record<ClusterState, Cluster[]> = { major_gap: [], minor_gap: [], transferable: [], strong: [] };
+  for (const cluster of clusters) {
+    grouped[clusterState(cluster)].push(cluster);
+  }
+  const lines: string[] = [];
+  for (const state of STATE_ORDER) {
+    const items = grouped[state];
+    if (items.length === 0) continue;
+    lines.push("", STATE_HEADERS[state]);
+    for (const cluster of items) {
+      const headline = clusterPrimary(cluster).reason || cluster.cluster || "";
+      lines.push(`- ${clusterPrefix(cluster)}${headline}`);
+    }
+  }
+  return lines;
+}
+
 export function evaluate(assessment: Assessment): FitResult {
   const clusters = assessment.clusters ?? [];
   const { score, fit_category: category } = reconcile(
@@ -320,33 +346,7 @@ export function evaluate(assessment: Assessment): FitResult {
     const reason = locationEligibility.reason ? ` — ${locationEligibility.reason}` : "";
     lines.push(`**Location eligibility:** ${label}${reason}`);
   }
-  lines.push("", "---");
-
-  const grouped: Record<ClusterState, Cluster[]> = { major_gap: [], minor_gap: [], transferable: [], strong: [] };
-  for (const cluster of clusters) {
-    grouped[clusterState(cluster)].push(cluster);
-  }
-
-  for (const state of STATE_ORDER) {
-    const items = grouped[state];
-    if (items.length === 0) continue;
-    lines.push("", STATE_HEADERS[state]);
-    for (const cluster of items) {
-      const primary = clusterPrimary(cluster);
-      let prefix: string;
-      if (cluster.blocking) {
-        prefix = "**blocking** — ";
-      } else if (cluster.importance === "critical") {
-        prefix = "**critical requirement** — ";
-      } else if (cluster.importance === "nice_to_have") {
-        prefix = "nice-to-have — ";
-      } else {
-        prefix = "";
-      }
-      const headline = primary.reason || cluster.cluster || "";
-      lines.push(`- ${prefix}${headline}`);
-    }
-  }
+  lines.push("", "---", ...clusterLines(clusters));
 
   const risk = (assessment.risk ?? "").trim();
   const appeal = (assessment.appeal ?? "").trim();
