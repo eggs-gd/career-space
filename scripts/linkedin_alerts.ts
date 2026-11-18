@@ -56,6 +56,22 @@ function jobIdFromUrl(url: string): string | null {
   return /\/jobs\/view\/(\d+)/.exec(url)?.[1] ?? /jobid_(\d+)/.exec(url)?.[1] ?? null;
 }
 
+/** `title / company / [location] / badges...`; the third line is a badge, not a location, when it
+ * matches one. A card with no title or no job id is no job. */
+function cardToJob(card: string[], jobId: string | null): AlertJob | null {
+  const [title = "", company = "", third = ""] = card;
+  if (!jobId || !title) return null;
+  const hasLocation = third !== "" && !BADGE.some((re) => re.test(third));
+  return {
+    job_id: jobId,
+    title,
+    company,
+    location: hasLocation ? third : "",
+    url: canonicalJobUrl(jobId),
+    badges: card.slice(hasLocation ? 3 : 2),
+  };
+}
+
 /** One alert email's plain-text body. Every job card is `title / company / location / badges... /
  * View job: <url>`, cards separated by a dashed line; the header and footer carry no `View job:`. */
 export function parseAlertEmail(body: string): ParsedAlert {
@@ -76,19 +92,8 @@ export function parseAlertEmail(body: string): ParsedAlert {
       if (line && !line.startsWith("Your job alert for")) card.push(line);
       continue;
     }
-    const jobId = jobIdFromUrl(view[1]!);
-    const [title = "", company = "", third = ""] = card;
-    if (jobId && title) {
-      const hasLocation = third !== "" && !BADGE.some((re) => re.test(third));
-      jobs.push({
-        job_id: jobId,
-        title,
-        company,
-        location: hasLocation ? third : "",
-        url: canonicalJobUrl(jobId),
-        badges: card.slice(hasLocation ? 3 : 2),
-      });
-    }
+    const job = cardToJob(card, jobIdFromUrl(view[1]!));
+    if (job) jobs.push(job);
     card = [];
   }
   return { alert_name: alertName, jobs, listed_ids: listed ? listed.split(",").filter(Boolean) : [] };

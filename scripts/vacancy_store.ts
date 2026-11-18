@@ -255,6 +255,13 @@ export function addAlias(slug: string, alias: AlsoSeen, scope: VacancyStoreScope
   return true;
 }
 
+/** The channels a record is already known on: its own `source` and every `also_seen` entry. */
+function recordChannels(record: Rec): Set<string> {
+  const known = new Set<string>([String(record.source ?? "")]);
+  for (const entry of Array.isArray(record.also_seen) ? record.also_seen : []) known.add(String(entry?.source ?? ""));
+  return known;
+}
+
 /** For the scout: roles it already judged, seen again. Each item is a content id plus the link and
  * source of the new sighting. The link goes to `also_seen` of the vacancy carrying that content id,
  * at most one link per channel (a channel that is already the record's `source`, or already in
@@ -273,9 +280,7 @@ export function addAliasesByContentId(items: { contentId: string; alias: AlsoSee
     const hit = byContent.get(contentId);
     if (!hit) continue;
     const channel = normalizeSource(alias.source).source || alias.source;
-    const known = new Set<string>([String(hit.record.source ?? "")]);
-    for (const entry of Array.isArray(hit.record.also_seen) ? hit.record.also_seen : []) known.add(String(entry?.source ?? ""));
-    if (known.has(channel)) continue;
+    if (recordChannels(hit.record).has(channel)) continue;
     if (pushAlias(hit.record, alias)) {
       hit.dirty = true;
       added += 1;
@@ -474,12 +479,10 @@ export interface ResolveVacancyResult {
 
 /** Create or update a vacancy folder. Omitted enrichment fields mean "no opinion"; existing
  * values are preserved. `status: "new"` only applies to a new record. */
-export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
-  const scope: VacancyStoreScope = { dataDir: opts.dataDir };
-  if (opts.status !== undefined && !isValidStatus(opts.status)) {
-    throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(opts.status)}`);
-  }
-
+/** The posting/content ids an upsert writes under, and whether they came from the scout or were
+ * derived by hand. A manual upsert reuses the ids of a record already known by company+title;
+ * explicit ids do not merge onto records already known to be scout-created. */
+function resolveUpsertIds(opts: UpsertVacancyOptions, scope: VacancyStoreScope): { pid: string; cid: string; idSource: string } {
   let pid = opts.postingId;
   let cid = opts.contentId;
   let idSource = "scout";
@@ -496,7 +499,6 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
       [pid, cid] = postingIds.manualIds(opts.company, opts.title, opts.postingText ?? "", opts.url ?? "");
     }
   } else if (!fs.existsSync(recordPath(makeSlug(opts.company, opts.title, pid), scope))) {
-    // Explicit ids do not merge onto records already known to be scout-created.
     const existingSlug = findByCompanyTitle(opts.company, opts.title, scope);
     if (existingSlug !== null) {
       const existing = readYamlRecord(recordPath(existingSlug, scope));
@@ -511,75 +513,85 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   if (pid === undefined || cid === undefined) {
     throw new VacancyStoreError("internal error: posting_id/content_id unresolved in upsertVacancy");
   }
+  return { pid, cid, idSource };
+}
 
-  // The folder already holding this exact posting wins, even if its name predates a later company/
-  // title correction -- the slug is derived from those, so re-deriving it would fork a duplicate.
-  const slug = findSlugByPostingId(pid, scope) ?? makeSlug(opts.company, opts.title, pid);
-  const vdir = vacancyDir(slug, scope);
-  const rpath = recordPath(slug, scope);
-  const nowStr = now();
-
-  let record: Rec;
-  if (fs.existsSync(rpath)) {
-    record = readYamlRecord(rpath);
-    const existingPostingId = record.posting_id;
-    if (existingPostingId && existingPostingId !== pid) {
-      // makeSlug uses a short hash suffix; guard against a real collision.
-      throw new VacancyStoreError(
-        `slug ${JSON.stringify(slug)} already belongs to posting_id ${JSON.stringify(existingPostingId)}, not ` +
-          `${JSON.stringify(pid)} -- refusing to overwrite a different vacancy's record.`
-      );
-    }
-  } else {
-    const initialStatus = opts.status ?? "new";
-    record = {
-      slug,
-      posting_id: pid,
-      content_id: cid,
-      id_source: idSource,
-      status: initialStatus,
-      status_history: [{ status: initialStatus, at: nowStr }],
-      created_at: nowStr,
-    };
-    // New tracked vacancies are also scout-seen for future dedup.
-    if (opts.markSeenOnCreate ?? true) {
-      markSeen(
-        pid,
-        cid,
-        {
-          outcome: "matched",
-          company: opts.company,
-          title: opts.title,
-          fitScore: opts.fitScore,
-          fitCategory: opts.fitCategory,
-          reason: opts.fitReason,
-        },
-        scope
-      );
-    }
+function readExistingRecord(rpath: string, slug: string, pid: string): Rec {
+  const record = readYamlRecord(rpath);
+  const existingPostingId = record.posting_id;
+  if (existingPostingId && existingPostingId !== pid) {
+    // makeSlug uses a short hash suffix; guard against a real collision.
+    throw new VacancyStoreError(
+      `slug ${JSON.stringify(slug)} already belongs to posting_id ${JSON.stringify(existingPostingId)}, not ` +
+        `${JSON.stringify(pid)} -- refusing to overwrite a different vacancy's record.`
+    );
   }
+  return record;
+}
 
-  Object.assign(record, { company: opts.company, title: opts.title, updated_at: nowStr });
-  // A record keeps the link and channel it was first seen under. A different link arriving later
-  // (the same role on another board, a repost) is kept in `also_seen`, not written over the first
-  // one, and a missing link never blanks the stored one. `replaceUrl` is the explicit correction.
-  const keepFirst = !opts.replaceUrl && typeof record.url === "string" && record.url !== "";
-  if (keepFirst) {
-    if (opts.url) pushAlias(record, { source: opts.source ?? "", url: opts.url });
-    if (opts.applyUrl) pushAlias(record, { source: opts.source ?? "", url: opts.applyUrl });
-  } else {
-    record.url = opts.url ?? "";
-    record.apply_url = opts.applyUrl || opts.url || "";
+function createRecord(
+  opts: UpsertVacancyOptions,
+  ids: { slug: string; pid: string; cid: string; idSource: string; nowStr: string },
+  scope: VacancyStoreScope
+): Rec {
+  const initialStatus = opts.status ?? "new";
+  const record: Rec = {
+    slug: ids.slug,
+    posting_id: ids.pid,
+    content_id: ids.cid,
+    id_source: ids.idSource,
+    status: initialStatus,
+    status_history: [{ status: initialStatus, at: ids.nowStr }],
+    created_at: ids.nowStr,
+  };
+  // New tracked vacancies are also scout-seen for future dedup.
+  if (opts.markSeenOnCreate ?? true) {
+    markSeen(
+      ids.pid,
+      ids.cid,
+      {
+        outcome: "matched",
+        company: opts.company,
+        title: opts.title,
+        fitScore: opts.fitScore,
+        fitCategory: opts.fitCategory,
+        reason: opts.fitReason,
+      },
+      scope
+    );
   }
-  if (opts.location) record.location = opts.location;
-  if (opts.remote !== undefined) record.remote = opts.remote;
+  return record;
+}
+
+/** A record keeps the link and channel it was first seen under: a different link arriving later
+ * (the same role on another board, a repost) goes to `also_seen`, not over the first one, and a
+ * missing link never blanks the stored one. `replaceUrl` is the explicit correction. */
+function keepsFirstLink(record: Rec, opts: UpsertVacancyOptions): boolean {
+  return !opts.replaceUrl && typeof record.url === "string" && record.url !== "";
+}
+
+function aliasLinks(record: Rec, opts: UpsertVacancyOptions): void {
+  if (opts.url) pushAlias(record, { source: opts.source ?? "", url: opts.url });
+  if (opts.applyUrl) pushAlias(record, { source: opts.source ?? "", url: opts.applyUrl });
+}
+
+function replaceLinks(record: Rec, opts: UpsertVacancyOptions): void {
+  record.url = opts.url ?? "";
+  record.apply_url = opts.applyUrl || opts.url || "";
+}
+
+/** Channel and posting date; the stored ones stay when `policy` is `keep-first` and they are set. */
+function applyChannel(record: Rec, opts: UpsertVacancyOptions, policy: "keep-first" | "replace"): void {
+  const keepFirst = policy === "keep-first";
   if (opts.source && (!keepFirst || !record.source)) {
     const { source, detail } = normalizeSource(opts.source);
     record.source = source;
     if (detail) record.source_detail = detail;
   }
   if (opts.postedAt && (!keepFirst || !record.posted_at)) record.posted_at = opts.postedAt;
-  if (opts.trackLabel) record.track_label = opts.trackLabel;
+}
+
+function applyFitAndEligibility(record: Rec, opts: UpsertVacancyOptions): void {
   if (opts.fitScore !== undefined || opts.fitCategory !== undefined || opts.fitReason !== undefined) {
     record.fit = { score: opts.fitScore ?? null, category: opts.fitCategory ?? null, reason: opts.fitReason ?? null };
   } else {
@@ -589,6 +601,19 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   const eligibility = eligibilityForSource(String(record.source ?? ""), incoming);
   if (eligibility !== undefined) record.eligibility = eligibility;
   else if (incoming !== undefined) delete record.eligibility; // suppressed on a local board: back to the default, no label
+}
+
+/** Writes the upsert's own fields onto the record: links, location, channel, location, fit, eligibility,
+ * and the status change. */
+function applyUpsertFields(record: Rec, opts: UpsertVacancyOptions, nowStr: string): void {
+  const policy = keepsFirstLink(record, opts) ? "keep-first" : "replace";
+  if (policy === "keep-first") aliasLinks(record, opts);
+  else replaceLinks(record, opts);
+  if (opts.location) record.location = opts.location;
+  if (opts.remote !== undefined) record.remote = opts.remote;
+  applyChannel(record, opts, policy);
+  if (opts.trackLabel) record.track_label = opts.trackLabel;
+  applyFitAndEligibility(record, opts);
   setdefault(record, "location", "");
   setdefault(record, "remote", false);
   setdefault(record, "source", "");
@@ -605,6 +630,28 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
   setdefault(record, "status_history", [{ status: record.status, at: nowStr }]);
   // Upsert never changes archive visibility; only setArchived does.
   setdefault(record, "archived", false);
+}
+
+export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
+  const scope: VacancyStoreScope = { dataDir: opts.dataDir };
+  if (opts.status !== undefined && !isValidStatus(opts.status)) {
+    throw new VacancyStoreError(`status must be one of ${VALID_STATUSES.join(", ")}, got ${JSON.stringify(opts.status)}`);
+  }
+  const { pid, cid, idSource } = resolveUpsertIds(opts, scope);
+
+  // The folder already holding this exact posting wins, even if its name predates a later company/
+  // title correction -- the slug is derived from those, so re-deriving it would fork a duplicate.
+  const slug = findSlugByPostingId(pid, scope) ?? makeSlug(opts.company, opts.title, pid);
+  const vdir = vacancyDir(slug, scope);
+  const rpath = recordPath(slug, scope);
+  const nowStr = now();
+
+  const record = fs.existsSync(rpath)
+    ? readExistingRecord(rpath, slug, pid)
+    : createRecord(opts, { slug, pid, cid, idSource, nowStr }, scope);
+
+  Object.assign(record, { company: opts.company, title: opts.title, updated_at: nowStr });
+  applyUpsertFields(record, opts, nowStr);
 
   fs.mkdirSync(vdir, { recursive: true });
   if (opts.postingText) fs.writeFileSync(postingPath(slug, scope), opts.postingText, "utf-8");
@@ -940,176 +987,216 @@ function renderBoardsFromCli(): void {
   renderBoards();
 }
 
-/** CLI fallback for agents without MCP support. Prefer the MCP tools when connected. */
-function cli(): void {
-  const { values, positionals } = parseArgs({
-    allowPositionals: true,
-    options: {
-      "posting-id": { type: "string" },
-      "content-id": { type: "string" },
-      outcome: { type: "string" },
-      company: { type: "string", default: "" },
-      title: { type: "string", default: "" },
-      "fit-score": { type: "string" },
-      "fit-category": { type: "string" },
-      reason: { type: "string" },
-      url: { type: "string", default: "" },
-      "apply-url": { type: "string", default: "" },
-      location: { type: "string", default: "" },
-      remote: { type: "boolean" },
-      source: { type: "string", default: "" },
-      "posted-at": { type: "string", default: "" },
-      "posting-text": { type: "string", default: "" },
-      status: { type: "string" },
-      "track-label": { type: "string" },
-      "fit-reason": { type: "string" },
-      "eligibility-location-status": { type: "string" },
-      "eligibility-location-reason": { type: "string" },
-      slug: { type: "string" },
-      note: { type: "string" },
-      kind: { type: "string" },
-      path: { type: "string" },
-      // string, not boolean -- parseArgs's boolean type is presence-only (no way to pass
-      // `false` explicitly), and un-archiving needs that just as much as archiving does.
-      archived: { type: "string" },
-      "include-archived": { type: "boolean" },
-      input: { type: "string" },
-      write: { type: "boolean" },
-    },
-  });
+const CLI_OPTIONS = {
+  "posting-id": { type: "string" },
+  "content-id": { type: "string" },
+  outcome: { type: "string" },
+  company: { type: "string", default: "" },
+  title: { type: "string", default: "" },
+  "fit-score": { type: "string" },
+  "fit-category": { type: "string" },
+  reason: { type: "string" },
+  url: { type: "string", default: "" },
+  "apply-url": { type: "string", default: "" },
+  location: { type: "string", default: "" },
+  remote: { type: "boolean" },
+  source: { type: "string", default: "" },
+  "posted-at": { type: "string", default: "" },
+  "posting-text": { type: "string", default: "" },
+  status: { type: "string" },
+  "track-label": { type: "string" },
+  "fit-reason": { type: "string" },
+  "eligibility-location-status": { type: "string" },
+  "eligibility-location-reason": { type: "string" },
+  slug: { type: "string" },
+  note: { type: "string" },
+  kind: { type: "string" },
+  path: { type: "string" },
+  // string, not boolean -- parseArgs's boolean type is presence-only (no way to pass
+  // `false` explicitly), and un-archiving needs that just as much as archiving does.
+  archived: { type: "string" },
+  "include-archived": { type: "boolean" },
+  input: { type: "string" },
+  write: { type: "boolean" },
+} as const;
 
-  const command = positionals[0];
-  let result: unknown;
+export function parseCli(args?: string[]) {
+  return parseArgs({ args, allowPositionals: true, options: CLI_OPTIONS });
+}
+type CliValues = ReturnType<typeof parseCli>["values"];
 
-  if (command === "mark-seen") {
-    if (!values["posting-id"] || !values["content-id"] || !values.outcome) {
-      throw new VacancyStoreError("mark-seen requires --posting-id, --content-id, --outcome");
-    }
-    markSeen(values["posting-id"], values["content-id"], {
-      outcome: values.outcome as "matched" | "rejected",
-      company: values.company,
-      title: values.title,
-      fitScore: values["fit-score"] !== undefined ? Number(values["fit-score"]) : undefined,
-      fitCategory: values["fit-category"],
-      reason: values.reason,
-    });
-    result = { ok: true };
-  } else if (command === "upsert") {
-    if (!values.company || !values.title) {
-      throw new VacancyStoreError("upsert requires --company and --title");
-    }
-    const status = values.status;
-    if (status !== undefined && !isValidStatus(status)) {
-      throw new VacancyStoreError(`--status must be one of ${VALID_STATUSES.join(", ")}`);
-    }
-    const eligibilityStatus = values["eligibility-location-status"];
-    if (eligibilityStatus !== undefined && !isLocationEligibilityStatus(eligibilityStatus)) {
-      throw new VacancyStoreError(
-        "--eligibility-location-status must be one of open_remote, local, location_exception_candidate, hard_location_block, unclear"
-      );
-    }
-    result = upsertVacancy({
-      postingId: values["posting-id"],
-      contentId: values["content-id"],
-      company: values.company,
-      title: values.title,
-      url: values.url,
-      applyUrl: values["apply-url"],
-      location: values.location,
-      remote: values.remote,
-      source: values.source,
-      postedAt: values["posted-at"],
-      postingText: values["posting-text"],
-      status,
-      trackLabel: values["track-label"],
-      fitScore: values["fit-score"] !== undefined ? Number(values["fit-score"]) : undefined,
-      fitCategory: values["fit-category"],
-      fitReason: values["fit-reason"],
-      eligibility: eligibilityStatus
-        ? { location: { status: eligibilityStatus, reason: values["eligibility-location-reason"] } }
-        : undefined,
-    });
-  } else if (command === "set-status") {
-    if (!values.slug || !values.status || !isValidStatus(values.status)) {
-      throw new VacancyStoreError(`set-status requires --slug and --status (one of ${VALID_STATUSES.join(", ")})`);
-    }
-    result = setStatus(values.slug, values.status, values.note);
-    renderBoardsFromCli();
-  } else if (command === "set-archived") {
-    if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
-      throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
-    }
-    result = setArchived(values.slug, values.archived === "true");
-    renderBoardsFromCli();
-  } else if (command === "relocate-archived") {
-    // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
-    result = relocateArchived(DATA_DIR, values.write ?? false);
-  } else if (command === "attach-artifact") {
-    if (!values.slug || !values.kind || !values.path) {
-      throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
-    }
-    result = attachArtifact(values.slug, values.kind, values.path);
-  } else if (command === "list") {
-    result = listVacancies(values.status, { includeArchived: values["include-archived"] });
-  } else if (command === "find") {
-    result = findVacancies({ url: values.url, company: values.company, title: values.title });
-  } else if (command === "add-alias") {
-    if (!values.slug || !values.source || !values.url) {
-      throw new VacancyStoreError("add-alias requires --slug, --source, --url");
-    }
-    result = { added: addAlias(values.slug, { source: values.source, url: values.url }) };
-  } else if (command === "record-scout-outcomes") {
-    if (!values.input) {
-      throw new VacancyStoreError("record-scout-outcomes requires --input <json>");
-    }
-    type OutcomeItems = { candidate: ScoutOutcomeCandidate; fit: ScoutOutcomeFit }[];
-    const parsed = JSON.parse(fs.readFileSync(values.input, "utf-8")) as unknown;
-    // Accept either a bare items array or a { min_fit_score?, items } wrapper.
-    const payload: { min_fit_score?: number; items?: OutcomeItems } = Array.isArray(parsed)
-      ? { items: parsed as OutcomeItems }
-      : (parsed as { min_fit_score?: number; items?: OutcomeItems });
-    const items = payload.items ?? [];
-    if (items.length === 0) {
-      throw new VacancyStoreError("record-scout-outcomes: --input file has no items");
-    }
-    result = items.map((item) =>
-      recordScoutOutcome({
-        candidate: item.candidate,
-        fit: item.fit,
-        minFitScore: payload.min_fit_score ?? 4,
-      })
-    );
-    if ((result as RecordedScoutOutcome[]).some((r) => r.outcome === "matched")) renderBoardsFromCli();
-  } else if (command === "resolve") {
-    const status = values.status;
-    if (status !== undefined && !isValidStatus(status)) {
-      throw new VacancyStoreError(`--status must be one of ${VALID_STATUSES.join(", ")}`);
-    }
-    const presentString = (value: string | undefined): string | undefined => (value && value.length > 0 ? value : undefined);
-    result = resolveVacancy({
-      slug: values.slug,
-      postingId: values["posting-id"],
-      contentId: values["content-id"],
-      company: presentString(values.company),
-      title: presentString(values.title),
-      url: presentString(values.url),
-      applyUrl: presentString(values["apply-url"]),
-      location: presentString(values.location),
-      remote: values.remote,
-      source: presentString(values.source),
-      postedAt: presentString(values["posted-at"]),
-      postingText: presentString(values["posting-text"]),
-      status,
-      trackLabel: presentString(values["track-label"]),
-    });
-    if ((result as ResolveVacancyResult).changed) renderBoardsFromCli();
-  } else {
+/** Where a CLI command reads and writes, and what it calls to refresh the boards. */
+export interface CliContext {
+  dataDir?: string;
+  renderBoards: () => void;
+}
+
+const optionalNumber = (value: string | undefined): number | undefined => (value === undefined ? undefined : Number(value));
+const presentString = (value: string | undefined): string | undefined => (value && value.length > 0 ? value : undefined);
+
+function validStatusOption(status: string | undefined): (typeof VALID_STATUSES)[number] | undefined {
+  if (status !== undefined && !isValidStatus(status)) {
+    throw new VacancyStoreError(`--status must be one of ${VALID_STATUSES.join(", ")}`);
+  }
+  return status;
+}
+
+function cliMarkSeen(values: CliValues, ctx: CliContext): unknown {
+  if (!values["posting-id"] || !values["content-id"] || !values.outcome) {
+    throw new VacancyStoreError("mark-seen requires --posting-id, --content-id, --outcome");
+  }
+  markSeen(values["posting-id"], values["content-id"], {
+    outcome: values.outcome as "matched" | "rejected",
+    company: values.company,
+    title: values.title,
+    fitScore: optionalNumber(values["fit-score"]),
+    fitCategory: values["fit-category"],
+    reason: values.reason,
+  }, { dataDir: ctx.dataDir });
+  return { ok: true };
+}
+
+function cliUpsert(values: CliValues, ctx: CliContext): unknown {
+  if (!values.company || !values.title) {
+    throw new VacancyStoreError("upsert requires --company and --title");
+  }
+  const status = validStatusOption(values.status);
+  const eligibilityStatus = values["eligibility-location-status"];
+  if (eligibilityStatus !== undefined && !isLocationEligibilityStatus(eligibilityStatus)) {
     throw new VacancyStoreError(
-      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, relocate-archived, attach-artifact, list, find, add-alias, record-scout-outcomes, resolve`
+      "--eligibility-location-status must be one of open_remote, local, location_exception_candidate, hard_location_block, unclear"
     );
   }
+  return upsertVacancy({
+    postingId: values["posting-id"],
+    contentId: values["content-id"],
+    company: values.company,
+    title: values.title,
+    url: values.url,
+    applyUrl: values["apply-url"],
+    location: values.location,
+    remote: values.remote,
+    source: values.source,
+    postedAt: values["posted-at"],
+    postingText: values["posting-text"],
+    status,
+    trackLabel: values["track-label"],
+    fitScore: optionalNumber(values["fit-score"]),
+    fitCategory: values["fit-category"],
+    fitReason: values["fit-reason"],
+    eligibility: eligibilityStatus
+      ? { location: { status: eligibilityStatus, reason: values["eligibility-location-reason"] } }
+      : undefined,
+    dataDir: ctx.dataDir,
+  });
+}
 
-  console.log(JSON.stringify(result, null, 2));
+function cliSetStatus(values: CliValues, ctx: CliContext): unknown {
+  if (!values.slug || !values.status || !isValidStatus(values.status)) {
+    throw new VacancyStoreError(`set-status requires --slug and --status (one of ${VALID_STATUSES.join(", ")})`);
+  }
+  const result = setStatus(values.slug, values.status, values.note, { dataDir: ctx.dataDir });
+  ctx.renderBoards();
+  return result;
+}
+
+function cliSetArchived(values: CliValues, ctx: CliContext): unknown {
+  if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
+    throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
+  }
+  const result = setArchived(values.slug, values.archived === "true", { dataDir: ctx.dataDir });
+  ctx.renderBoards();
+  return result;
+}
+
+function cliAttachArtifact(values: CliValues, ctx: CliContext): unknown {
+  if (!values.slug || !values.kind || !values.path) {
+    throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
+  }
+  return attachArtifact(values.slug, values.kind, values.path, { dataDir: ctx.dataDir });
+}
+
+function cliAddAlias(values: CliValues, ctx: CliContext): unknown {
+  if (!values.slug || !values.source || !values.url) {
+    throw new VacancyStoreError("add-alias requires --slug, --source, --url");
+  }
+  return { added: addAlias(values.slug, { source: values.source, url: values.url }, { dataDir: ctx.dataDir }) };
+}
+
+function cliRecordScoutOutcomes(values: CliValues, ctx: CliContext): unknown {
+  if (!values.input) {
+    throw new VacancyStoreError("record-scout-outcomes requires --input <json>");
+  }
+  type OutcomeItems = { candidate: ScoutOutcomeCandidate; fit: ScoutOutcomeFit }[];
+  const parsed = JSON.parse(fs.readFileSync(values.input, "utf-8")) as unknown;
+  // Accept either a bare items array or a { min_fit_score?, items } wrapper.
+  const payload: { min_fit_score?: number; items?: OutcomeItems } = Array.isArray(parsed)
+    ? { items: parsed as OutcomeItems }
+    : (parsed as { min_fit_score?: number; items?: OutcomeItems });
+  const items = payload.items ?? [];
+  if (items.length === 0) {
+    throw new VacancyStoreError("record-scout-outcomes: --input file has no items");
+  }
+  const results: RecordedScoutOutcome[] = items.map((item) =>
+    recordScoutOutcome({
+      candidate: item.candidate,
+      fit: item.fit,
+      minFitScore: payload.min_fit_score ?? 4,
+      dataDir: ctx.dataDir,
+    })
+  );
+  if (results.some((r) => r.outcome === "matched")) ctx.renderBoards();
+  return results;
+}
+
+function cliResolve(values: CliValues, ctx: CliContext): unknown {
+  const result = resolveVacancy({
+    slug: values.slug,
+    postingId: values["posting-id"],
+    contentId: values["content-id"],
+    company: presentString(values.company),
+    title: presentString(values.title),
+    url: presentString(values.url),
+    applyUrl: presentString(values["apply-url"]),
+    location: presentString(values.location),
+    remote: values.remote,
+    source: presentString(values.source),
+    postedAt: presentString(values["posted-at"]),
+    postingText: presentString(values["posting-text"]),
+    status: validStatusOption(values.status),
+    trackLabel: presentString(values["track-label"]),
+    dataDir: ctx.dataDir,
+  });
+  if ((result as ResolveVacancyResult).changed) ctx.renderBoards();
+  return result;
+}
+
+export const CLI_COMMANDS: Record<string, (values: CliValues, ctx: CliContext) => unknown> = {
+  "mark-seen": cliMarkSeen,
+  upsert: cliUpsert,
+  "set-status": cliSetStatus,
+  "set-archived": cliSetArchived,
+  // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
+  "relocate-archived": (values, ctx) => relocateArchived(ctx.dataDir ?? DATA_DIR, values.write ?? false),
+  "attach-artifact": cliAttachArtifact,
+  list: (values, ctx) => listVacancies(values.status, { includeArchived: values["include-archived"], dataDir: ctx.dataDir }),
+  find: (values, ctx) => findVacancies({ url: values.url, company: values.company, title: values.title }, { dataDir: ctx.dataDir }),
+  "add-alias": cliAddAlias,
+  "record-scout-outcomes": cliRecordScoutOutcomes,
+  resolve: cliResolve,
+};
+
+/** CLI fallback for agents without MCP support. Prefer the MCP tools when connected. */
+function cli(): void {
+  const { values, positionals } = parseCli();
+  const command = positionals[0];
+  const handler = command !== undefined && Object.hasOwn(CLI_COMMANDS, command) ? CLI_COMMANDS[command] : undefined;
+  if (!handler) {
+    throw new VacancyStoreError(
+      `Unknown command ${JSON.stringify(command)} -- expected one of: ${Object.keys(CLI_COMMANDS).join(", ")}`
+    );
+  }
+  console.log(JSON.stringify(handler(values, { renderBoards: renderBoardsFromCli }), null, 2));
 }
 
 if (require.main === module) {

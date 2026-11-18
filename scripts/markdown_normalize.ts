@@ -43,6 +43,23 @@ function isThematicBreak(line: string): boolean {
   return THEMATIC_BREAK_RE.test(line);
 }
 
+function pushHeading(out: string[], line: string, prevOut: string | null, nextLine: string | null): void {
+  if (prevOut !== null && !isBlank(prevOut)) out.push("");
+  out.push(line);
+  if (needsBlankAfterHeading(nextLine)) out.push("");
+}
+
+function needsBlankAfterHeading(nextLine: string | null): boolean {
+  return nextLine !== null && !isBlank(nextLine) && !isAtxHeading(nextLine) && !isFenceStart(nextLine) && !isThematicBreak(nextLine);
+}
+
+function needsBlankBeforeListOrQuote(line: string, prevOut: string | null): boolean {
+  if (prevOut === null || isBlank(prevOut)) return false;
+  if (isBullet(line)) return !isBullet(prevOut);
+  if (isBlockquote(line)) return !isBlockquote(prevOut);
+  return false;
+}
+
 /** Insert blank lines around headings/lists/blockquotes so renderers agree on structure --
  * a line-by-line state machine tracking fence/heading/list context as it goes. */
 export function normalizeMarkdownStructure(markdown: string): string {
@@ -54,56 +71,21 @@ export function normalizeMarkdownStructure(markdown: string): string {
     const line = lines[i]!;
     const nextLine = i + 1 < lines.length ? lines[i + 1]! : null;
 
-    if (isFenceStart(line)) {
-      inFence = !inFence;
-      out.push(line);
-      continue;
-    }
-
-    if (inFence) {
+    const fence = isFenceStart(line);
+    if (fence) inFence = !inFence;
+    if (fence || inFence) {
       out.push(line);
       continue;
     }
 
     const prevOut = out.at(-1) ?? null;
-
     if (isAtxHeading(line)) {
-      if (prevOut !== null && !isBlank(prevOut)) {
-        out.push("");
-      }
+      pushHeading(out, line, prevOut, nextLine);
+    } else {
+      // Lists/blockquotes start after a blank line when preceded by non-blank text of another kind.
+      if (needsBlankBeforeListOrQuote(line, prevOut)) out.push("");
       out.push(line);
-
-      if (
-        nextLine !== null &&
-        !isBlank(nextLine) &&
-        !isAtxHeading(nextLine) &&
-        !isFenceStart(nextLine) &&
-        !isThematicBreak(nextLine)
-      ) {
-        out.push("");
-      }
-
-      continue;
     }
-
-    // Ensure lists/blockquotes start after a blank line when preceded by non-blank text.
-    if (prevOut !== null && !isBlank(prevOut)) {
-      if (isBullet(line) && !isAtxHeading(prevOut) && !isBullet(prevOut)) {
-        out.push("");
-      }
-      if (isBlockquote(line) && !isAtxHeading(prevOut) && !isBlockquote(prevOut)) {
-        out.push("");
-      }
-    }
-
-    if ((isBullet(line) || isBlockquote(line)) && out.length > 0) {
-      const last = out.at(-1)!;
-      if (isAtxHeading(last)) {
-        out.push("");
-      }
-    }
-
-    out.push(line);
   }
 
   let joined = out.join("\n");

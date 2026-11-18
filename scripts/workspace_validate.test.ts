@@ -215,3 +215,25 @@ test("validateWorkspace warns on a malformed also_seen and accepts a well-formed
   fs.writeFileSync(recordPath, yaml.dump(record), "utf-8");
   assert.equal(validateWorkspace({ dataDir }).issues.some((item) => item.code === "vacancy_also_seen"), true);
 });
+
+test("validateWorkspace reports malformed sources and fit blocks by code", () => {
+  const dataDir = tempDataDir();
+  writeYaml(path.join(dataDir, "sources.yaml"), {
+    tracks: { bad: "not a mapping", odd: { kind: "weird" } },
+    feeds: ["no-such-feed"],
+    companies: ["just a string", { name: "Acme", ats: "nope" }],
+    min_fit_score: "high",
+  });
+  const slug = writeValidVacancy(dataDir);
+  const recordFile = path.join(dataDir, "vacancies", slug, "record.yaml");
+  const record = yaml.load(fs.readFileSync(recordFile, "utf-8")) as Record<string, unknown>;
+  writeYaml(recordFile, { ...record, fit: "high" });
+
+  const codes = validateWorkspace({ dataDir }).issues.map((i) => i.code);
+  for (const code of ["sources_track_shape", "sources_track_kind", "sources_unknown_feed", "sources_company_shape", "sources_company_required", "sources_unknown_ats", "sources_min_fit_score", "vacancy_fit_shape"]) {
+    assert.ok(codes.includes(code), `expected ${code} in ${codes.join(", ")}`);
+  }
+
+  writeYaml(path.join(dataDir, "sources.yaml"), { tracks: ["list"] });
+  assert.ok(validateWorkspace({ dataDir }).issues.some((i) => i.code === "sources_tracks_shape"));
+});
