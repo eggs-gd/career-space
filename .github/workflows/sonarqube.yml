@@ -1,0 +1,24 @@
+# The SonarQube analysis (docs/sonarqube.md of eggs-gd/.github): on the self-hosted runner next to
+# the server, once a commit is on GitHub. A change to the docs alone is not analysed. Not a required
+# check: when the runner is down the analysis waits, and the merge does not.
+#
+# A pull request from a fork runs `make sonar` on that runner: its Makefile, `npm ci` and the tests.
+# Keep Settings -> Actions -> General -> "Fork pull request workflows" on "Require approval for all
+# outside collaborators", and read the diff before approving a run.
+name: SonarQube
+
+on:
+  pull_request:
+    paths-ignore: ['**/*.md']
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md']
+
+permissions:
+  contents: read
+
+jobs:
+  sonarqube:
+    uses: eggs-gd/.github/.github/workflows/sonarqube.yml@main
+    with:
+      node-dir: .

@@ -21,6 +21,7 @@ Use the smallest check that covers the change:
 
 - `npm run build` -- after any TypeScript or MCP schema change.
 - `npm test` -- after changing `scripts/` behavior or tests.
+- `npm run coverage` -- writes `coverage/lcov.info` (the paths are the `.ts` files, through source maps); `make sonar` runs it before the scan.
 - `node scripts/dist/workspace_validate.js` -- after changing `data/` layout rules or validators.
 - `node scripts/dist/rescore.js` (dry run) -- after changing `score_fit.ts`'s formula or caps, to
   see the blast radius across saved `fitment.json` records before deciding to `--write`.

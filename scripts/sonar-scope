@@ -1,0 +1,35 @@
+#!/bin/sh
+# Prints the sonar-scanner arguments that say what this checkout is: nothing for the
+# main branch (origin/HEAD), the pull request when gh finds an open one for the current
+# branch, else the branch. A branch named in SONAR_BRANCH_ONLY (default: develop, git
+# flow's integration branch, whose release PR stays open for long) is always a branch.
+# Needs the community branch plugin on the server for anything but the main branch.
+#
+# Canonical copy: eGGs-gd/.github, sonarqube/scripts/sonar-scope. Change it there.
+set -e
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+if [ "$branch" = HEAD ]; then
+	echo "sonar-scope: detached HEAD, check out a branch" >&2
+	exit 1
+fi
+main=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) || {
+	echo "sonar-scope: origin/HEAD is not set, run: git remote set-head origin -a" >&2
+	exit 1
+}
+main=${main#origin/}
+
+if [ "$branch" = "$main" ]; then
+	exit 0
+fi
+pr=""
+if [ "$branch" != "${SONAR_BRANCH_ONLY:-develop}" ] && command -v gh >/dev/null 2>&1; then
+	pr=$(gh pr view "$branch" --json number,baseRefName,state \
+		--jq 'select(.state == "OPEN") | "\(.number) \(.baseRefName)"' 2>/dev/null) || pr=""
+fi
+if [ -n "$pr" ]; then
+	set -- $pr
+	echo "-Dsonar.pullrequest.key=$1 -Dsonar.pullrequest.branch=$branch -Dsonar.pullrequest.base=$2"
+else
+	echo "-Dsonar.branch.name=$branch"
+fi
