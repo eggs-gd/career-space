@@ -183,6 +183,16 @@ function prefilterLabel(mode: PrefilterMode, config: ScoutConfig | null): string
   return mode;
 }
 
+function addJob(unique: Map<string, IntakeJob>, job: ParsedAlert["jobs"][number], alertName: string | null): void {
+  const merged = unique.get(job.job_id);
+  if (!merged) {
+    unique.set(job.job_id, { ...job, alerts: alertName ? [alertName] : [], emails: 1 });
+    return;
+  }
+  merged.emails += 1;
+  if (alertName && !merged.alerts.includes(alertName)) merged.alerts.push(alertName);
+}
+
 /** One entry per job id across all alert emails; counts the emails that listed it and the alert
  * names that surfaced it, plus how many ids the emails list that no card produced. */
 function mergeAlerts(alerts: ParsedAlert[]): { unique: Map<string, IntakeJob>; listed: number; unparsed: number } {
@@ -193,15 +203,7 @@ function mergeAlerts(alerts: ParsedAlert[]): { unique: Map<string, IntakeJob>; l
     listed += alert.jobs.length;
     const parsedIds = new Set(alert.jobs.map((j) => j.job_id));
     unparsed += alert.listed_ids.filter((id) => !parsedIds.has(id)).length;
-    for (const job of alert.jobs) {
-      const merged = unique.get(job.job_id);
-      if (merged) {
-        merged.emails += 1;
-        if (alert.alert_name && !merged.alerts.includes(alert.alert_name)) merged.alerts.push(alert.alert_name);
-      } else {
-        unique.set(job.job_id, { ...job, alerts: alert.alert_name ? [alert.alert_name] : [], emails: 1 });
-      }
-    }
+    for (const job of alert.jobs) addJob(unique, job, alert.alert_name);
   }
   return { unique, listed, unparsed };
 }
