@@ -180,11 +180,15 @@ function recruiteePosting(offer: any, company: string, fallbackUrl: string): Pos
   });
 }
 
+function withRemote(place: string): string {
+  return place ? `Remote, ${place}` : "Remote";
+}
+
 function workablePosting(job: any, fallbackUrl: string): Posting {
   const loc = job.location ?? {};
   const place = [loc.city, loc.subregion, loc.countryName].filter(Boolean).map(String).join(", ");
   const remote = String(job.workplace ?? "").toLowerCase() === "remote";
-  const location = remote ? (place ? `Remote, ${place}` : "Remote") : place;
+  const location = remote ? withRemote(place) : place;
   return makePosting({
     source: "workable",
     company: job.company?.title ?? "?",
@@ -204,7 +208,7 @@ function jobicoPosting(job: any, description: string, fallbackUrl: string): Post
     source: "jobico",
     company: job.company?.name ?? "?",
     title: job.title ?? "",
-    location: remote ? (place ? `Remote, ${place}` : "Remote") : place,
+    location: remote ? withRemote(place) : place,
     url: job.url ?? fallbackUrl,
     description,
     postedAt: job.postedAt ?? "",

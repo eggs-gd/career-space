@@ -570,17 +570,19 @@ function keepsFirstLink(record: Rec, opts: UpsertVacancyOptions): boolean {
   return !opts.replaceUrl && typeof record.url === "string" && record.url !== "";
 }
 
-function applyLinks(record: Rec, opts: UpsertVacancyOptions, keepFirst: boolean): void {
-  if (keepFirst) {
-    if (opts.url) pushAlias(record, { source: opts.source ?? "", url: opts.url });
-    if (opts.applyUrl) pushAlias(record, { source: opts.source ?? "", url: opts.applyUrl });
-  } else {
-    record.url = opts.url ?? "";
-    record.apply_url = opts.applyUrl || opts.url || "";
-  }
+function aliasLinks(record: Rec, opts: UpsertVacancyOptions): void {
+  if (opts.url) pushAlias(record, { source: opts.source ?? "", url: opts.url });
+  if (opts.applyUrl) pushAlias(record, { source: opts.source ?? "", url: opts.applyUrl });
 }
 
-function applyChannel(record: Rec, opts: UpsertVacancyOptions, keepFirst: boolean): void {
+function replaceLinks(record: Rec, opts: UpsertVacancyOptions): void {
+  record.url = opts.url ?? "";
+  record.apply_url = opts.applyUrl || opts.url || "";
+}
+
+/** Channel and posting date; the stored ones stay when `policy` is `keep-first` and they are set. */
+function applyChannel(record: Rec, opts: UpsertVacancyOptions, policy: "keep-first" | "replace"): void {
+  const keepFirst = policy === "keep-first";
   if (opts.source && (!keepFirst || !record.source)) {
     const { source, detail } = normalizeSource(opts.source);
     record.source = source;
@@ -604,11 +606,12 @@ function applyFitAndEligibility(record: Rec, opts: UpsertVacancyOptions): void {
 /** Writes the upsert's own fields onto the record: links, location, channel, location, fit, eligibility,
  * and the status change. */
 function applyUpsertFields(record: Rec, opts: UpsertVacancyOptions, nowStr: string): void {
-  const keepFirst = keepsFirstLink(record, opts);
-  applyLinks(record, opts, keepFirst);
+  const policy = keepsFirstLink(record, opts) ? "keep-first" : "replace";
+  if (policy === "keep-first") aliasLinks(record, opts);
+  else replaceLinks(record, opts);
   if (opts.location) record.location = opts.location;
   if (opts.remote !== undefined) record.remote = opts.remote;
-  applyChannel(record, opts, keepFirst);
+  applyChannel(record, opts, policy);
   if (opts.trackLabel) record.track_label = opts.trackLabel;
   applyFitAndEligibility(record, opts);
   setdefault(record, "location", "");
