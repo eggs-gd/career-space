@@ -35,7 +35,8 @@ export function jobKey(rawUrl: string): string {
     .filter(([name]) => !isTrackingParam(name))
     .map(([name, value]) => `${name.toLowerCase()}=${value}`)
     .sort(compareText);
-  return `${host}${trimEndChar(url.pathname, "/")}${kept.length > 0 ? `?${kept.join("&")}` : ""}`.toLowerCase();
+  const query = kept.length > 0 ? `?${kept.join("&")}` : "";
+  return `${host}${trimEndChar(url.pathname, "/")}${query}`.toLowerCase();
 }
 
 const TRACKING_PARAMS = new Set([
