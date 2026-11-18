@@ -43,6 +43,17 @@ function isThematicBreak(line: string): boolean {
   return THEMATIC_BREAK_RE.test(line);
 }
 
+function needsBlankAfterHeading(nextLine: string | null): boolean {
+  return nextLine !== null && !isBlank(nextLine) && !isAtxHeading(nextLine) && !isFenceStart(nextLine) && !isThematicBreak(nextLine);
+}
+
+function needsBlankBeforeListOrQuote(line: string, prevOut: string | null): boolean {
+  if (prevOut === null || isBlank(prevOut)) return false;
+  if (isBullet(line)) return !isBullet(prevOut);
+  if (isBlockquote(line)) return !isBlockquote(prevOut);
+  return false;
+}
+
 /** Insert blank lines around headings/lists/blockquotes so renderers agree on structure --
  * a line-by-line state machine tracking fence/heading/list context as it goes. */
 export function normalizeMarkdownStructure(markdown: string): string {
@@ -66,43 +77,15 @@ export function normalizeMarkdownStructure(markdown: string): string {
     }
 
     const prevOut = out.at(-1) ?? null;
-
     if (isAtxHeading(line)) {
-      if (prevOut !== null && !isBlank(prevOut)) {
-        out.push("");
-      }
+      if (prevOut !== null && !isBlank(prevOut)) out.push("");
       out.push(line);
-
-      if (
-        nextLine !== null &&
-        !isBlank(nextLine) &&
-        !isAtxHeading(nextLine) &&
-        !isFenceStart(nextLine) &&
-        !isThematicBreak(nextLine)
-      ) {
-        out.push("");
-      }
-
+      if (needsBlankAfterHeading(nextLine)) out.push("");
       continue;
     }
 
-    // Ensure lists/blockquotes start after a blank line when preceded by non-blank text.
-    if (prevOut !== null && !isBlank(prevOut)) {
-      if (isBullet(line) && !isAtxHeading(prevOut) && !isBullet(prevOut)) {
-        out.push("");
-      }
-      if (isBlockquote(line) && !isAtxHeading(prevOut) && !isBlockquote(prevOut)) {
-        out.push("");
-      }
-    }
-
-    if ((isBullet(line) || isBlockquote(line)) && out.length > 0) {
-      const last = out.at(-1)!;
-      if (isAtxHeading(last)) {
-        out.push("");
-      }
-    }
-
+    // Lists/blockquotes start after a blank line when preceded by non-blank text of another kind.
+    if (needsBlankBeforeListOrQuote(line, prevOut)) out.push("");
     out.push(line);
   }
 
