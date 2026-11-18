@@ -130,6 +130,94 @@ function errorMessage(error: unknown): string {
 
 // ------------------------------------------------------------------ per-company boards
 
+/** Builders shared by a platform's board fetch and its single-posting URL resolver: both read the
+ * same payload shape, only the fallback for a missing link differs. */
+
+function leverPosting(job: any, company: string, fallbackUrl: string): Posting {
+  const cats = job.categories ?? {};
+  const parts = [job.descriptionPlain ?? ""];
+  for (const lst of job.lists ?? []) parts.push(stripHtml(lst.content ?? ""));
+  parts.push(job.additionalPlain ?? "");
+  return makePosting({
+    source: "lever",
+    company,
+    title: job.text ?? "",
+    location: [cats.location ?? "", cats.team ?? "", cats.commitment ?? ""].filter(Boolean).join(", "),
+    url: job.hostedUrl ?? fallbackUrl,
+    description: parts.filter(Boolean).join("\n"),
+    postedAt: String(job.createdAt ?? ""),
+  });
+}
+
+function ashbyPosting(job: any, company: string, fallbackUrl: string): Posting {
+  const secondary = (job.secondaryLocations ?? [])
+    .map((s: any) => s.location ?? "")
+    .filter(Boolean)
+    .join(", ");
+  return makePosting({
+    source: "ashby",
+    company,
+    title: job.title ?? "",
+    location: [job.location ?? "", secondary].filter(Boolean).join(", "),
+    url: job.jobUrl ?? fallbackUrl,
+    applyUrl: job.applyUrl ?? "",
+    description: job.descriptionPlain || stripHtml(job.descriptionHtml ?? ""),
+    postedAt: job.publishedAt ?? "",
+    remoteOverride: Boolean(job.isRemote || job.workplaceType === "Remote") || null,
+  });
+}
+
+function recruiteePosting(offer: any, company: string, fallbackUrl: string): Posting {
+  return makePosting({
+    source: "recruitee",
+    company,
+    title: offer.title ?? "",
+    location: [offer.city, offer.country].filter(Boolean).map(String).join(", "),
+    url: offer.careers_url || offer.careers_apply_url || fallbackUrl,
+    description: stripHtml(`${offer.description ?? ""} ${offer.requirements ?? ""}`),
+    postedAt: String(offer.published_at ?? ""),
+    remoteOverride: ["true", "1", "yes"].includes(String(offer.remote ?? "").toLowerCase()) || null,
+  });
+}
+
+function workablePosting(job: any, fallbackUrl: string): Posting {
+  const loc = job.location ?? {};
+  const place = [loc.city, loc.subregion, loc.countryName].filter(Boolean).map(String).join(", ");
+  const remote = String(job.workplace ?? "").toLowerCase() === "remote";
+  const location = remote ? (place ? `Remote, ${place}` : "Remote") : place;
+  return makePosting({
+    source: "workable",
+    company: job.company?.title ?? "?",
+    title: job.title ?? "",
+    location,
+    url: job.url ?? fallbackUrl,
+    description: stripHtml([job.description, job.requirementsSection, job.benefitsSection].filter(Boolean).join(" ")),
+    postedAt: String(job.published ?? job.created ?? ""),
+    remoteOverride: remote ? true : null,
+  });
+}
+
+function jobicoPosting(job: any, description: string, fallbackUrl: string): Posting {
+  const place = [job.city, job.country].filter(Boolean).join(", ");
+  const remote = job.locationType === "remote";
+  return makePosting({
+    source: "jobico",
+    company: job.company?.name ?? "?",
+    title: job.title ?? "",
+    location: remote ? (place ? `Remote, ${place}` : "Remote") : place,
+    url: job.url ?? fallbackUrl,
+    description,
+    postedAt: job.postedAt ?? "",
+    remoteOverride: remote,
+  });
+}
+
+function jobicoDescription(detail: any, techStack: string): string {
+  return [detail.description, detail.requirements, detail.niceToHave, detail.responsibilities, techStack]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 async function fetchGreenhouse(company: CompanyConfig): Promise<FetchResult> {
   const url = `https://boards-api.greenhouse.io/v1/boards/${company.slug}/jobs?content=true`;
   let data: any;
@@ -160,24 +248,7 @@ async function fetchLever(company: CompanyConfig): Promise<FetchResult> {
   } catch (error) {
     return [[], `${company.name} (lever/${company.slug}): ${errorMessage(error)}`];
   }
-  const postings = (data as any[]).map((job) => {
-    const cats = job.categories ?? {};
-    const loc = cats.location ?? "";
-    const parts = [job.descriptionPlain ?? ""];
-    for (const lst of job.lists ?? []) parts.push(stripHtml(lst.content ?? ""));
-    parts.push(job.additionalPlain ?? "");
-    const description = parts.filter(Boolean).join("\n");
-    const locFull = [loc, cats.team ?? "", cats.commitment ?? ""].filter(Boolean).join(", ");
-    return makePosting({
-      source: "lever",
-      company: company.name,
-      title: job.text ?? "",
-      location: locFull,
-      url: job.hostedUrl ?? "",
-      description,
-      postedAt: String(job.createdAt ?? ""),
-    });
-  });
+  const postings = (data as any[]).map((job) => leverPosting(job, company.name, ""));
   return [postings, null];
 }
 
@@ -189,31 +260,9 @@ async function fetchAshby(company: CompanyConfig): Promise<FetchResult> {
   } catch (error) {
     return [[], `${company.name} (ashby/${company.slug}): ${errorMessage(error)}`];
   }
-  const postings: Posting[] = [];
-  for (const job of data.jobs ?? []) {
-    if (job.isListed === false) continue;
-    const loc = job.location ?? "";
-    const secondary = (job.secondaryLocations ?? [])
-      .map((s: any) => s.location ?? "")
-      .filter(Boolean)
-      .join(", ");
-    const locFull = [loc, secondary].filter(Boolean).join(", ");
-    const description = job.descriptionPlain || stripHtml(job.descriptionHtml ?? "");
-    const remoteOverride = Boolean(job.isRemote || job.workplaceType === "Remote") || null;
-    postings.push(
-      makePosting({
-        source: "ashby",
-        company: company.name,
-        title: job.title ?? "",
-        location: locFull,
-        url: job.jobUrl ?? "",
-        applyUrl: job.applyUrl ?? "",
-        description,
-        postedAt: job.publishedAt ?? "",
-        remoteOverride,
-      })
-    );
-  }
+  const postings = (data.jobs ?? [])
+    .filter((job: any) => job.isListed !== false)
+    .map((job: any) => ashbyPosting(job, company.name, ""));
   return [postings, null];
 }
 
@@ -225,21 +274,7 @@ async function fetchRecruitee(company: CompanyConfig): Promise<FetchResult> {
   } catch (error) {
     return [[], `${company.name} (recruitee/${company.slug}): ${errorMessage(error)}`];
   }
-  const postings = (data.offers ?? []).map((offer: any) => {
-    const loc = [offer.city, offer.country].filter(Boolean).map(String).join(", ");
-    const description = stripHtml(`${offer.description ?? ""} ${offer.requirements ?? ""}`);
-    const remoteOverride = ["true", "1", "yes"].includes(String(offer.remote ?? "").toLowerCase()) || null;
-    return makePosting({
-      source: "recruitee",
-      company: company.name,
-      title: offer.title ?? "",
-      location: loc,
-      url: offer.careers_url || offer.careers_apply_url || "",
-      description,
-      postedAt: String(offer.published_at ?? ""),
-      remoteOverride,
-    });
-  });
+  const postings = (data.offers ?? []).map((offer: any) => recruiteePosting(offer, company.name, ""));
   return [postings, null];
 }
 
@@ -287,59 +322,94 @@ function worthDetailFetch(title: string, trackTitles: string[], roleSignals: str
   return trackTitles.some((t) => titleHasPhrase(titleL, t)) || roleSignals.some((t) => titleL.includes(t));
 }
 
+async function workableQuery(query: string): Promise<FetchResult> {
+  const postings: Posting[] = [];
+  let token: string | undefined;
+  for (let pageNum = 0; pageNum < 2; pageNum++) {
+    // 20 postings/page -- 2 pages is plenty for a track query
+    let url = "https://jobs.workable.com/api/v1/jobs?query=" + encodeURIComponent(query);
+    if (token) url += `&pageToken=${token}`;
+    let data: any;
+    try {
+      data = await getJson(url);
+    } catch (fetchError) {
+      return [postings, `Workable (${query}): ${errorMessage(fetchError)}`];
+    }
+    for (const job of data.jobs ?? []) postings.push(workablePosting(job, ""));
+    token = data.nextPageToken;
+    if (!token) break;
+  }
+  return [postings, null];
+}
+
 async function fetchWorkable({ trackTitles }: FeedFetchOpts): Promise<FetchResult> {
   const queries = trackQueries(trackTitles);
   if (queries.length === 0) return [[], "Workable: no track titles to search with"];
   const postings: Posting[] = [];
   let error: string | null = null;
   for (const query of queries) {
-    let token: string | undefined;
-    for (let pageNum = 0; pageNum < 2; pageNum++) {
-      // 20 postings/page -- 2 pages is plenty for a track query
-      let url = "https://jobs.workable.com/api/v1/jobs?query=" + encodeURIComponent(query);
-      if (token) url += `&pageToken=${token}`;
-      let data: any;
-      try {
-        data = await getJson(url);
-      } catch (fetchError) {
-        error = `Workable (${query}): ${errorMessage(fetchError)}`;
-        break;
-      }
-      for (const job of data.jobs ?? []) {
-        const company = job.company ?? {};
-        const loc = job.location ?? {};
-        let locStr = [loc.city, loc.subregion, loc.countryName].filter(Boolean).map(String).join(", ");
-        const workplace = (job.workplace ?? "").toLowerCase();
-        if (workplace === "remote") locStr = locStr ? `Remote, ${locStr}` : "Remote";
-        const description = stripHtml(
-          [job.description, job.requirementsSection, job.benefitsSection].filter(Boolean).join(" ")
-        );
-        postings.push(
-          makePosting({
-            source: "workable",
-            company: company.title ?? "?",
-            title: job.title ?? "",
-            location: locStr,
-            url: job.url ?? "",
-            description,
-            postedAt: String(job.published ?? job.created ?? ""),
-            remoteOverride: workplace === "remote" ? true : null,
-          })
-        );
-      }
-      token = data.nextPageToken;
-      if (!token) break;
-    }
+    const [found, queryError] = await workableQuery(query);
+    postings.push(...found);
+    error = queryError ?? error;
   }
   return [postings, error];
 }
 
-async function fetchSmartrecruiters({ trackTitles, roleSignals }: FeedFetchOpts): Promise<FetchResult> {
-  const queries = trackQueries(trackTitles);
+/** How many detail fetches a run may still spend. */
+interface DetailBudget {
+  left: number;
+}
+
+async function smartrecruitersJob(job: any, opts: FeedFetchOpts, budget: DetailBudget): Promise<[Posting, string | null]> {
+  const company = job.company ?? {};
+  const loc = job.location ?? {};
+  const locStr = [loc.city, loc.region, (loc.country ?? "").toUpperCase()].filter(Boolean).join(", ");
+  const title = job.name ?? "";
+  let description = "";
+  let error: string | null = null;
+  // Relevance gate via worthDetailFetch (trackTitles + roleSignals), not `queries` (the
+  // top-8-longest subset trackQueries truncates the search step itself to): a posting's
+  // title only needs to contain ONE track title to be worth a detail fetch, but short,
+  // common titles ("engineering manager", "head of engineering") are exactly the ones
+  // length-truncation drops in favor of longer compound ones -- so a plainly titled posting
+  // could be found by search yet never get its real description fetched, silently degrading
+  // to a title-only stub downstream.
+  const detailUrl = job.actions?.details;
+  if (detailUrl && budget.left > 0 && worthDetailFetch(title, opts.trackTitles, opts.roleSignals)) {
+    budget.left -= 1;
+    try {
+      const detail = await getJson(detailUrl);
+      const sections = detail.jobAd?.sections ?? {};
+      description = stripHtml(
+        Object.values(sections)
+          .filter((s: any) => s && typeof s === "object")
+          .map((s: any) => String(s.text ?? ""))
+          .join(" ")
+      );
+    } catch (detailError) {
+      error = `SmartRecruiters detail (${title}): ${errorMessage(detailError)}`;
+    }
+  }
+  const posting = makePosting({
+    source: "smartrecruiters",
+    company: company.name ?? "?",
+    title,
+    location: locStr,
+    url: job.applyUrl ?? "",
+    applyUrl: job.applyUrl ?? "",
+    description: description || title,
+    postedAt: String(job.releasedDate ?? ""),
+    remoteOverride: loc.remote ? true : null,
+  });
+  return [posting, error];
+}
+
+async function fetchSmartrecruiters(opts: FeedFetchOpts): Promise<FetchResult> {
+  const queries = trackQueries(opts.trackTitles);
   if (queries.length === 0) return [[], "SmartRecruiters: no track titles to search with"];
   const postings: Posting[] = [];
   let error: string | null = null;
-  let detailBudget = 60;
+  const budget: DetailBudget = { left: 60 };
   for (const query of queries) {
     const url =
       "https://jobs.smartrecruiters.com/sr-jobs/search?keyword=" + encodeURIComponent(query) + "&limit=100&offset=0";
@@ -351,49 +421,9 @@ async function fetchSmartrecruiters({ trackTitles, roleSignals }: FeedFetchOpts)
       continue;
     }
     for (const job of data.content ?? []) {
-      const company = job.company ?? {};
-      const loc = job.location ?? {};
-      const locStr = [loc.city, loc.region, (loc.country ?? "").toUpperCase()].filter(Boolean).join(", ");
-      const title = job.name ?? "";
-      let description = "";
-      // Relevance gate via worthDetailFetch (trackTitles + roleSignals), not `queries` (the
-      // top-8-longest subset trackQueries truncates the search step itself to): a posting's
-      // title only needs to contain ONE track title to be worth a detail fetch, but short,
-      // common titles ("engineering manager", "head of engineering") are exactly the ones
-      // length-truncation drops in favor of longer compound ones -- so a plainly titled posting
-      // could be found by search yet never get its real description fetched, silently degrading
-      // to a title-only stub downstream.
-      if (detailBudget > 0 && worthDetailFetch(title, trackTitles, roleSignals)) {
-        const detailUrl = job.actions?.details;
-        if (detailUrl) {
-          detailBudget -= 1;
-          try {
-            const detail = await getJson(detailUrl);
-            const sections = detail.jobAd?.sections ?? {};
-            description = stripHtml(
-              Object.values(sections)
-                .filter((s: any) => s && typeof s === "object")
-                .map((s: any) => String(s.text ?? ""))
-                .join(" ")
-            );
-          } catch (detailError) {
-            error = `SmartRecruiters detail (${title}): ${errorMessage(detailError)}`;
-          }
-        }
-      }
-      postings.push(
-        makePosting({
-          source: "smartrecruiters",
-          company: company.name ?? "?",
-          title,
-          location: locStr,
-          url: job.applyUrl ?? "",
-          applyUrl: job.applyUrl ?? "",
-          description: description || title,
-          postedAt: String(job.releasedDate ?? ""),
-          remoteOverride: loc.remote ? true : null,
-        })
-      );
+      const [posting, detailError] = await smartrecruitersJob(job, opts, budget);
+      postings.push(posting);
+      error = detailError ?? error;
     }
   }
   return [postings, error];
@@ -438,12 +468,28 @@ async function postJobicoTool(toolName: string, args: Record<string, unknown>): 
  * above, plus a budget cap for the same reason. `locationType` (`"remote"|"hybrid"|"office"`) is
  * a clean, always-present structured field -- used directly as `remoteOverride` in both
  * directions rather than inferred from text, unlike most other sources here. */
-async function fetchJobico({ trackTitles, roleSignals }: FeedFetchOpts): Promise<FetchResult> {
-  const queries = trackQueries(trackTitles);
+async function jobicoJob(job: any, opts: FeedFetchOpts, budget: DetailBudget): Promise<[Posting, string | null]> {
+  const title = job.title ?? "";
+  const techStack = (job.techStack ?? []).join(" ");
+  let description = techStack;
+  let error: string | null = null;
+  if (budget.left > 0 && worthDetailFetch(title, opts.trackTitles, opts.roleSignals)) {
+    budget.left -= 1;
+    try {
+      description = jobicoDescription(await postJobicoTool("get_job", { slug: job.slug }), techStack);
+    } catch (detailError) {
+      error = `Jobico detail (${title}): ${errorMessage(detailError)}`;
+    }
+  }
+  return [jobicoPosting(job, description, ""), error];
+}
+
+async function fetchJobico(opts: FeedFetchOpts): Promise<FetchResult> {
+  const queries = trackQueries(opts.trackTitles);
   if (queries.length === 0) return [[], "Jobico: no track titles to search with"];
   const postings: Posting[] = [];
   let error: string | null = null;
-  let detailBudget = 60;
+  const budget: DetailBudget = { left: 60 };
   for (const query of queries) {
     let list: any;
     try {
@@ -453,35 +499,9 @@ async function fetchJobico({ trackTitles, roleSignals }: FeedFetchOpts): Promise
       continue;
     }
     for (const job of list.jobs ?? []) {
-      const title = job.title ?? "";
-      const techStack = (job.techStack ?? []).join(" ");
-      let description = techStack;
-      if (detailBudget > 0 && worthDetailFetch(title, trackTitles, roleSignals)) {
-        detailBudget -= 1;
-        try {
-          const detail = await postJobicoTool("get_job", { slug: job.slug });
-          description = [detail.description, detail.requirements, detail.niceToHave, detail.responsibilities, techStack]
-            .filter(Boolean)
-            .join("\n\n");
-        } catch (detailError) {
-          error = `Jobico detail (${title}): ${errorMessage(detailError)}`;
-        }
-      }
-      const locParts = [job.city, job.country].filter(Boolean);
-      let location = locParts.join(", ");
-      if (job.locationType === "remote") location = location ? `Remote, ${location}` : "Remote";
-      postings.push(
-        makePosting({
-          source: "jobico",
-          company: job.company?.name ?? "?",
-          title,
-          location,
-          url: job.url ?? "",
-          description,
-          postedAt: job.postedAt ?? "",
-          remoteOverride: job.locationType === "remote",
-        })
-      );
+      const [posting, detailError] = await jobicoJob(job, opts, budget);
+      postings.push(posting);
+      error = detailError ?? error;
     }
   }
   return [postings, error];
@@ -790,7 +810,32 @@ export const AGGREGATOR_FETCHERS: Record<string, FeedFetcher> = {
  * same-origin one; `api.justjoin.it` answers 503 to everything. The list API only returns
  * title+skill-tags+level, not JD text -- a title worth judging (see `worthDetailFetch`) gets one
  * extra detail fetch for the real requirements/description text. */
-async function fetchJustjoin({ trackTitles, roleSignals }: FeedFetchOpts, pages = 3): Promise<FetchResult> {
+async function justjoinPosting(offer: any, opts: FeedFetchOpts): Promise<Posting> {
+  const rawSkills = [...(offer.requiredSkills ?? []), ...(offer.niceToHaveSkills ?? [])];
+  const skills = rawSkills.map((s: any) => (typeof s === "object" ? s.name ?? "" : String(s))).join(" ");
+  const title = offer.title ?? "";
+  let body = "";
+  if (worthDetailFetch(title, opts.trackTitles, opts.roleSignals)) {
+    try {
+      const detail = await getJson(`https://justjoin.it/api/candidate-api/offers/${offer.slug ?? ""}`);
+      body = stripHtml(detail.body ?? "");
+    } catch {
+      // best effort, never fatal
+    }
+  }
+  return makePosting({
+    source: "justjoin",
+    company: offer.companyName ?? "?",
+    title,
+    location: [offer.city ?? "", offer.workplaceType ?? ""].filter(Boolean).join(", "),
+    url: `https://justjoin.it/job-offer/${offer.slug ?? ""}`,
+    description: `${title}\n${body}\n${skills}\n${offer.experienceLevel ?? ""}`,
+    postedAt: offer.publishedAt ?? "",
+    remoteOverride: offer.workplaceType === "remote" ? true : null,
+  });
+}
+
+async function fetchJustjoin(opts: FeedFetchOpts, pages = 3): Promise<FetchResult> {
   const postings: Posting[] = [];
   for (let page = 1; page <= pages; page++) {
     const url = `https://justjoin.it/api/candidate-api/offers?sortBy=newest&from=${(page - 1) * 100}&itemsCount=100`;
@@ -802,41 +847,43 @@ async function fetchJustjoin({ trackTitles, roleSignals }: FeedFetchOpts, pages 
     }
     const offers = data.data ?? [];
     if (offers.length === 0) break;
-    for (const offer of offers) {
-      const rawSkills = [...(offer.requiredSkills ?? []), ...(offer.niceToHaveSkills ?? [])];
-      const skills = rawSkills.map((s: any) => (typeof s === "object" ? s.name ?? "" : String(s))).join(" ");
-      let body = "";
-      const title = offer.title ?? "";
-      if (worthDetailFetch(title, trackTitles, roleSignals)) {
-        try {
-          const detail = await getJson(`https://justjoin.it/api/candidate-api/offers/${offer.slug ?? ""}`);
-          body = stripHtml(detail.body ?? "");
-        } catch {
-          // best effort, never fatal
-        }
-      }
-      const description = `${title}\n${body}\n${skills}\n${offer.experienceLevel ?? ""}`;
-      const loc = [offer.city ?? "", offer.workplaceType ?? ""].filter(Boolean).join(", ");
-      postings.push(
-        makePosting({
-          source: "justjoin",
-          company: offer.companyName ?? "?",
-          title,
-          location: loc,
-          url: `https://justjoin.it/job-offer/${offer.slug ?? ""}`,
-          description,
-          postedAt: offer.publishedAt ?? "",
-          remoteOverride: offer.workplaceType === "remote" ? true : null,
-        })
-      );
-    }
+    for (const offer of offers) postings.push(await justjoinPosting(offer, opts));
   }
   return [postings, null];
 }
 
+async function nofluffPosting(postingData: any, opts: FeedFetchOpts): Promise<Posting> {
+  const places = postingData.location?.places ?? [];
+  const city = places[0]?.city ?? "";
+  const title = (postingData.title ?? "").trim();
+  let body = "";
+  if (worthDetailFetch(title, opts.trackTitles, opts.roleSignals)) {
+    try {
+      const detail = await getJson(`https://nofluffjobs.com/api/posting/${postingData.url ?? ""}`);
+      const req = detail.requirements ?? {};
+      const det = detail.details ?? {};
+      body = stripHtml(req.description ?? "") + "\n" + stripHtml(det.description ?? "");
+    } catch {
+      // best effort, never fatal
+    }
+  }
+  const tech = postingData.technology;
+  const techStr = (Array.isArray(tech) ? tech : [tech ?? ""]).join(" ");
+  return makePosting({
+    source: "nofluff",
+    company: postingData.name ?? "?",
+    title,
+    location: city || "Poland",
+    url: `https://nofluffjobs.com/job/${postingData.url ?? ""}`,
+    description: `${title}\n${body}\n${postingData.category ?? ""} ${techStr}`,
+    postedAt: postingData.posted ?? "",
+    remoteOverride: postingData.fullyRemote ? true : null,
+  });
+}
+
 /** nofluffjobs.com -- Poland/CEE IT board, salary disclosure mandatory. Same detail-fetch gap
  * as JustJoin above. */
-async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promise<FetchResult> {
+async function fetchNofluff(opts: FeedFetchOpts): Promise<FetchResult> {
   let data: any;
   try {
     data = await getJson("https://nofluffjobs.com/api/posting");
@@ -844,38 +891,7 @@ async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promis
     return [[], `NoFluffJobs: ${errorMessage(error)}`];
   }
   const postings: Posting[] = [];
-  for (const postingData of data.postings ?? []) {
-    const places = postingData.location?.places ?? [];
-    const city = places.length > 0 ? places[0].city ?? "" : "";
-    let body = "";
-    const title = (postingData.title ?? "").trim();
-    if (worthDetailFetch(title, trackTitles, roleSignals)) {
-      try {
-        const detail = await getJson(`https://nofluffjobs.com/api/posting/${postingData.url ?? ""}`);
-        const req = detail.requirements ?? {};
-        const det = detail.details ?? {};
-        body = stripHtml(req.description ?? "") + "\n" + stripHtml(det.description ?? "");
-      } catch {
-        // best effort, never fatal
-      }
-    }
-    const category = postingData.category ?? "";
-    const tech = postingData.technology;
-    const techStr = (Array.isArray(tech) ? tech : [tech ?? ""]).join(" ");
-    const description = `${title}\n${body}\n${category} ${techStr}`;
-    postings.push(
-      makePosting({
-        source: "nofluff",
-        company: postingData.name ?? "?",
-        title,
-        location: city || "Poland",
-        url: `https://nofluffjobs.com/job/${postingData.url ?? ""}`,
-        description,
-        postedAt: postingData.posted ?? "",
-        remoteOverride: postingData.fullyRemote ? true : null,
-      })
-    );
-  }
+  for (const postingData of data.postings ?? []) postings.push(await nofluffPosting(postingData, opts));
   return [postings, null];
 }
 
@@ -898,36 +914,38 @@ export interface DjinniPage {
  * "Весь світ"). Without them a remote-from-Ukraine posting looked on-site to the location gate. */
 export function parseDjinniPage(html: string, rssTitle: string): DjinniPage {
   const pageTitle = decodeHtmlEntities(/<title>([^<]*)<\/title>/.exec(html)?.[1]?.trim() ?? "");
-  const suffix = " – Djinni";
-  let company: string | null = null;
-  if (pageTitle.endsWith(suffix)) {
-    const withoutSuffix = pageTitle.slice(0, -suffix.length);
-    const prefix = `${rssTitle} в `;
-    if (withoutSuffix.startsWith(prefix)) {
-      company = withoutSuffix.slice(prefix.length).trim() || null;
-    } else {
-      const fallback = / в (.+)$/.exec(withoutSuffix);
-      company = fallback ? fallback[1]!.trim() || null : null;
-    }
-  }
+  const { countries, mode } = djinniFacts(html);
+  const remote = mode ? /віддален/i.test(mode) : null;
+  const location = [countries, mode ? `(${mode.toLowerCase()})` : ""].filter(Boolean).join(" ");
+  return { company: djinniCompany(pageTitle, rssTitle), location, remote };
+}
 
+function djinniCompany(pageTitle: string, rssTitle: string): string | null {
+  const suffix = " – Djinni";
+  if (!pageTitle.endsWith(suffix)) return null;
+  const withoutSuffix = pageTitle.slice(0, -suffix.length);
+  const prefix = `${rssTitle} в `;
+  const name = withoutSuffix.startsWith(prefix)
+    ? withoutSuffix.slice(prefix.length)
+    : (/ в (.+)$/.exec(withoutSuffix)?.[1] ?? "");
+  return name.trim() || null;
+}
+
+/** The countries considered and the first work-mode line of the page's facts list. */
+function djinniFacts(html: string): { countries: string; mode: string } {
   let countries = "";
   let mode = "";
   const facts = /<ul[^>]*>((?:(?!<\/ul>)[\s\S])*location-text(?:(?!<\/ul>)[\s\S])*)<\/ul>/.exec(html)?.[1];
-  if (facts) {
-    for (const item of facts.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)) {
-      const raw = item[1] ?? "";
-      const text = decodeHtmlEntities(raw.replace(TAG_RE, " ")).replace(/\s+/g, " ").trim();
-      if (raw.includes("location-text")) {
-        countries = decodeHtmlEntities(/class="location-text"[^>]*>([^<]*)</.exec(raw)?.[1] ?? "").trim();
-      } else if (!mode && /віддален|офіс|гібрид/i.test(text)) {
-        mode = text;
-      }
+  for (const item of facts?.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g) ?? []) {
+    const raw = item[1] ?? "";
+    const text = decodeHtmlEntities(raw.replace(TAG_RE, " ")).replace(/\s+/g, " ").trim();
+    if (raw.includes("location-text")) {
+      countries = decodeHtmlEntities(/class="location-text"[^>]*>([^<]*)</.exec(raw)?.[1] ?? "").trim();
+    } else if (!mode && /віддален|офіс|гібрид/i.test(text)) {
+      mode = text;
     }
   }
-  const remote = mode ? /віддален/i.test(mode) : null;
-  const location = [countries, mode ? `(${mode.toLowerCase()})` : ""].filter(Boolean).join(" ");
-  return { company, location, remote };
+  return { countries, mode };
 }
 
 export async function fetchDjinniCompany(jobUrl: string, rssTitle: string): Promise<string | null> {
@@ -1098,6 +1116,109 @@ export type UrlResolveResult =
   | { matched: true; posting: null; error: string }
   | { matched: false };
 
+type Resolver = (rawUrl: string, path: string) => Promise<UrlResolveResult> | UrlResolveResult;
+
+const failed = (error: string): UrlResolveResult => ({ matched: true, posting: null, error });
+const found = (posting: Posting): UrlResolveResult => ({ matched: true, posting });
+const NOT_MATCHED: UrlResolveResult = { matched: false };
+
+async function resolveJobico(rawUrl: string, path: string): Promise<UrlResolveResult> {
+  const m = /^\/jobs\/([^/]+)\/?$/.exec(path);
+  if (!m) return NOT_MATCHED;
+  try {
+    const detail = await postJobicoTool("get_job", { slug: m[1] });
+    if (!detail.found) return failed(`jobico.io: no job found for slug ${m[1]}`);
+    const description = jobicoDescription(detail, (detail.techStack ?? []).join(" "));
+    return found(jobicoPosting(detail, description, rawUrl));
+  } catch (error) {
+    return failed(`jobico.io: ${errorMessage(error)}`);
+  }
+}
+
+async function resolveGreenhouse(rawUrl: string, path: string): Promise<UrlResolveResult> {
+  const m = /^\/([^/]+)\/jobs\/(\d+)/.exec(path);
+  if (!m) return NOT_MATCHED;
+  const [, company, jobId] = m as unknown as [string, string, string];
+  try {
+    const detail = await getJson(`https://boards-api.greenhouse.io/v1/boards/${company}/jobs/${jobId}?content=true`);
+    return found(
+      makePosting({
+        source: "greenhouse",
+        company: detail.company_name ?? company,
+        title: detail.title ?? "",
+        location: detail.location?.name ?? "",
+        url: detail.absolute_url ?? rawUrl,
+        description: stripHtml(detail.content ?? ""),
+        postedAt: detail.updated_at ?? "",
+      })
+    );
+  } catch (error) {
+    return failed(`greenhouse (${company}/${jobId}): ${errorMessage(error)}`);
+  }
+}
+
+async function resolveLever(rawUrl: string, path: string): Promise<UrlResolveResult> {
+  const m = /^\/([^/]+)\/([0-9a-f-]{36})/i.exec(path);
+  if (!m) return NOT_MATCHED;
+  const [, company, postingId] = m as unknown as [string, string, string];
+  try {
+    const detail = await getJson(`https://api.lever.co/v0/postings/${company}/${postingId}?mode=json`);
+    return found(leverPosting(detail, company, rawUrl));
+  } catch (error) {
+    return failed(`lever (${company}/${postingId}): ${errorMessage(error)}`);
+  }
+}
+
+async function resolveRecruitee(rawUrl: string, path: string, company: string): Promise<UrlResolveResult> {
+  const m = /^\/o\/([^/]+)/.exec(path);
+  if (!m) return NOT_MATCHED;
+  const slug = m[1];
+  try {
+    const data = await getJson(`https://${company}.recruitee.com/api/offers/${slug}`);
+    const offer = data.offer ?? {};
+    return found(recruiteePosting(offer, offer.company_name ?? company, rawUrl));
+  } catch (error) {
+    return failed(`recruitee (${company}/${slug}): ${errorMessage(error)}`);
+  }
+}
+
+async function resolveAshby(rawUrl: string, path: string): Promise<UrlResolveResult> {
+  const m = /^\/([^/]+)\/([0-9a-f-]{36})/i.exec(path);
+  if (!m) return NOT_MATCHED;
+  const [, company, postingId] = m as unknown as [string, string, string];
+  try {
+    const data = await getJson(`https://api.ashbyhq.com/posting-api/job-board/${company}?includeCompensation=true`);
+    const job = (data.jobs ?? []).find((j: any) => j.id === postingId);
+    if (!job) return failed(`ashby (${company}): no job with id ${postingId} on the current board`);
+    return found(ashbyPosting(job, company, rawUrl));
+  } catch (error) {
+    return failed(`ashby (${company}): ${errorMessage(error)}`);
+  }
+}
+
+async function resolveWorkable(rawUrl: string, path: string): Promise<UrlResolveResult> {
+  // jobs.workable.com/view/<shortcode>/<slug> -- the single-job endpoint returns the same job
+  // shape fetchWorkable's search endpoint does, so parse it identically.
+  const m = /^\/view\/([A-Za-z0-9_-]+)/.exec(path);
+  if (!m) return NOT_MATCHED;
+  const shortcode = m[1]!;
+  try {
+    return found(workablePosting(await getJson(`https://jobs.workable.com/api/v1/jobs/${shortcode}`), rawUrl));
+  } catch (error) {
+    return failed(`workable (${shortcode}): ${errorMessage(error)}`);
+  }
+}
+
+const HOST_RESOLVERS: Record<string, Resolver> = {
+  "jobico.io": resolveJobico,
+  "www.jobico.io": resolveJobico,
+  "boards.greenhouse.io": resolveGreenhouse,
+  "job-boards.greenhouse.io": resolveGreenhouse,
+  "jobs.lever.co": resolveLever,
+  "jobs.ashbyhq.com": resolveAshby,
+  "jobs.workable.com": resolveWorkable,
+};
+
 /** Given one vacancy URL (not a feed to search), checks it against the handful of job-board/ATS
  * URL shapes this file already knows precisely -- greenhouse.io, lever.co, ashbyhq.com,
  * recruitee.com, jobico.io, jobs.workable.com -- and if it matches, fetches that EXACT posting
@@ -1118,192 +1239,11 @@ export async function resolvePostingFromUrl(rawUrl: string): Promise<UrlResolveR
   try {
     url = new URL(rawUrl);
   } catch {
-    return { matched: false };
+    return NOT_MATCHED;
   }
   const host = url.hostname.toLowerCase();
-  const path = url.pathname;
-
-  if (host === "jobico.io" || host === "www.jobico.io") {
-    const m = /^\/jobs\/([^/]+)\/?$/.exec(path);
-    if (!m) return { matched: false };
-    try {
-      const detail = await postJobicoTool("get_job", { slug: m[1] });
-      if (!detail.found) return { matched: true, posting: null, error: `jobico.io: no job found for slug ${m[1]}` };
-      const techStack = (detail.techStack ?? []).join(" ");
-      const description = [detail.description, detail.requirements, detail.niceToHave, detail.responsibilities, techStack]
-        .filter(Boolean)
-        .join("\n\n");
-      const locParts = [detail.city, detail.country].filter(Boolean);
-      let location = locParts.join(", ");
-      if (detail.locationType === "remote") location = location ? `Remote, ${location}` : "Remote";
-      return {
-        matched: true,
-        posting: makePosting({
-          source: "jobico",
-          company: detail.company?.name ?? "?",
-          title: detail.title ?? "",
-          location,
-          url: detail.url ?? rawUrl,
-          description,
-          postedAt: detail.postedAt ?? "",
-          remoteOverride: detail.locationType === "remote",
-        }),
-      };
-    } catch (error) {
-      return { matched: true, posting: null, error: `jobico.io: ${errorMessage(error)}` };
-    }
-  }
-
-  if (host === "boards.greenhouse.io" || host === "job-boards.greenhouse.io") {
-    const m = /^\/([^/]+)\/jobs\/(\d+)/.exec(path);
-    if (!m) return { matched: false };
-    const [, company, jobId] = m as unknown as [string, string, string];
-    try {
-      const detail = await getJson(`https://boards-api.greenhouse.io/v1/boards/${company}/jobs/${jobId}?content=true`);
-      return {
-        matched: true,
-        posting: makePosting({
-          source: "greenhouse",
-          company: detail.company_name ?? company,
-          title: detail.title ?? "",
-          location: detail.location?.name ?? "",
-          url: detail.absolute_url ?? rawUrl,
-          description: stripHtml(detail.content ?? ""),
-          postedAt: detail.updated_at ?? "",
-        }),
-      };
-    } catch (error) {
-      return { matched: true, posting: null, error: `greenhouse (${company}/${jobId}): ${errorMessage(error)}` };
-    }
-  }
-
-  if (host === "jobs.lever.co") {
-    const m = /^\/([^/]+)\/([0-9a-f-]{36})/i.exec(path);
-    if (!m) return { matched: false };
-    const [, company, postingId] = m as unknown as [string, string, string];
-    try {
-      const detail = await getJson(`https://api.lever.co/v0/postings/${company}/${postingId}?mode=json`);
-      const cats = detail.categories ?? {};
-      const loc = cats.location ?? "";
-      const parts = [detail.descriptionPlain ?? ""];
-      for (const lst of detail.lists ?? []) parts.push(stripHtml(lst.content ?? ""));
-      parts.push(detail.additionalPlain ?? "");
-      const description = parts.filter(Boolean).join("\n");
-      const locFull = [loc, cats.team ?? "", cats.commitment ?? ""].filter(Boolean).join(", ");
-      return {
-        matched: true,
-        posting: makePosting({
-          source: "lever",
-          company,
-          title: detail.text ?? "",
-          location: locFull,
-          url: detail.hostedUrl ?? rawUrl,
-          description,
-          postedAt: String(detail.createdAt ?? ""),
-        }),
-      };
-    } catch (error) {
-      return { matched: true, posting: null, error: `lever (${company}/${postingId}): ${errorMessage(error)}` };
-    }
-  }
-
-  const recruiteeMatch = /^([a-z0-9-]+)\.recruitee\.com$/.exec(host);
-  if (recruiteeMatch) {
-    const company = recruiteeMatch[1]!;
-    const m = /^\/o\/([^/]+)/.exec(path);
-    if (!m) return { matched: false };
-    const slug = m[1];
-    try {
-      const data = await getJson(`https://${company}.recruitee.com/api/offers/${slug}`);
-      const offer = data.offer ?? {};
-      const loc = [offer.city, offer.country].filter(Boolean).map(String).join(", ");
-      const description = stripHtml(`${offer.description ?? ""} ${offer.requirements ?? ""}`);
-      const remoteOverride = ["true", "1", "yes"].includes(String(offer.remote ?? "").toLowerCase()) || null;
-      return {
-        matched: true,
-        posting: makePosting({
-          source: "recruitee",
-          company: offer.company_name ?? company,
-          title: offer.title ?? "",
-          location: loc,
-          url: offer.careers_url || offer.careers_apply_url || rawUrl,
-          description,
-          postedAt: String(offer.published_at ?? ""),
-          remoteOverride,
-        }),
-      };
-    } catch (error) {
-      return { matched: true, posting: null, error: `recruitee (${company}/${slug}): ${errorMessage(error)}` };
-    }
-  }
-
-  if (host === "jobs.ashbyhq.com") {
-    const m = /^\/([^/]+)\/([0-9a-f-]{36})/i.exec(path);
-    if (!m) return { matched: false };
-    const [, company, postingId] = m as unknown as [string, string, string];
-    try {
-      const data = await getJson(`https://api.ashbyhq.com/posting-api/job-board/${company}?includeCompensation=true`);
-      const job = (data.jobs ?? []).find((j: any) => j.id === postingId);
-      if (!job) return { matched: true, posting: null, error: `ashby (${company}): no job with id ${postingId} on the current board` };
-      const loc = job.location ?? "";
-      const secondary = (job.secondaryLocations ?? [])
-        .map((s: any) => s.location ?? "")
-        .filter(Boolean)
-        .join(", ");
-      const locFull = [loc, secondary].filter(Boolean).join(", ");
-      const description = job.descriptionPlain || stripHtml(job.descriptionHtml ?? "");
-      const remoteOverride = Boolean(job.isRemote || job.workplaceType === "Remote") || null;
-      return {
-        matched: true,
-        posting: makePosting({
-          source: "ashby",
-          company,
-          title: job.title ?? "",
-          location: locFull,
-          url: job.jobUrl ?? rawUrl,
-          applyUrl: job.applyUrl ?? "",
-          description,
-          postedAt: job.publishedAt ?? "",
-          remoteOverride,
-        }),
-      };
-    } catch (error) {
-      return { matched: true, posting: null, error: `ashby (${company}): ${errorMessage(error)}` };
-    }
-  }
-
-  if (host === "jobs.workable.com") {
-    // jobs.workable.com/view/<shortcode>/<slug> -- the single-job endpoint returns the same job
-    // shape fetchWorkable's search endpoint does, so parse it identically.
-    const m = /^\/view\/([A-Za-z0-9_-]+)/.exec(path);
-    if (!m) return { matched: false };
-    const shortcode = m[1]!;
-    try {
-      const job = await getJson(`https://jobs.workable.com/api/v1/jobs/${shortcode}`);
-      const loc = job.location ?? {};
-      let location = [loc.city, loc.subregion, loc.countryName].filter(Boolean).map(String).join(", ");
-      const workplace = String(job.workplace ?? "").toLowerCase();
-      if (workplace === "remote") location = location ? `Remote, ${location}` : "Remote";
-      const description = stripHtml(
-        [job.description, job.requirementsSection, job.benefitsSection].filter(Boolean).join(" ")
-      );
-      return {
-        matched: true,
-        posting: makePosting({
-          source: "workable",
-          company: job.company?.title ?? "?",
-          title: job.title ?? "",
-          location,
-          url: job.url ?? rawUrl,
-          description,
-          postedAt: String(job.published ?? job.created ?? ""),
-          remoteOverride: workplace === "remote" ? true : null,
-        }),
-      };
-    } catch (error) {
-      return { matched: true, posting: null, error: `workable (${shortcode}): ${errorMessage(error)}` };
-    }
-  }
-
-  return { matched: false };
+  const recruiteeCompany = /^([a-z0-9-]+)\.recruitee\.com$/.exec(host)?.[1];
+  if (recruiteeCompany) return resolveRecruitee(rawUrl, url.pathname, recruiteeCompany);
+  const resolver = Object.hasOwn(HOST_RESOLVERS, host) ? HOST_RESOLVERS[host] : undefined;
+  return resolver ? resolver(rawUrl, url.pathname) : NOT_MATCHED;
 }
