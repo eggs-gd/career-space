@@ -208,6 +208,71 @@ function renderBoardsFromCli(): void {
   renderBoards();
 }
 
+type CliValues = {
+  client: string;
+  title: string;
+  url: string;
+  source: string;
+  "posting-text": string;
+  "fit-score"?: string;
+  "fit-category"?: string;
+  "fit-reason"?: string;
+  "judged-at"?: string;
+  status?: string;
+  slug?: string;
+  note?: string;
+  kind?: string;
+  path?: string;
+  archived?: string;
+  "include-archived"?: boolean;
+  write?: boolean;
+};
+
+const CLI_COMMANDS: Record<string, (values: CliValues) => unknown> = {
+  upsert: (values) => {
+    if (!values.title) throw new VacancyStoreError("upsert requires --title");
+    const result = upsertEngagement({
+      client: values.client,
+      title: values.title,
+      url: values.url,
+      source: values.source,
+      postingText: values["posting-text"],
+      judgedAt: values["judged-at"],
+      fitScore: values["fit-score"] === undefined ? undefined : Number(values["fit-score"]),
+      fitCategory: values["fit-category"],
+      fitReason: values["fit-reason"],
+      status: values.status,
+    });
+    renderBoardsFromCli();
+    return result;
+  },
+  "set-status": (values) => {
+    if (!values.slug || !values.status) throw new VacancyStoreError("set-status requires --slug and --status");
+    const result = setEngagementStatus(values.slug, values.status, values.note);
+    renderBoardsFromCli();
+    return result;
+  },
+  "set-archived": (values) => {
+    if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
+      throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
+    }
+    const result = setEngagementArchived(values.slug, values.archived === "true");
+    renderBoardsFromCli();
+    return result;
+  },
+  // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
+  "relocate-archived": (values) => relocateArchived(ENGAGEMENTS_DIR, values.write ?? false),
+  // No re-render here -- matches `vacancy_store.js attach-artifact` and the `engagement_attach_artifact`
+  // MCP tool, both of which leave the board to the next status/upsert call.
+  "attach-artifact": (values) => {
+    if (!values.slug || !values.kind || !values.path) {
+      throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
+    }
+    return attachEngagementArtifact(values.slug, values.kind, values.path);
+  },
+  list: (values) => listEngagements({ includeArchived: values["include-archived"] }),
+};
+
 function cli(): void {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
@@ -232,50 +297,13 @@ function cli(): void {
     },
   });
   const command = positionals[0];
-  let result: unknown;
-
-  if (command === "upsert") {
-    if (!values.title) throw new VacancyStoreError("upsert requires --title");
-    result = upsertEngagement({
-      client: values.client,
-      title: values.title,
-      url: values.url,
-      source: values.source,
-      postingText: values["posting-text"],
-      judgedAt: values["judged-at"],
-      fitScore: values["fit-score"] !== undefined ? Number(values["fit-score"]) : undefined,
-      fitCategory: values["fit-category"],
-      fitReason: values["fit-reason"],
-      status: values.status,
-    });
-    renderBoardsFromCli();
-  } else if (command === "set-status") {
-    if (!values.slug || !values.status) throw new VacancyStoreError("set-status requires --slug and --status");
-    result = setEngagementStatus(values.slug, values.status, values.note);
-    renderBoardsFromCli();
-  } else if (command === "set-archived") {
-    if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
-      throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
-    }
-    result = setEngagementArchived(values.slug, values.archived === "true");
-    renderBoardsFromCli();
-  } else if (command === "relocate-archived") {
-    // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
-    result = relocateArchived(ENGAGEMENTS_DIR, values.write ?? false);
-  } else if (command === "attach-artifact") {
-    if (!values.slug || !values.kind || !values.path) {
-      throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
-    }
-    // No re-render here -- matches `vacancy_store.js attach-artifact` and the `engagement_attach_artifact`
-    // MCP tool, both of which leave the board to the next status/upsert call.
-    result = attachEngagementArtifact(values.slug, values.kind, values.path);
-  } else if (command === "list") {
-    result = listEngagements({ includeArchived: values["include-archived"] });
-  } else {
+  const handler = command !== undefined && Object.hasOwn(CLI_COMMANDS, command) ? CLI_COMMANDS[command] : undefined;
+  if (!handler) {
     throw new VacancyStoreError(
-      `Unknown command ${JSON.stringify(command)} -- expected: upsert, set-status, set-archived, relocate-archived, attach-artifact, list`
+      `Unknown command ${JSON.stringify(command)} -- expected: ${Object.keys(CLI_COMMANDS).join(", ")}`
     );
   }
+  const result = handler(values);
   console.log(JSON.stringify(result, null, 2));
 }
 
