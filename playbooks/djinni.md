@@ -82,7 +82,8 @@ For "find me jobs on Djinni" beyond the scout's tracks. This is the one-off hunt
 4. Judge through `playbooks/fitment.md`. Add only the worthwhile ones as `new` vacancies with
    `vacancy_upsert`: `source: djinni`, `url: https://djinni.co/jobs/<job_id>/`, the job
    description as the posting text. Same output shape as any other vacancy: it lands on the board.
-5. Report the funnel: searched, already known, judged, added.
+5. `vacancy_upsert` does not render the board: run `render_boards` once after the batch.
+6. Report the funnel: searched, already known, judged, added.
 
 ## 3 — Profile
 
@@ -113,8 +114,9 @@ For each vacancy:
    range).
 3. The materials come from this repo, not from Djinni's own CV builder: the vacancy's
    `cover-letter.md` / `.txt` and the targeted resume PDF (`playbooks/cover-letter.md`,
-   `playbooks/cv-targeted.md` — the PDF is rendered outside an OS sandbox, see
-   `_sb/reference/gotchas.md`). If they don't exist yet, produce them first. The PDF must be at
+   `playbooks/cv-targeted.md` — inside a macOS sandbox the PDF step is skipped, so the render is
+   re-run outside it, see "A PDF in a macOS sandbox is skipped" in `AGENTS.md`). If they don't
+   exist yet, produce them first. The PDF must be at
    most 2 MB.
 4. Screening answers come only from `data/CV_GENERAL.md`, `data/config.yaml` and what the
    candidate says now. Yes/no questions are `'1'` / `'0'`, numbers are digits only. Anything the

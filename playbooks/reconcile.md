@@ -36,8 +36,14 @@ case you're in before doing anything:
   like Y". Treat that text as the observations: skip the gathering in Step 2, go straight to Step
   3 (match and judge) against it. It's second-hand, so lean toward "needs confirmation" for
   anything not spelled out.
-- **Nothing at all** — no email capability, no pasted summary. Say reconciliation needs an email
-  connector/plugin in their host (or a pasted summary), and stop. Not a failure, just unavailable.
+- **Nothing at all** — no email capability, no pasted summary, and no usable Djinni connector (see
+  below). Say reconciliation needs an email connector/plugin in their host (or a pasted summary),
+  and stop. Not a failure, just unavailable.
+
+Djinni is a separate evidence source and does not depend on any of the above: a usable Djinni
+connector is enough to reconcile on its own. With no email capability, or one that isn't
+authorized, still run Djinni (section 1 of `playbooks/djinni.md`), skip the mailbox steps, and say
+which source was missing.
 
 **Djinni conversations** are a second evidence source, independent of the mailbox: if Djinni's
 connector is connected, read the threads through `playbooks/djinni.md` section 1 and judge them

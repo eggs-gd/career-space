@@ -5,8 +5,8 @@
  * second sighting to a vacancy record goes through this key, never through string equality.
  */
 
-/** `djinni:<id>`, `dou:<id>`, `linkedin:<id>`, otherwise `host/path` without query, hash, `www.`
- * or a trailing slash. Empty string for an empty input. */
+/** `djinni:<id>`, `dou:<id>`, `linkedin:<id>`, otherwise `host/path` plus the query parameters that
+ * may identify the job (tracking parameters, the hash, `www.` and a trailing slash are dropped). Empty string for an empty input. */
 export function jobKey(rawUrl: string): string {
   const text = (rawUrl ?? "").trim();
   if (!text) return "";
@@ -24,10 +24,26 @@ export function jobKey(rawUrl: string): string {
   if (host === "jobs.dou.ua" && (match = /\/vacancies\/(\d+)/.exec(url.pathname))) {
     return `dou:${match[1]}`;
   }
-  if (host.endsWith("linkedin.com") && (match = /\/jobs\/view\/(?:[^/]*-)?(\d+)/.exec(url.pathname))) {
+  if ((host === "linkedin.com" || host.endsWith(".linkedin.com")) && (match = /\/jobs\/view\/(?:[^/]*-)?(\d+)/.exec(url.pathname))) {
     return `linkedin:${match[1]}`;
   }
-  return `${host}${url.pathname.replace(/\/+$/, "")}`.toLowerCase();
+  // Any other site: host, path and the query parameters that may identify the job (`gh_jid`,
+  // `jobId`, ...). Only tracking parameters are dropped, so two jobs on one careers page stay two.
+  const kept = [...url.searchParams.entries()]
+    .filter(([name]) => !isTrackingParam(name))
+    .map(([name, value]) => `${name.toLowerCase()}=${value}`)
+    .sort();
+  return `${host}${url.pathname.replace(/\/+$/, "")}${kept.length > 0 ? `?${kept.join("&")}` : ""}`.toLowerCase();
+}
+
+const TRACKING_PARAMS = new Set([
+  "gh_src", "trk", "trackingid", "refid", "ref", "referrer", "source", "src", "fbclid", "gclid", "msclkid",
+  "mc_cid", "mc_eid", "lever-source", "lever-origin", "ss", "ccuid", "li_fat_id",
+]);
+
+function isTrackingParam(name: string): boolean {
+  const lower = name.toLowerCase();
+  return lower.startsWith("utm_") || TRACKING_PARAMS.has(lower);
 }
 
 /** The Djinni job id inside a Djinni job URL, or null. */

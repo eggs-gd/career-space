@@ -22,6 +22,12 @@ test("jobKey: DOU and LinkedIn ids, with and without tracking tails", () => {
 
 test("jobKey: other sites compare by host and path only; an empty or odd input does not throw", () => {
   assert.equal(jobKey("https://Boards.Greenhouse.io/acme/jobs/123/?gh_src=x"), "boards.greenhouse.io/acme/jobs/123");
+  // white-labelled Greenhouse: the job is in the query, tracking parameters are not
+  assert.notEqual(jobKey("https://example.com/careers?gh_jid=111"), jobKey("https://example.com/careers?gh_jid=222"));
+  assert.equal(jobKey("https://example.com/careers?gh_jid=111&utm_source=x"), jobKey("https://example.com/careers/?utm_medium=y&gh_jid=111"));
+  // a look-alike host is not LinkedIn
+  assert.equal(jobKey("https://evil-linkedin.com/jobs/view/123"), "evil-linkedin.com/jobs/view/123");
+  assert.equal(jobKey("https://uk.linkedin.com/jobs/view/123"), "linkedin:123");
   assert.equal(jobKey(""), "");
   assert.equal(jobKey("not a url"), "not a url");
   assert.notEqual(jobKey("https://djinni.co/jobs/1-a/"), jobKey("https://djinni.co/jobs/2-a/"));
