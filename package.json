@@ -10,7 +10,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "node --test scripts/dist/**/*.test.js"
+    "test": "node --test scripts/dist/**/*.test.js",
+    "coverage": "npm run build && mkdir -p coverage && node --enable-source-maps --test --experimental-test-coverage --test-coverage-exclude=**/*.test.js --test-reporter=lcov --test-reporter-destination=coverage/lcov.info scripts/dist/**/*.test.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

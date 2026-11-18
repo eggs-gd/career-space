@@ -400,3 +400,13 @@ as `vacancy_upsert` above.
 Full script-by-script reference, exact CLI commands, and how the MCP server's own automatic setup
 works: `_sb/reference/runtime.md`. Design-patterns/ts-language MCP dev tooling and how to verify a
 change to this repo's own files: `_sb/development.md`.
+
+## SonarQube
+
+Developer mode: follow the `sonar` skill ([`.agents/skills/sonar`](.agents/skills/sonar/SKILL.md)).
+The analysis runs in the SonarQube workflow (`.github/workflows/sonarqube.yml`) on the
+organization's self-hosted runner next to the server, once a commit is on GitHub: on a pull request
+and on a push to `main`. A red gate fails the job and the server's comment lands on the pull
+request. The pre-commit hook is the local gate (`git config core.hooksPath .githooks`). `make sonar`
+by hand needs `SONAR_HOST_URL` and `SONAR_TOKEN`; never print the token. The setup is the
+organization's standard: <https://github.com/eggs-gd/.github/blob/main/docs/sonarqube.md>.

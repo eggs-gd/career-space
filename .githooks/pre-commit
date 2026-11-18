@@ -1,0 +1,38 @@
+#!/bin/sh
+# The local gate before a commit; nothing goes to the server. It runs
+#   1. the secrets scan of the staged files (SonarQube CLI: sonar hook git-pre-commit),
+#      when the CLI is installed and SONAR_HOST_URL and SONAR_TOKEN are set;
+#   2. golangci-lint (.golangci.yml) on every Go module that has a staged .go file, on the
+#      lines changed since HEAD: what the commit brings, not what was there before.
+# A finding stops the commit. The analysis that goes to the server runs in the SonarQube
+# workflow, once the commit is on GitHub (docs/sonarqube.md of eggs-gd/.github).
+# Enable per checkout: git config core.hooksPath .githooks
+# Skip once, and say so in the commit message: git commit --no-verify
+#
+# The part between the markers is canonical: eggs-gd/.github, sonarqube/hooks/pre-commit.
+
+# --- sonar:begin
+env=./.env
+[ -f "$env" ] || env="$(git rev-parse --path-format=absolute --git-common-dir)/../.env"
+set -a; [ ! -f "$env" ] || . "$env"; set +a
+if [ -n "${SONAR_HOST_URL:-}" ] && [ -n "${SONAR_TOKEN:-}" ] && command -v sonar >/dev/null 2>&1; then
+	sonar hook git-pre-commit || exit 1
+fi
+
+if command -v golangci-lint >/dev/null 2>&1; then
+	modules=$(git diff --cached --name-only --diff-filter=ACMR -- '*.go' | while read -r f; do
+		d=$(dirname "$f")
+		while [ "$d" != . ] && [ ! -f "$d/go.mod" ]; do d=$(dirname "$d"); done
+		if [ -f "$d/go.mod" ]; then echo "$d"; fi
+	done | sort -u)
+	# the first commit of a repository has no HEAD to compare with: all of it is new
+	new=""
+	if git rev-parse -q --verify HEAD >/dev/null; then new=--new-from-rev=HEAD; fi
+	for m in $modules; do
+		echo "pre-commit: golangci-lint in $m"
+		(cd "$m" && golangci-lint run $new ./...) || exit 1
+	done
+elif [ -n "$(git diff --cached --name-only -- '*.go')" ]; then
+	echo "pre-commit: golangci-lint is not installed, the lint is skipped" >&2
+fi
+# --- sonar:end
