@@ -984,176 +984,207 @@ function renderBoardsFromCli(): void {
   renderBoards();
 }
 
-/** CLI fallback for agents without MCP support. Prefer the MCP tools when connected. */
-function cli(): void {
-  const { values, positionals } = parseArgs({
-    allowPositionals: true,
-    options: {
-      "posting-id": { type: "string" },
-      "content-id": { type: "string" },
-      outcome: { type: "string" },
-      company: { type: "string", default: "" },
-      title: { type: "string", default: "" },
-      "fit-score": { type: "string" },
-      "fit-category": { type: "string" },
-      reason: { type: "string" },
-      url: { type: "string", default: "" },
-      "apply-url": { type: "string", default: "" },
-      location: { type: "string", default: "" },
-      remote: { type: "boolean" },
-      source: { type: "string", default: "" },
-      "posted-at": { type: "string", default: "" },
-      "posting-text": { type: "string", default: "" },
-      status: { type: "string" },
-      "track-label": { type: "string" },
-      "fit-reason": { type: "string" },
-      "eligibility-location-status": { type: "string" },
-      "eligibility-location-reason": { type: "string" },
-      slug: { type: "string" },
-      note: { type: "string" },
-      kind: { type: "string" },
-      path: { type: "string" },
-      // string, not boolean -- parseArgs's boolean type is presence-only (no way to pass
-      // `false` explicitly), and un-archiving needs that just as much as archiving does.
-      archived: { type: "string" },
-      "include-archived": { type: "boolean" },
-      input: { type: "string" },
-      write: { type: "boolean" },
-    },
+const CLI_OPTIONS = {
+  "posting-id": { type: "string" },
+  "content-id": { type: "string" },
+  outcome: { type: "string" },
+  company: { type: "string", default: "" },
+  title: { type: "string", default: "" },
+  "fit-score": { type: "string" },
+  "fit-category": { type: "string" },
+  reason: { type: "string" },
+  url: { type: "string", default: "" },
+  "apply-url": { type: "string", default: "" },
+  location: { type: "string", default: "" },
+  remote: { type: "boolean" },
+  source: { type: "string", default: "" },
+  "posted-at": { type: "string", default: "" },
+  "posting-text": { type: "string", default: "" },
+  status: { type: "string" },
+  "track-label": { type: "string" },
+  "fit-reason": { type: "string" },
+  "eligibility-location-status": { type: "string" },
+  "eligibility-location-reason": { type: "string" },
+  slug: { type: "string" },
+  note: { type: "string" },
+  kind: { type: "string" },
+  path: { type: "string" },
+  // string, not boolean -- parseArgs's boolean type is presence-only (no way to pass
+  // `false` explicitly), and un-archiving needs that just as much as archiving does.
+  archived: { type: "string" },
+  "include-archived": { type: "boolean" },
+  input: { type: "string" },
+  write: { type: "boolean" },
+} as const;
+
+function parseCli() {
+  return parseArgs({ allowPositionals: true, options: CLI_OPTIONS });
+}
+type CliValues = ReturnType<typeof parseCli>["values"];
+
+const optionalNumber = (value: string | undefined): number | undefined => (value === undefined ? undefined : Number(value));
+const presentString = (value: string | undefined): string | undefined => (value && value.length > 0 ? value : undefined);
+
+function validStatusOption(status: string | undefined): (typeof VALID_STATUSES)[number] | undefined {
+  if (status !== undefined && !isValidStatus(status)) {
+    throw new VacancyStoreError(`--status must be one of ${VALID_STATUSES.join(", ")}`);
+  }
+  return status;
+}
+
+function cliMarkSeen(values: CliValues): unknown {
+  if (!values["posting-id"] || !values["content-id"] || !values.outcome) {
+    throw new VacancyStoreError("mark-seen requires --posting-id, --content-id, --outcome");
+  }
+  markSeen(values["posting-id"], values["content-id"], {
+    outcome: values.outcome as "matched" | "rejected",
+    company: values.company,
+    title: values.title,
+    fitScore: optionalNumber(values["fit-score"]),
+    fitCategory: values["fit-category"],
+    reason: values.reason,
   });
+  return { ok: true };
+}
 
-  const command = positionals[0];
-  let result: unknown;
-
-  if (command === "mark-seen") {
-    if (!values["posting-id"] || !values["content-id"] || !values.outcome) {
-      throw new VacancyStoreError("mark-seen requires --posting-id, --content-id, --outcome");
-    }
-    markSeen(values["posting-id"], values["content-id"], {
-      outcome: values.outcome as "matched" | "rejected",
-      company: values.company,
-      title: values.title,
-      fitScore: values["fit-score"] !== undefined ? Number(values["fit-score"]) : undefined,
-      fitCategory: values["fit-category"],
-      reason: values.reason,
-    });
-    result = { ok: true };
-  } else if (command === "upsert") {
-    if (!values.company || !values.title) {
-      throw new VacancyStoreError("upsert requires --company and --title");
-    }
-    const status = values.status;
-    if (status !== undefined && !isValidStatus(status)) {
-      throw new VacancyStoreError(`--status must be one of ${VALID_STATUSES.join(", ")}`);
-    }
-    const eligibilityStatus = values["eligibility-location-status"];
-    if (eligibilityStatus !== undefined && !isLocationEligibilityStatus(eligibilityStatus)) {
-      throw new VacancyStoreError(
-        "--eligibility-location-status must be one of open_remote, local, location_exception_candidate, hard_location_block, unclear"
-      );
-    }
-    result = upsertVacancy({
-      postingId: values["posting-id"],
-      contentId: values["content-id"],
-      company: values.company,
-      title: values.title,
-      url: values.url,
-      applyUrl: values["apply-url"],
-      location: values.location,
-      remote: values.remote,
-      source: values.source,
-      postedAt: values["posted-at"],
-      postingText: values["posting-text"],
-      status,
-      trackLabel: values["track-label"],
-      fitScore: values["fit-score"] !== undefined ? Number(values["fit-score"]) : undefined,
-      fitCategory: values["fit-category"],
-      fitReason: values["fit-reason"],
-      eligibility: eligibilityStatus
-        ? { location: { status: eligibilityStatus, reason: values["eligibility-location-reason"] } }
-        : undefined,
-    });
-  } else if (command === "set-status") {
-    if (!values.slug || !values.status || !isValidStatus(values.status)) {
-      throw new VacancyStoreError(`set-status requires --slug and --status (one of ${VALID_STATUSES.join(", ")})`);
-    }
-    result = setStatus(values.slug, values.status, values.note);
-    renderBoardsFromCli();
-  } else if (command === "set-archived") {
-    if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
-      throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
-    }
-    result = setArchived(values.slug, values.archived === "true");
-    renderBoardsFromCli();
-  } else if (command === "relocate-archived") {
-    // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
-    result = relocateArchived(DATA_DIR, values.write ?? false);
-  } else if (command === "attach-artifact") {
-    if (!values.slug || !values.kind || !values.path) {
-      throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
-    }
-    result = attachArtifact(values.slug, values.kind, values.path);
-  } else if (command === "list") {
-    result = listVacancies(values.status, { includeArchived: values["include-archived"] });
-  } else if (command === "find") {
-    result = findVacancies({ url: values.url, company: values.company, title: values.title });
-  } else if (command === "add-alias") {
-    if (!values.slug || !values.source || !values.url) {
-      throw new VacancyStoreError("add-alias requires --slug, --source, --url");
-    }
-    result = { added: addAlias(values.slug, { source: values.source, url: values.url }) };
-  } else if (command === "record-scout-outcomes") {
-    if (!values.input) {
-      throw new VacancyStoreError("record-scout-outcomes requires --input <json>");
-    }
-    type OutcomeItems = { candidate: ScoutOutcomeCandidate; fit: ScoutOutcomeFit }[];
-    const parsed = JSON.parse(fs.readFileSync(values.input, "utf-8")) as unknown;
-    // Accept either a bare items array or a { min_fit_score?, items } wrapper.
-    const payload: { min_fit_score?: number; items?: OutcomeItems } = Array.isArray(parsed)
-      ? { items: parsed as OutcomeItems }
-      : (parsed as { min_fit_score?: number; items?: OutcomeItems });
-    const items = payload.items ?? [];
-    if (items.length === 0) {
-      throw new VacancyStoreError("record-scout-outcomes: --input file has no items");
-    }
-    result = items.map((item) =>
-      recordScoutOutcome({
-        candidate: item.candidate,
-        fit: item.fit,
-        minFitScore: payload.min_fit_score ?? 4,
-      })
-    );
-    if ((result as RecordedScoutOutcome[]).some((r) => r.outcome === "matched")) renderBoardsFromCli();
-  } else if (command === "resolve") {
-    const status = values.status;
-    if (status !== undefined && !isValidStatus(status)) {
-      throw new VacancyStoreError(`--status must be one of ${VALID_STATUSES.join(", ")}`);
-    }
-    const presentString = (value: string | undefined): string | undefined => (value && value.length > 0 ? value : undefined);
-    result = resolveVacancy({
-      slug: values.slug,
-      postingId: values["posting-id"],
-      contentId: values["content-id"],
-      company: presentString(values.company),
-      title: presentString(values.title),
-      url: presentString(values.url),
-      applyUrl: presentString(values["apply-url"]),
-      location: presentString(values.location),
-      remote: values.remote,
-      source: presentString(values.source),
-      postedAt: presentString(values["posted-at"]),
-      postingText: presentString(values["posting-text"]),
-      status,
-      trackLabel: presentString(values["track-label"]),
-    });
-    if ((result as ResolveVacancyResult).changed) renderBoardsFromCli();
-  } else {
+function cliUpsert(values: CliValues): unknown {
+  if (!values.company || !values.title) {
+    throw new VacancyStoreError("upsert requires --company and --title");
+  }
+  const status = validStatusOption(values.status);
+  const eligibilityStatus = values["eligibility-location-status"];
+  if (eligibilityStatus !== undefined && !isLocationEligibilityStatus(eligibilityStatus)) {
     throw new VacancyStoreError(
-      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, relocate-archived, attach-artifact, list, find, add-alias, record-scout-outcomes, resolve`
+      "--eligibility-location-status must be one of open_remote, local, location_exception_candidate, hard_location_block, unclear"
     );
   }
+  return upsertVacancy({
+    postingId: values["posting-id"],
+    contentId: values["content-id"],
+    company: values.company,
+    title: values.title,
+    url: values.url,
+    applyUrl: values["apply-url"],
+    location: values.location,
+    remote: values.remote,
+    source: values.source,
+    postedAt: values["posted-at"],
+    postingText: values["posting-text"],
+    status,
+    trackLabel: values["track-label"],
+    fitScore: optionalNumber(values["fit-score"]),
+    fitCategory: values["fit-category"],
+    fitReason: values["fit-reason"],
+    eligibility: eligibilityStatus
+      ? { location: { status: eligibilityStatus, reason: values["eligibility-location-reason"] } }
+      : undefined,
+  });
+}
 
-  console.log(JSON.stringify(result, null, 2));
+function cliSetStatus(values: CliValues): unknown {
+  if (!values.slug || !values.status || !isValidStatus(values.status)) {
+    throw new VacancyStoreError(`set-status requires --slug and --status (one of ${VALID_STATUSES.join(", ")})`);
+  }
+  const result = setStatus(values.slug, values.status, values.note);
+  renderBoardsFromCli();
+  return result;
+}
+
+function cliSetArchived(values: CliValues): unknown {
+  if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
+    throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
+  }
+  const result = setArchived(values.slug, values.archived === "true");
+  renderBoardsFromCli();
+  return result;
+}
+
+function cliAttachArtifact(values: CliValues): unknown {
+  if (!values.slug || !values.kind || !values.path) {
+    throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
+  }
+  return attachArtifact(values.slug, values.kind, values.path);
+}
+
+function cliAddAlias(values: CliValues): unknown {
+  if (!values.slug || !values.source || !values.url) {
+    throw new VacancyStoreError("add-alias requires --slug, --source, --url");
+  }
+  return { added: addAlias(values.slug, { source: values.source, url: values.url }) };
+}
+
+function cliRecordScoutOutcomes(values: CliValues): unknown {
+  if (!values.input) {
+    throw new VacancyStoreError("record-scout-outcomes requires --input <json>");
+  }
+  type OutcomeItems = { candidate: ScoutOutcomeCandidate; fit: ScoutOutcomeFit }[];
+  const parsed = JSON.parse(fs.readFileSync(values.input, "utf-8")) as unknown;
+  // Accept either a bare items array or a { min_fit_score?, items } wrapper.
+  const payload: { min_fit_score?: number; items?: OutcomeItems } = Array.isArray(parsed)
+    ? { items: parsed as OutcomeItems }
+    : (parsed as { min_fit_score?: number; items?: OutcomeItems });
+  const items = payload.items ?? [];
+  if (items.length === 0) {
+    throw new VacancyStoreError("record-scout-outcomes: --input file has no items");
+  }
+  const results: RecordedScoutOutcome[] = items.map((item) =>
+    recordScoutOutcome({
+      candidate: item.candidate,
+      fit: item.fit,
+      minFitScore: payload.min_fit_score ?? 4,
+    })
+  );
+  if (results.some((r) => r.outcome === "matched")) renderBoardsFromCli();
+  return results;
+}
+
+function cliResolve(values: CliValues): unknown {
+  const result = resolveVacancy({
+    slug: values.slug,
+    postingId: values["posting-id"],
+    contentId: values["content-id"],
+    company: presentString(values.company),
+    title: presentString(values.title),
+    url: presentString(values.url),
+    applyUrl: presentString(values["apply-url"]),
+    location: presentString(values.location),
+    remote: values.remote,
+    source: presentString(values.source),
+    postedAt: presentString(values["posted-at"]),
+    postingText: presentString(values["posting-text"]),
+    status: validStatusOption(values.status),
+    trackLabel: presentString(values["track-label"]),
+  });
+  if ((result as ResolveVacancyResult).changed) renderBoardsFromCli();
+  return result;
+}
+
+const CLI_COMMANDS: Record<string, (values: CliValues) => unknown> = {
+  "mark-seen": cliMarkSeen,
+  upsert: cliUpsert,
+  "set-status": cliSetStatus,
+  "set-archived": cliSetArchived,
+  // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
+  "relocate-archived": (values) => relocateArchived(DATA_DIR, values.write ?? false),
+  "attach-artifact": cliAttachArtifact,
+  list: (values) => listVacancies(values.status, { includeArchived: values["include-archived"] }),
+  find: (values) => findVacancies({ url: values.url, company: values.company, title: values.title }),
+  "add-alias": cliAddAlias,
+  "record-scout-outcomes": cliRecordScoutOutcomes,
+  resolve: cliResolve,
+};
+
+/** CLI fallback for agents without MCP support. Prefer the MCP tools when connected. */
+function cli(): void {
+  const { values, positionals } = parseCli();
+  const command = positionals[0];
+  const handler = command !== undefined && Object.hasOwn(CLI_COMMANDS, command) ? CLI_COMMANDS[command] : undefined;
+  if (!handler) {
+    throw new VacancyStoreError(
+      `Unknown command ${JSON.stringify(command)} -- expected one of: ${Object.keys(CLI_COMMANDS).join(", ")}`
+    );
+  }
+  console.log(JSON.stringify(handler(values), null, 2));
 }
 
 if (require.main === module) {
