@@ -1017,10 +1017,16 @@ const CLI_OPTIONS = {
   write: { type: "boolean" },
 } as const;
 
-function parseCli() {
-  return parseArgs({ allowPositionals: true, options: CLI_OPTIONS });
+export function parseCli(args?: string[]) {
+  return parseArgs({ args, allowPositionals: true, options: CLI_OPTIONS });
 }
 type CliValues = ReturnType<typeof parseCli>["values"];
+
+/** Where a CLI command reads and writes, and what it calls to refresh the boards. */
+export interface CliContext {
+  dataDir?: string;
+  renderBoards: () => void;
+}
 
 const optionalNumber = (value: string | undefined): number | undefined => (value === undefined ? undefined : Number(value));
 const presentString = (value: string | undefined): string | undefined => (value && value.length > 0 ? value : undefined);
@@ -1032,7 +1038,7 @@ function validStatusOption(status: string | undefined): (typeof VALID_STATUSES)[
   return status;
 }
 
-function cliMarkSeen(values: CliValues): unknown {
+function cliMarkSeen(values: CliValues, ctx: CliContext): unknown {
   if (!values["posting-id"] || !values["content-id"] || !values.outcome) {
     throw new VacancyStoreError("mark-seen requires --posting-id, --content-id, --outcome");
   }
@@ -1043,11 +1049,11 @@ function cliMarkSeen(values: CliValues): unknown {
     fitScore: optionalNumber(values["fit-score"]),
     fitCategory: values["fit-category"],
     reason: values.reason,
-  });
+  }, { dataDir: ctx.dataDir });
   return { ok: true };
 }
 
-function cliUpsert(values: CliValues): unknown {
+function cliUpsert(values: CliValues, ctx: CliContext): unknown {
   if (!values.company || !values.title) {
     throw new VacancyStoreError("upsert requires --company and --title");
   }
@@ -1078,42 +1084,43 @@ function cliUpsert(values: CliValues): unknown {
     eligibility: eligibilityStatus
       ? { location: { status: eligibilityStatus, reason: values["eligibility-location-reason"] } }
       : undefined,
+    dataDir: ctx.dataDir,
   });
 }
 
-function cliSetStatus(values: CliValues): unknown {
+function cliSetStatus(values: CliValues, ctx: CliContext): unknown {
   if (!values.slug || !values.status || !isValidStatus(values.status)) {
     throw new VacancyStoreError(`set-status requires --slug and --status (one of ${VALID_STATUSES.join(", ")})`);
   }
-  const result = setStatus(values.slug, values.status, values.note);
-  renderBoardsFromCli();
+  const result = setStatus(values.slug, values.status, values.note, { dataDir: ctx.dataDir });
+  ctx.renderBoards();
   return result;
 }
 
-function cliSetArchived(values: CliValues): unknown {
+function cliSetArchived(values: CliValues, ctx: CliContext): unknown {
   if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
     throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
   }
-  const result = setArchived(values.slug, values.archived === "true");
-  renderBoardsFromCli();
+  const result = setArchived(values.slug, values.archived === "true", { dataDir: ctx.dataDir });
+  ctx.renderBoards();
   return result;
 }
 
-function cliAttachArtifact(values: CliValues): unknown {
+function cliAttachArtifact(values: CliValues, ctx: CliContext): unknown {
   if (!values.slug || !values.kind || !values.path) {
     throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
   }
-  return attachArtifact(values.slug, values.kind, values.path);
+  return attachArtifact(values.slug, values.kind, values.path, { dataDir: ctx.dataDir });
 }
 
-function cliAddAlias(values: CliValues): unknown {
+function cliAddAlias(values: CliValues, ctx: CliContext): unknown {
   if (!values.slug || !values.source || !values.url) {
     throw new VacancyStoreError("add-alias requires --slug, --source, --url");
   }
-  return { added: addAlias(values.slug, { source: values.source, url: values.url }) };
+  return { added: addAlias(values.slug, { source: values.source, url: values.url }, { dataDir: ctx.dataDir }) };
 }
 
-function cliRecordScoutOutcomes(values: CliValues): unknown {
+function cliRecordScoutOutcomes(values: CliValues, ctx: CliContext): unknown {
   if (!values.input) {
     throw new VacancyStoreError("record-scout-outcomes requires --input <json>");
   }
@@ -1132,13 +1139,14 @@ function cliRecordScoutOutcomes(values: CliValues): unknown {
       candidate: item.candidate,
       fit: item.fit,
       minFitScore: payload.min_fit_score ?? 4,
+      dataDir: ctx.dataDir,
     })
   );
-  if (results.some((r) => r.outcome === "matched")) renderBoardsFromCli();
+  if (results.some((r) => r.outcome === "matched")) ctx.renderBoards();
   return results;
 }
 
-function cliResolve(values: CliValues): unknown {
+function cliResolve(values: CliValues, ctx: CliContext): unknown {
   const result = resolveVacancy({
     slug: values.slug,
     postingId: values["posting-id"],
@@ -1154,21 +1162,22 @@ function cliResolve(values: CliValues): unknown {
     postingText: presentString(values["posting-text"]),
     status: validStatusOption(values.status),
     trackLabel: presentString(values["track-label"]),
+    dataDir: ctx.dataDir,
   });
-  if ((result as ResolveVacancyResult).changed) renderBoardsFromCli();
+  if ((result as ResolveVacancyResult).changed) ctx.renderBoards();
   return result;
 }
 
-const CLI_COMMANDS: Record<string, (values: CliValues) => unknown> = {
+export const CLI_COMMANDS: Record<string, (values: CliValues, ctx: CliContext) => unknown> = {
   "mark-seen": cliMarkSeen,
   upsert: cliUpsert,
   "set-status": cliSetStatus,
   "set-archived": cliSetArchived,
   // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
-  "relocate-archived": (values) => relocateArchived(DATA_DIR, values.write ?? false),
+  "relocate-archived": (values, ctx) => relocateArchived(ctx.dataDir ?? DATA_DIR, values.write ?? false),
   "attach-artifact": cliAttachArtifact,
-  list: (values) => listVacancies(values.status, { includeArchived: values["include-archived"] }),
-  find: (values) => findVacancies({ url: values.url, company: values.company, title: values.title }),
+  list: (values, ctx) => listVacancies(values.status, { includeArchived: values["include-archived"], dataDir: ctx.dataDir }),
+  find: (values, ctx) => findVacancies({ url: values.url, company: values.company, title: values.title }, { dataDir: ctx.dataDir }),
   "add-alias": cliAddAlias,
   "record-scout-outcomes": cliRecordScoutOutcomes,
   resolve: cliResolve,
@@ -1184,7 +1193,7 @@ function cli(): void {
       `Unknown command ${JSON.stringify(command)} -- expected one of: ${Object.keys(CLI_COMMANDS).join(", ")}`
     );
   }
-  console.log(JSON.stringify(handler(values), null, 2));
+  console.log(JSON.stringify(handler(values, { renderBoards: renderBoardsFromCli }), null, 2));
 }
 
 if (require.main === module) {

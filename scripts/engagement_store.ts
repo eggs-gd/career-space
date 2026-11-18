@@ -208,28 +208,39 @@ function renderBoardsFromCli(): void {
   renderBoards();
 }
 
-type CliValues = {
-  client: string;
-  title: string;
-  url: string;
-  source: string;
-  "posting-text": string;
-  "fit-score"?: string;
-  "fit-category"?: string;
-  "fit-reason"?: string;
-  "judged-at"?: string;
-  status?: string;
-  slug?: string;
-  note?: string;
-  kind?: string;
-  path?: string;
-  archived?: string;
-  "include-archived"?: boolean;
-  write?: boolean;
-};
+const CLI_OPTIONS = {
+  client: { type: "string", default: "" },
+  title: { type: "string", default: "" },
+  url: { type: "string", default: "" },
+  source: { type: "string", default: "" },
+  "posting-text": { type: "string", default: "" },
+  "fit-score": { type: "string" },
+  "fit-category": { type: "string" },
+  "fit-reason": { type: "string" },
+  "judged-at": { type: "string" },
+  status: { type: "string" },
+  slug: { type: "string" },
+  note: { type: "string" },
+  kind: { type: "string" },
+  path: { type: "string" },
+  archived: { type: "string" },
+  "include-archived": { type: "boolean" },
+  write: { type: "boolean" },
+} as const;
 
-const CLI_COMMANDS: Record<string, (values: CliValues) => unknown> = {
-  upsert: (values) => {
+export function parseCli(args?: string[]) {
+  return parseArgs({ args, allowPositionals: true, options: CLI_OPTIONS });
+}
+type CliValues = ReturnType<typeof parseCli>["values"];
+
+/** Where a CLI command reads and writes, and what it calls to refresh the boards. */
+export interface CliContext {
+  dataDir?: string;
+  renderBoards: () => void;
+}
+
+export const CLI_COMMANDS: Record<string, (values: CliValues, ctx: CliContext) => unknown> = {
+  upsert: (values, ctx) => {
     if (!values.title) throw new VacancyStoreError("upsert requires --title");
     const result = upsertEngagement({
       client: values.client,
@@ -242,60 +253,40 @@ const CLI_COMMANDS: Record<string, (values: CliValues) => unknown> = {
       fitCategory: values["fit-category"],
       fitReason: values["fit-reason"],
       status: values.status,
+      dataDir: ctx.dataDir,
     });
-    renderBoardsFromCli();
+    ctx.renderBoards();
     return result;
   },
-  "set-status": (values) => {
+  "set-status": (values, ctx) => {
     if (!values.slug || !values.status) throw new VacancyStoreError("set-status requires --slug and --status");
-    const result = setEngagementStatus(values.slug, values.status, values.note);
-    renderBoardsFromCli();
+    const result = setEngagementStatus(values.slug, values.status, values.note, ctx.dataDir);
+    ctx.renderBoards();
     return result;
   },
-  "set-archived": (values) => {
+  "set-archived": (values, ctx) => {
     if (!values.slug || (values.archived !== "true" && values.archived !== "false")) {
       throw new VacancyStoreError("set-archived requires --slug and --archived true|false");
     }
-    const result = setEngagementArchived(values.slug, values.archived === "true");
-    renderBoardsFromCli();
+    const result = setEngagementArchived(values.slug, values.archived === "true", ctx.dataDir);
+    ctx.renderBoards();
     return result;
   },
   // Dry run unless --write: lists folders whose location disagrees with their `archived` flag.
-  "relocate-archived": (values) => relocateArchived(ENGAGEMENTS_DIR, values.write ?? false),
+  "relocate-archived": (values, ctx) => relocateArchived(ctx.dataDir ?? ENGAGEMENTS_DIR, values.write ?? false),
   // No re-render here -- matches `vacancy_store.js attach-artifact` and the `engagement_attach_artifact`
   // MCP tool, both of which leave the board to the next status/upsert call.
-  "attach-artifact": (values) => {
+  "attach-artifact": (values, ctx) => {
     if (!values.slug || !values.kind || !values.path) {
       throw new VacancyStoreError("attach-artifact requires --slug, --kind, --path");
     }
-    return attachEngagementArtifact(values.slug, values.kind, values.path);
+    return attachEngagementArtifact(values.slug, values.kind, values.path, ctx.dataDir);
   },
-  list: (values) => listEngagements({ includeArchived: values["include-archived"] }),
+  list: (values, ctx) => listEngagements({ includeArchived: values["include-archived"], dataDir: ctx.dataDir }),
 };
 
 function cli(): void {
-  const { values, positionals } = parseArgs({
-    allowPositionals: true,
-    options: {
-      client: { type: "string", default: "" },
-      title: { type: "string", default: "" },
-      url: { type: "string", default: "" },
-      source: { type: "string", default: "" },
-      "posting-text": { type: "string", default: "" },
-      "fit-score": { type: "string" },
-      "fit-category": { type: "string" },
-      "fit-reason": { type: "string" },
-      "judged-at": { type: "string" },
-      status: { type: "string" },
-      slug: { type: "string" },
-      note: { type: "string" },
-      kind: { type: "string" },
-      path: { type: "string" },
-      archived: { type: "string" },
-      "include-archived": { type: "boolean" },
-      write: { type: "boolean" },
-    },
-  });
+  const { values, positionals } = parseCli();
   const command = positionals[0];
   const handler = command !== undefined && Object.hasOwn(CLI_COMMANDS, command) ? CLI_COMMANDS[command] : undefined;
   if (!handler) {
@@ -303,8 +294,7 @@ function cli(): void {
       `Unknown command ${JSON.stringify(command)} -- expected: ${Object.keys(CLI_COMMANDS).join(", ")}`
     );
   }
-  const result = handler(values);
-  console.log(JSON.stringify(result, null, 2));
+  console.log(JSON.stringify(handler(values, { renderBoards: renderBoardsFromCli }), null, 2));
 }
 
 if (require.main === module) {

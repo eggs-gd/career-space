@@ -232,3 +232,52 @@ test("justjoin lists offers (detail text for a relevant title) and nofluff reads
   assert.equal(nf[1]!.location, "Poland");
   assert.match(nf[0]!.description, /Req\nDet/);
 });
+
+test("a failing board is reported once and keeps what was already read", async (t) => {
+  routeFetch(t, () => FAIL);
+  const [wk, wkError] = await FEED_FETCHERS.workable!(OPTS);
+  assert.deepEqual(wk, []);
+  assert.match(wkError ?? "", /Workable \(engineering manager\)/);
+  assert.match((await FEED_FETCHERS.smartrecruiters!(OPTS))[1] ?? "", /SmartRecruiters \(/);
+  assert.match((await FEED_FETCHERS.jobico!(OPTS))[1] ?? "", /Jobico \(/);
+  assert.match((await FEED_FETCHERS.justjoin!(OPTS))[1] ?? "", /JustJoin\.it \(page 1\)/);
+  assert.match((await FEED_FETCHERS.nofluff!(OPTS))[1] ?? "", /NoFluffJobs/);
+});
+
+test("a failing detail fetch is reported for smartrecruiters and jobico, and the posting is kept", async (t) => {
+  routeFetch(t, (url, body) => {
+    if (url.includes("sr-jobs/search")) {
+      return { content: [{ name: "Engineering Manager", actions: { details: "https://sr/detail/1" } }] };
+    }
+    if (url.includes("sr/detail")) return FAIL;
+    const call = JSON.parse(body).params;
+    if (call.name === "search_jobs") return { result: { structuredContent: { jobs: [{ title: "Engineering Manager", slug: "em" }] } } };
+    return { error: { message: "boom" } };
+  });
+  const [sr, srError] = await FEED_FETCHERS.smartrecruiters!(OPTS);
+  assert.equal(sr.length, 1);
+  assert.match(srError ?? "", /SmartRecruiters detail/);
+  const [jc, jcError] = await FEED_FETCHERS.jobico!(OPTS);
+  assert.equal(jc.length, 1);
+  assert.match(jcError ?? "", /Jobico detail/);
+});
+
+test("resolvePostingFromUrl reports a failing platform per host", async (t) => {
+  const uuid = "123e4567-e89b-12d3-a456-426614174000";
+  routeFetch(t, () => FAIL);
+  for (const [url, expected] of [
+    [`https://jobs.lever.co/acme/${uuid}`, /lever \(acme\//],
+    ["https://acme.recruitee.com/o/role", /recruitee \(acme\/role\)/],
+    [`https://jobs.ashbyhq.com/acme/${uuid}`, /ashby \(acme\)/],
+    ["https://jobs.workable.com/view/AbC123", /workable \(AbC123\)/],
+  ] as const) {
+    const result = await resolvePostingFromUrl(url);
+    assert.ok(result.matched && result.posting === null, url);
+    assert.match(result.error, expected);
+  }
+  routeFetch(t, () => ({ error: { message: "boom" } }));
+  const jobico = await resolvePostingFromUrl("https://jobico.io/jobs/x");
+  assert.ok(jobico.matched && jobico.posting === null);
+  assert.match(jobico.error, /jobico\.io: /);
+  assert.deepEqual(await resolvePostingFromUrl("https://acme.recruitee.com/other"), { matched: false });
+});
