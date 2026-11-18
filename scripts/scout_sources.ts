@@ -143,7 +143,7 @@ async function fetchGreenhouse(company: CompanyConfig): Promise<FetchResult> {
       source: "greenhouse",
       company: company.name,
       title: job.title ?? "",
-      location: (job.location ?? {}).name ?? "",
+      location: job.location?.name ?? "",
       url: job.absolute_url ?? "",
       description: stripHtml(job.content ?? ""),
       postedAt: job.updated_at ?? "",
@@ -166,8 +166,8 @@ async function fetchLever(company: CompanyConfig): Promise<FetchResult> {
     const parts = [job.descriptionPlain ?? ""];
     for (const lst of job.lists ?? []) parts.push(stripHtml(lst.content ?? ""));
     parts.push(job.additionalPlain ?? "");
-    const description = parts.filter((p) => p).join("\n");
-    const locFull = [loc, cats.team ?? "", cats.commitment ?? ""].filter((x) => x).join(", ");
+    const description = parts.filter(Boolean).join("\n");
+    const locFull = [loc, cats.team ?? "", cats.commitment ?? ""].filter(Boolean).join(", ");
     return makePosting({
       source: "lever",
       company: company.name,
@@ -195,9 +195,9 @@ async function fetchAshby(company: CompanyConfig): Promise<FetchResult> {
     const loc = job.location ?? "";
     const secondary = (job.secondaryLocations ?? [])
       .map((s: any) => s.location ?? "")
-      .filter((x: string) => x)
+      .filter(Boolean)
       .join(", ");
-    const locFull = [loc, secondary].filter((x) => x).join(", ");
+    const locFull = [loc, secondary].filter(Boolean).join(", ");
     const description = job.descriptionPlain || stripHtml(job.descriptionHtml ?? "");
     const remoteOverride = Boolean(job.isRemote || job.workplaceType === "Remote") || null;
     postings.push(
@@ -226,7 +226,7 @@ async function fetchRecruitee(company: CompanyConfig): Promise<FetchResult> {
     return [[], `${company.name} (recruitee/${company.slug}): ${errorMessage(error)}`];
   }
   const postings = (data.offers ?? []).map((offer: any) => {
-    const loc = [offer.city, offer.country].filter((x) => x).map(String).join(", ");
+    const loc = [offer.city, offer.country].filter(Boolean).map(String).join(", ");
     const description = stripHtml(`${offer.description ?? ""} ${offer.requirements ?? ""}`);
     const remoteOverride = ["true", "1", "yes"].includes(String(offer.remote ?? "").toLowerCase()) || null;
     return makePosting({
@@ -308,11 +308,11 @@ async function fetchWorkable({ trackTitles }: FeedFetchOpts): Promise<FetchResul
       for (const job of data.jobs ?? []) {
         const company = job.company ?? {};
         const loc = job.location ?? {};
-        let locStr = [loc.city, loc.subregion, loc.countryName].filter((x) => x).map(String).join(", ");
+        let locStr = [loc.city, loc.subregion, loc.countryName].filter(Boolean).map(String).join(", ");
         const workplace = (job.workplace ?? "").toLowerCase();
         if (workplace === "remote") locStr = locStr ? `Remote, ${locStr}` : "Remote";
         const description = stripHtml(
-          [job.description, job.requirementsSection, job.benefitsSection].filter((x) => x).join(" ")
+          [job.description, job.requirementsSection, job.benefitsSection].filter(Boolean).join(" ")
         );
         postings.push(
           makePosting({
@@ -353,7 +353,7 @@ async function fetchSmartrecruiters({ trackTitles, roleSignals }: FeedFetchOpts)
     for (const job of data.content ?? []) {
       const company = job.company ?? {};
       const loc = job.location ?? {};
-      const locStr = [loc.city, loc.region, (loc.country ?? "").toUpperCase()].filter((x) => x).join(", ");
+      const locStr = [loc.city, loc.region, (loc.country ?? "").toUpperCase()].filter(Boolean).join(", ");
       const title = job.name ?? "";
       let description = "";
       // Relevance gate via worthDetailFetch (trackTitles + roleSignals), not `queries` (the
@@ -364,12 +364,12 @@ async function fetchSmartrecruiters({ trackTitles, roleSignals }: FeedFetchOpts)
       // could be found by search yet never get its real description fetched, silently degrading
       // to a title-only stub downstream.
       if (detailBudget > 0 && worthDetailFetch(title, trackTitles, roleSignals)) {
-        const detailUrl = (job.actions ?? {}).details;
+        const detailUrl = job.actions?.details;
         if (detailUrl) {
           detailBudget -= 1;
           try {
             const detail = await getJson(detailUrl);
-            const sections = (detail.jobAd ?? {}).sections ?? {};
+            const sections = detail.jobAd?.sections ?? {};
             description = stripHtml(
               Object.values(sections)
                 .filter((s: any) => s && typeof s === "object")
@@ -461,19 +461,19 @@ async function fetchJobico({ trackTitles, roleSignals }: FeedFetchOpts): Promise
         try {
           const detail = await postJobicoTool("get_job", { slug: job.slug });
           description = [detail.description, detail.requirements, detail.niceToHave, detail.responsibilities, techStack]
-            .filter((x) => x)
+            .filter(Boolean)
             .join("\n\n");
         } catch (detailError) {
           error = `Jobico detail (${title}): ${errorMessage(detailError)}`;
         }
       }
-      const locParts = [job.city, job.country].filter((x: any) => x);
+      const locParts = [job.city, job.country].filter(Boolean);
       let location = locParts.join(", ");
       if (job.locationType === "remote") location = location ? `Remote, ${location}` : "Remote";
       postings.push(
         makePosting({
           source: "jobico",
-          company: (job.company ?? {}).name ?? "?",
+          company: job.company?.name ?? "?",
           title,
           location,
           url: job.url ?? "",
@@ -611,7 +611,7 @@ async function fetchHimalayas(): Promise<FetchResult> {
 const ITEM_RE = /<item>(.*?)<\/item>/gs;
 const RSS_FIELD_NAMES = ["title", "link", "description", "pubDate", "region"] as const;
 const FIELD_RE: Record<(typeof RSS_FIELD_NAMES)[number], RegExp> = Object.fromEntries(
-  RSS_FIELD_NAMES.map((key) => [key, new RegExp(`<${key}>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?</${key}>`, "s")])
+  RSS_FIELD_NAMES.map((key) => [key, new RegExp(String.raw`<${key}>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</${key}>`, "s")])
 ) as any;
 
 async function fetchWeworkremotely(): Promise<FetchResult> {
@@ -816,7 +816,7 @@ async function fetchJustjoin({ trackTitles, roleSignals }: FeedFetchOpts, pages 
         }
       }
       const description = `${title}\n${body}\n${skills}\n${offer.experienceLevel ?? ""}`;
-      const loc = [offer.city ?? "", offer.workplaceType ?? ""].filter((x) => x).join(", ");
+      const loc = [offer.city ?? "", offer.workplaceType ?? ""].filter(Boolean).join(", ");
       postings.push(
         makePosting({
           source: "justjoin",
@@ -845,7 +845,7 @@ async function fetchNofluff({ trackTitles, roleSignals }: FeedFetchOpts): Promis
   }
   const postings: Posting[] = [];
   for (const postingData of data.postings ?? []) {
-    const places = (postingData.location ?? {}).places ?? [];
+    const places = postingData.location?.places ?? [];
     const city = places.length > 0 ? places[0].city ?? "" : "";
     let body = "";
     const title = (postingData.title ?? "").trim();
@@ -1131,16 +1131,16 @@ export async function resolvePostingFromUrl(rawUrl: string): Promise<UrlResolveR
       if (!detail.found) return { matched: true, posting: null, error: `jobico.io: no job found for slug ${m[1]}` };
       const techStack = (detail.techStack ?? []).join(" ");
       const description = [detail.description, detail.requirements, detail.niceToHave, detail.responsibilities, techStack]
-        .filter((x: unknown) => x)
+        .filter(Boolean)
         .join("\n\n");
-      const locParts = [detail.city, detail.country].filter((x: unknown) => x);
+      const locParts = [detail.city, detail.country].filter(Boolean);
       let location = locParts.join(", ");
       if (detail.locationType === "remote") location = location ? `Remote, ${location}` : "Remote";
       return {
         matched: true,
         posting: makePosting({
           source: "jobico",
-          company: (detail.company ?? {}).name ?? "?",
+          company: detail.company?.name ?? "?",
           title: detail.title ?? "",
           location,
           url: detail.url ?? rawUrl,
@@ -1166,7 +1166,7 @@ export async function resolvePostingFromUrl(rawUrl: string): Promise<UrlResolveR
           source: "greenhouse",
           company: detail.company_name ?? company,
           title: detail.title ?? "",
-          location: (detail.location ?? {}).name ?? "",
+          location: detail.location?.name ?? "",
           url: detail.absolute_url ?? rawUrl,
           description: stripHtml(detail.content ?? ""),
           postedAt: detail.updated_at ?? "",
@@ -1188,8 +1188,8 @@ export async function resolvePostingFromUrl(rawUrl: string): Promise<UrlResolveR
       const parts = [detail.descriptionPlain ?? ""];
       for (const lst of detail.lists ?? []) parts.push(stripHtml(lst.content ?? ""));
       parts.push(detail.additionalPlain ?? "");
-      const description = parts.filter((p: string) => p).join("\n");
-      const locFull = [loc, cats.team ?? "", cats.commitment ?? ""].filter((x: unknown) => x).join(", ");
+      const description = parts.filter(Boolean).join("\n");
+      const locFull = [loc, cats.team ?? "", cats.commitment ?? ""].filter(Boolean).join(", ");
       return {
         matched: true,
         posting: makePosting({
@@ -1216,7 +1216,7 @@ export async function resolvePostingFromUrl(rawUrl: string): Promise<UrlResolveR
     try {
       const data = await getJson(`https://${company}.recruitee.com/api/offers/${slug}`);
       const offer = data.offer ?? {};
-      const loc = [offer.city, offer.country].filter((x: unknown) => x).map(String).join(", ");
+      const loc = [offer.city, offer.country].filter(Boolean).map(String).join(", ");
       const description = stripHtml(`${offer.description ?? ""} ${offer.requirements ?? ""}`);
       const remoteOverride = ["true", "1", "yes"].includes(String(offer.remote ?? "").toLowerCase()) || null;
       return {
@@ -1248,9 +1248,9 @@ export async function resolvePostingFromUrl(rawUrl: string): Promise<UrlResolveR
       const loc = job.location ?? "";
       const secondary = (job.secondaryLocations ?? [])
         .map((s: any) => s.location ?? "")
-        .filter((x: string) => x)
+        .filter(Boolean)
         .join(", ");
-      const locFull = [loc, secondary].filter((x: unknown) => x).join(", ");
+      const locFull = [loc, secondary].filter(Boolean).join(", ");
       const description = job.descriptionPlain || stripHtml(job.descriptionHtml ?? "");
       const remoteOverride = Boolean(job.isRemote || job.workplaceType === "Remote") || null;
       return {
@@ -1281,17 +1281,17 @@ export async function resolvePostingFromUrl(rawUrl: string): Promise<UrlResolveR
     try {
       const job = await getJson(`https://jobs.workable.com/api/v1/jobs/${shortcode}`);
       const loc = job.location ?? {};
-      let location = [loc.city, loc.subregion, loc.countryName].filter((x: unknown) => x).map(String).join(", ");
+      let location = [loc.city, loc.subregion, loc.countryName].filter(Boolean).map(String).join(", ");
       const workplace = String(job.workplace ?? "").toLowerCase();
       if (workplace === "remote") location = location ? `Remote, ${location}` : "Remote";
       const description = stripHtml(
-        [job.description, job.requirementsSection, job.benefitsSection].filter((x: unknown) => x).join(" ")
+        [job.description, job.requirementsSection, job.benefitsSection].filter(Boolean).join(" ")
       );
       return {
         matched: true,
         posting: makePosting({
           source: "workable",
-          company: (job.company ?? {}).title ?? "?",
+          company: job.company?.title ?? "?",
           title: job.title ?? "",
           location,
           url: job.url ?? rawUrl,

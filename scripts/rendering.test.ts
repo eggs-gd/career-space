@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { pdfLaunchBlocker, renderBoardHtml, renderBoardMd, renderEngagementsHtml, renderEngagementsMd, writePdfDetailed } from "./rendering";
 
 test("board renders location-exception metadata as a visible badge", () => {
@@ -169,4 +169,18 @@ test("a markdown board cell is one line with its pipes and backslashes escaped",
   const md = renderBoardMd(vacancies);
   assert.ok(md.includes(String.raw`| Acme \| Co | Dev\\\|Ops Lead |`), md);
   assert.equal(md.split("\n").filter((line) => line.includes("Acme")).length, 1, "one row, the newline became a space");
+});
+
+test("the copy payload says '7/10' or that fitment has not run, for a vacancy and for an engagement", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "board-fit-"));
+  const vacancy = (slug: string, fit_score: number | null) => ({ slug, status: "new", company: "Acme", title: "Dev", fit_score, files: [] });
+  const board = renderBoardHtml([vacancy("a", 7), vacancy("b", null)], { vacancyDirFn: (s) => path.join(root, s) });
+  assert.match(board, /Fitment: 7\/10/);
+  assert.match(board, /Fitment: not yet assessed/);
+  const engagement = (slug: string, fit_score: number | null, fit_category: string | null) => ({
+    slug, status: "tracked", client: "Nimbus", title: "Sync", fit_score, fit_category, archived: false, files: [],
+  });
+  const orders = renderEngagementsHtml([engagement("x", 8, "good_bet"), engagement("y", null, null)], { engagementDirFn: (s) => path.join(root, s) });
+  assert.match(orders, /Fit: 8\/10 \(good_bet\)/);
+  assert.match(orders, /Fit: not assessed(?! \()/);
 });

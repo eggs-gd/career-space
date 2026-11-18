@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as yaml from "js-yaml";
-import { parseArgs } from "util";
+import { parseArgs } from "node:util";
 import { isLocationEligibilityStatus } from "./eligibility";
 import { TRACK_KIND_FALLBACK, TRACK_KIND_PRIMARY, loadScoutConfig } from "./scout_domain";
 import { FEED_FETCHERS, PER_COMPANY_FETCHERS } from "./scout_sources";

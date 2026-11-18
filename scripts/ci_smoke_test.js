@@ -17,8 +17,8 @@
  * and stdout/stderr are printed so the Actions log shows exactly what broke.
  */
 
-const { spawn } = require('child_process');
-const path = require('path');
+const { spawn } = require('node:child_process');
+const path = require('node:path');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const TIMEOUT_MS = 180_000; // generous: first run also runs npm ci + npm run build (Puppeteer's Chromium download included)

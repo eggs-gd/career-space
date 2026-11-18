@@ -6,8 +6,8 @@
  * `_`-prefixed names under a root are reserved (slugs are `[a-z0-9-]`, never start with one).
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as yaml from "js-yaml";
 
 export const ARCHIVE_DIRNAME = "_archive";

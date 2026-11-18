@@ -16,10 +16,10 @@
  * Usage: node scripts/dist/rescore.js [--write] [--data-dir <dir>]
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as yaml from "js-yaml";
-import { parseArgs } from "util";
+import { parseArgs } from "node:util";
 import { listOpportunityDirs } from "./opportunity_dirs";
 import { REPO_ROOT } from "./repo_paths";
 import { Assessment, evaluate, persistFitment } from "./score_fit";

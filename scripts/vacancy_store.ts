@@ -6,10 +6,10 @@
  *   artifacts for that vacancy.
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as yaml from "js-yaml";
-import { parseArgs } from "util";
+import { parseArgs } from "node:util";
 import { Eligibility, eligibilityForSource, isLocationEligibilityStatus, normalizeEligibility } from "./eligibility";
 import { listOpportunityDirs, moveToHome, opportunityDir, relocateArchived } from "./opportunity_dirs";
 import { jobKey } from "./job_links";
@@ -843,7 +843,7 @@ export function setStatus(slug: string, status: VacancyStatus, note?: string, sc
     record.status = status;
     setdefault(record, "status_history", []);
     const entry: Rec = { status, at: nowStr };
-    if (note && note.trim()) entry.note = note.trim();
+    if (note?.trim()) entry.note = note.trim();
     record.status_history.push(entry);
     record.updated_at = nowStr;
     writeYamlRecord(rpath, record);

@@ -17,9 +17,9 @@
  * first.
  */
 
-const { spawnSync, spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+const { spawnSync, spawn } = require('node:child_process');
+const path = require('node:path');
+const fs = require('node:fs');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const SERVER_ENTRY = path.join(REPO_ROOT, 'scripts', 'dist', 'mcp_server.js');
@@ -89,7 +89,8 @@ function main() {
     process.exit(1);
   });
   child.on('exit', (code, signal) => {
-    process.exit(code === null ? (signal ? 1 : 0) : code);
+    if (code !== null) process.exit(code);
+    process.exit(signal ? 1 : 0);
   });
 }
 

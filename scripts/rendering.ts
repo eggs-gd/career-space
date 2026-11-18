@@ -5,9 +5,9 @@
  * because it needs loops over statuses, files, and folder links.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { pathToFileURL } from "url";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import * as yaml from "js-yaml";
 import MarkdownIt from "markdown-it";
 // @ts-expect-error -- markdown-it-footnote ships no types of its own
@@ -17,7 +17,7 @@ import { formatCvMarkdown } from "./markdown_normalize";
 import { opportunityDir } from "./opportunity_dirs";
 import { vacancyDir as defaultVacancyDir } from "./vacancy_store";
 import { matchesLocalKeywords } from "./scout_prefilter";
-import { oneLine, trimChar } from "./text_utils";
+import { compareText, oneLine, trimChar } from "./text_utils";
 
 const TEMPLATE_DIR = path.join(__dirname, "..", "templates");
 const CONFIG_PATH = path.join(REPO_ROOT, "data", "config.yaml");
@@ -38,16 +38,21 @@ export function listResumeStyles(): string[] {
  * `select_autoescape`), never for a value the original marked `| safe`. */
 function escapeHtml(value: string): string {
   return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/'/g, "&#39;")
-    .replace(/"/g, "&#34;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("'", "&#39;")
+    .replaceAll('"', "&#34;");
 }
 
 /** One markdown table cell: a single line, backslashes and pipes escaped. */
 function markdownCell(value: string | null | undefined): string {
   return oneLine(value ?? "").replaceAll("\\", String.raw`\\`).replaceAll("|", String.raw`\|`);
+}
+
+/** "<score>/10", or `none` when fitment has not run. */
+function fitText(score: number | null | undefined, none: string): string {
+  return score === null || score === undefined ? none : `${score}/10`;
 }
 
 /** One filename-safe segment: non-alphanumerics collapse to a single underscore, no leading/
@@ -63,7 +68,7 @@ function filenamePart(text: string): string {
 function candidateFullName(): string {
   try {
     const parsed = (yaml.load(fs.readFileSync(CONFIG_PATH, "utf-8")) ?? {}) as Record<string, any>;
-    const name = (parsed.shared ?? {}).full_name;
+    const name = parsed.shared?.full_name;
     if (name && String(name).trim()) return String(name).trim();
   } catch {
     // Missing/unreadable config -- fall through to the generic label below, same as Python's
@@ -110,7 +115,7 @@ export function resumeOutputStem(markdownPath: string): string {
   } else {
     const stem = path.basename(markdownPath, path.extname(markdownPath));
     const withoutPrefix = stem.startsWith("universal-") ? stem.slice("universal-".length) : stem;
-    role = titleCase(withoutPrefix.replace(/-/g, " ").replace(/_/g, " "));
+    role = titleCase(withoutPrefix.replaceAll("-", " ").replaceAll("_", " "));
   }
   const parts = [candidateFullName(), "Resume"];
   if (role) parts.push(role);
@@ -318,9 +323,9 @@ function formatGeneratedAt(d: Date): string {
  * `good_bet` / `thin_margin` / ...). Per-category color lives in `board/head.html.j2` as
  * `.fit-cat-<category>`. Empty string when fitment hasn't run. */
 function fitCategoryPill(category: unknown): string {
-  const cat = String(category ?? "").trim();
+  const cat = typeof category === "string" ? category.trim() : "";
   if (!cat) return "";
-  return `<span class="fit-cat fit-cat-${escapeHtml(cat)}">${escapeHtml(cat.replace(/_/g, " "))}</span>`;
+  return `<span class="fit-cat fit-cat-${escapeHtml(cat)}">${escapeHtml(cat.replaceAll("_", " "))}</span>`;
 }
 
 type Rec = Record<string, any>;
@@ -392,7 +397,7 @@ export function renderBoardHtml(
       if (fa !== fb) return fa - fb;
       const ca = String(a.company ?? "");
       const cb = String(b.company ?? "");
-      return ca < cb ? -1 : ca > cb ? 1 : 0;
+      return compareText(ca, cb);
     });
     total += rows.length;
 
@@ -415,7 +420,7 @@ export function renderBoardHtml(
         let contentHtml: string;
         if (raw.trim()) {
           // Escape raw HTML in vacancy documents before markdown rendering.
-          const escaped = raw.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+          const escaped = raw.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
           contentHtml = md.render(escaped);
         } else {
           contentHtml = "<p><em>Empty.</em></p>";
@@ -439,7 +444,7 @@ export function renderBoardHtml(
         `Company: ${v.company ?? ""}`,
         `URL: ${v.url ?? ""}`,
         `Status: ${v.status ?? ""}`,
-        `Fitment: ${v.fit_score !== null && v.fit_score !== undefined ? `${v.fit_score}/10` : "not yet assessed"}`,
+        `Fitment: ${fitText(v.fit_score, "not yet assessed")}`,
         `Vacancy ID: ${slug}`,
       ].join("\n");
       const result: Rec = { ...v, slug, fileButtons, folderUrl, folderFiles, folderHasCv, copyPayload, updatedShort: boardUpdatedShort(v.updated_at ?? ""), isLocal };
@@ -642,7 +647,7 @@ export function renderEngagementsHtml(engagements: Rec[], opts: { title?: string
               return "";
             }
             const contentHtml = raw.trim()
-              ? md.render(raw.replace(/&/g, "&amp;").replace(/</g, "&lt;"))
+              ? md.render(raw.replaceAll("&", "&amp;").replaceAll("<", "&lt;"))
               : "<p><em>Empty.</em></p>";
             return `<details class="file" name="panel-${escapeHtml(slug)}"><summary>${escapeHtml(
               BOARD_FILE_LABELS[fname] ?? fname
@@ -663,12 +668,13 @@ export function renderEngagementsHtml(engagements: Rec[], opts: { title?: string
           ? `<a class="posting-link" href="${escapeHtml(String(o.url))}" target="_blank" rel="noopener">posting&nbsp;&#8599;</a>`
           : "";
         const archivedBadgeHtml = o.archived ? `<span class="archived-badge">Archived</span>` : "";
+        const fitCategorySuffix = o.fit_category ? ` (${o.fit_category})` : "";
         const copyPayload = [
           `Title: ${o.title ?? ""}`,
           `Client: ${o.client ?? ""}`,
           `URL: ${o.url ?? ""}`,
           `Status: ${o.status ?? ""}`,
-          `Fit: ${o.fit_score !== null && o.fit_score !== undefined ? `${o.fit_score}/10` : "not assessed"}${o.fit_category ? ` (${o.fit_category})` : ""}`,
+          `Fit: ${fitText(o.fit_score, "not assessed")}${fitCategorySuffix}`,
           `Order ID: ${slug}`,
         ].join("\n");
         const copyButtonHtml = `<button type="button" class="copy-btn" data-copy="${escapeHtml(JSON.stringify(copyPayload))}">Copy</button>`;
@@ -752,7 +758,9 @@ export function pdfLaunchBlocker(
   platform: NodeJS.Platform = process.platform
 ): string | null {
   if (platform !== "darwin" || env.CAREER_SPACE_PDF_FORCE === "1") return null;
-  const marker = env.CODEX_SANDBOX ? `CODEX_SANDBOX=${env.CODEX_SANDBOX}` : env.SANDBOX_RUNTIME ? "SANDBOX_RUNTIME" : "";
+  let marker = "";
+  if (env.CODEX_SANDBOX) marker = `CODEX_SANDBOX=${env.CODEX_SANDBOX}`;
+  else if (env.SANDBOX_RUNTIME) marker = "SANDBOX_RUNTIME";
   if (!marker) return null;
   return `this process runs inside an OS sandbox (${marker}), where Chrome aborts at launch on macOS; run the same render outside the sandbox (an approved escalation), do not swap the browser`;
 }

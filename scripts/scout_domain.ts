@@ -6,7 +6,7 @@
  * exclusions, company list, and feed selection, personal to whoever's `data/` this is.
  */
 
-import * as fs from "fs";
+import * as fs from "node:fs";
 import * as yaml from "js-yaml";
 import * as postingIds from "./posting_ids";
 
@@ -283,7 +283,7 @@ export class ScoutConfig {
     for (const track of this.tracks.values()) {
       if (!track.titles.some((phrase) => titleHasPhrase(titleLower, phrase))) continue;
       if (track.kind === TRACK_KIND_FALLBACK) {
-        if (fallbackMatch === null) fallbackMatch = track;
+        fallbackMatch ??= track;
         continue;
       }
       return track;
@@ -312,6 +312,13 @@ export function titleHasPhrase(titleLower: string, phrase: string): boolean {
     from = titleLower.indexOf(phrase, from + 1);
   }
   return false;
+}
+
+/** A YAML scalar as text; `fallback` for a missing value or a non-scalar. */
+function textOr(value: unknown, fallback: string): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return fallback;
 }
 
 function asStringTuple(value: unknown): string[] {
@@ -348,8 +355,8 @@ export function loadScoutConfig(path: string): ScoutConfig {
       throw new ScoutConfigError(`tracks.${key} in data/sources.yaml must be a mapping, got ${JSON.stringify(spec)}`);
     }
     tracks.set(key, {
-      label: String(spec.label ?? key),
-      kind: String(spec.kind ?? TRACK_KIND_PRIMARY),
+      label: textOr(spec.label, key),
+      kind: textOr(spec.kind, TRACK_KIND_PRIMARY),
       titles: asStringTuple(spec.titles),
       hiringTitles: asStringTuple(spec.hiring_titles),
       uaCategories: asStringTuplePreserveCase(spec.ua_categories),

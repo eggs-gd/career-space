@@ -18,9 +18,9 @@
  * no shell-escaping anything.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { parseArgs } from "util";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parseArgs } from "node:util";
 import * as vacancyStore from "./vacancy_store";
 import { ScoutConfigError, loadScoutConfig } from "./scout_domain";
 import { classifyTrackMatch, collapseDuplicates, filterPostings, trackMatchLabel } from "./scout_prefilter";

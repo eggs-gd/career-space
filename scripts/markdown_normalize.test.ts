@@ -4,6 +4,7 @@ import {
   ensureCleanMarkdown,
   normalizeMarkdownStructure,
   applyAsciiTypographyToText,
+  normalizeAsciiTypographyOutsideFences,
 } from "./markdown_normalize";
 
 test("ensureCleanMarkdown strips a wrapping code fence", () => {
@@ -48,4 +49,11 @@ test("applyAsciiTypographyToText normalizes nbsp/narrow-nbsp/soft-hyphen/minus b
   assert.equal(applyAsciiTypographyToText(`soft${String.fromCodePoint(0x00ad)}hyphen`), "softhyphen");
   assert.equal(applyAsciiTypographyToText(`non${String.fromCodePoint(0x2011)}breaking`), "non-breaking");
   assert.equal(applyAsciiTypographyToText(`minus${String.fromCodePoint(0x2212)}sign`), "minus-sign");
+});
+
+test("typography outside fences handles CRLF input and leaves fenced code alone", () => {
+  const out = normalizeAsciiTypographyOutsideFences("“quoted” — here\r\n```\r\n“keep”\r\n```\r\n");
+  assert.ok(!out.includes("\r"));
+  assert.ok(out.startsWith('"quoted"'));
+  assert.ok(out.includes("“keep”"));
 });

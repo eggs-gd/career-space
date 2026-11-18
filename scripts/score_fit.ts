@@ -55,9 +55,9 @@
  * than guessing which one was "meant".
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { parseArgs } from "util";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parseArgs } from "node:util";
 import { Eligibility, normalizeEligibility } from "./eligibility";
 
 interface Requirement {
@@ -311,8 +311,7 @@ export function evaluate(assessment: Assessment): FitResult {
   if (explanation) lines.push(`*${explanation}*`);
   const jobSummary = (assessment.job_summary ?? "").trim();
   if (jobSummary) {
-    lines.push("");
-    lines.push(jobSummary);
+    lines.push("", jobSummary);
   }
   const locationEligibility = eligibility?.location;
   if (locationEligibility) {
@@ -321,8 +320,7 @@ export function evaluate(assessment: Assessment): FitResult {
     const reason = locationEligibility.reason ? ` — ${locationEligibility.reason}` : "";
     lines.push(`**Location eligibility:** ${label}${reason}`);
   }
-  lines.push("");
-  lines.push("---");
+  lines.push("", "---");
 
   const grouped: Record<ClusterState, Cluster[]> = { major_gap: [], minor_gap: [], transferable: [], strong: [] };
   for (const cluster of clusters) {
@@ -332,8 +330,7 @@ export function evaluate(assessment: Assessment): FitResult {
   for (const state of STATE_ORDER) {
     const items = grouped[state];
     if (items.length === 0) continue;
-    lines.push("");
-    lines.push(STATE_HEADERS[state]);
+    lines.push("", STATE_HEADERS[state]);
     for (const cluster of items) {
       const primary = clusterPrimary(cluster);
       let prefix: string;
@@ -354,16 +351,13 @@ export function evaluate(assessment: Assessment): FitResult {
   const risk = (assessment.risk ?? "").trim();
   const appeal = (assessment.appeal ?? "").trim();
   if (risk || appeal) {
-    lines.push("");
-    lines.push("---");
+    lines.push("", "---");
   }
   if (risk) {
-    lines.push("");
-    lines.push(`⚠️ **Risk:** ${risk}`);
+    lines.push("", `⚠️ **Risk:** ${risk}`);
   }
   if (appeal) {
-    lines.push("");
-    lines.push(`✅ **Appeal:** ${appeal}`);
+    lines.push("", `✅ **Appeal:** ${appeal}`);
   }
 
   return {

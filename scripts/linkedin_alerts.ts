@@ -9,9 +9,9 @@
  * [--prefilter light|full|off] [--out-file result.json]`. Prefer the `linkedin_alert_intake` MCP tool.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { parseArgs } from "util";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parseArgs } from "node:util";
 import * as vacancyStore from "./vacancy_store";
 import { Posting, ScoutConfig, loadScoutConfig } from "./scout_domain";
 import { collapseDuplicates, filterPostings } from "./scout_prefilter";
@@ -130,23 +130,7 @@ export interface TriageOptions {
 /** Pure core: merges parsed alerts, drops known jobs, applies the scout's prefilter to what the
  * alert shows (no description yet), collapses same-role repeats, caps at `maxJudgmentsPerRun`. */
 export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeResult {
-  const unique = new Map<string, IntakeJob>();
-  let listed = 0;
-  let unparsed = 0;
-  for (const alert of alerts) {
-    listed += alert.jobs.length;
-    const parsedIds = new Set(alert.jobs.map((j) => j.job_id));
-    unparsed += alert.listed_ids.filter((id) => !parsedIds.has(id)).length;
-    for (const job of alert.jobs) {
-      const merged = unique.get(job.job_id);
-      if (merged) {
-        merged.emails += 1;
-        if (alert.alert_name && !merged.alerts.includes(alert.alert_name)) merged.alerts.push(alert.alert_name);
-      } else {
-        unique.set(job.job_id, { ...job, alerts: alert.alert_name ? [alert.alert_name] : [], emails: 1 });
-      }
-    }
-  }
+  const { unique, listed, unparsed } = mergeAlerts(alerts);
 
   const isKnown = opts.isKnown ?? (() => false);
   const fresh = [...unique.values()].filter((job) => !isKnown(job.job_id));
@@ -189,8 +173,39 @@ export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeR
     returned: returned.length,
     capped: deduped.length - returned.length,
     max_judgments: cap,
-    prefilter: mode === "off" ? "off (asked)" : config === null ? "off (no sources.yaml)" : mode,
+    prefilter: prefilterLabel(mode, config),
   };
+}
+
+function prefilterLabel(mode: PrefilterMode, config: ScoutConfig | null): string {
+  if (mode === "off") return "off (asked)";
+  if (config === null) return "off (no sources.yaml)";
+  return mode;
+}
+
+function addJob(unique: Map<string, IntakeJob>, job: ParsedAlert["jobs"][number], alertName: string | null): void {
+  const merged = unique.get(job.job_id);
+  if (!merged) {
+    unique.set(job.job_id, { ...job, alerts: alertName ? [alertName] : [], emails: 1 });
+    return;
+  }
+  merged.emails += 1;
+  if (alertName && !merged.alerts.includes(alertName)) merged.alerts.push(alertName);
+}
+
+/** One entry per job id across all alert emails; counts the emails that listed it and the alert
+ * names that surfaced it, plus how many ids the emails list that no card produced. */
+function mergeAlerts(alerts: ParsedAlert[]): { unique: Map<string, IntakeJob>; listed: number; unparsed: number } {
+  const unique = new Map<string, IntakeJob>();
+  let listed = 0;
+  let unparsed = 0;
+  for (const alert of alerts) {
+    listed += alert.jobs.length;
+    const parsedIds = new Set(alert.jobs.map((j) => j.job_id));
+    unparsed += alert.listed_ids.filter((id) => !parsedIds.has(id)).length;
+    for (const job of alert.jobs) addJob(unique, job, alert.alert_name);
+  }
+  return { unique, listed, unparsed };
 }
 
 /** Known = already in the seen ledger under any URL spelling a past flow used, or already a
@@ -207,8 +222,8 @@ function loadKnown(): (jobId: string) => boolean {
   return (jobId) => {
     if (recorded.has(jobId)) return true;
     const bare = `linkedin.com/jobs/view/${jobId}`;
-    // NOSONAR S5332: not a request -- earlier records hashed an http:// link, so that form is looked up too
-    return ["https://www.", "https://", "http://www."].some((prefix) =>
+    // Not a request: earlier records hashed an http:// link, so that form is looked up too.
+    return ["https://www.", "https://", "http://www."].some((prefix) => // NOSONAR S5332
       ["", "/"].some((tail) =>
         ["linkedin", "manual"].some((source) => seenPostingIds.has(postingId(source, `${prefix}${bare}${tail}`)))
       )
