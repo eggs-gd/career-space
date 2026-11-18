@@ -22,6 +22,16 @@ managers screening for a role to fill now.
   own UI; treat as out of scope for generation unless asked.
 - Employment type, location, and remote preference — structured filters.
 
+## Through the connector
+
+With Djinni's assistant connector, `get_profile` / `update_profile` expose these fields by name
+(`position`, `experience_years`, `salary_min`, `location`, `country_code`, `employment_options`,
+`format_options`, `skills_experience`, `domain_experience`, `language_knowledge`, `highlights`,
+`moreinfo`, `looking_for`, `question`, `certifications`, …). Stated limits: `moreinfo` 200–2500
+characters with no links or contacts, at least three skills, `salary_min` and `country_code`
+change only a limited number of times. Contacts, name, email and CV uploads are not editable there.
+See `playbooks/djinni.md`.
+
 ## Discovery mechanics
 
 Recruiters filter by position, experience level, English level, and salary, then read Summary and

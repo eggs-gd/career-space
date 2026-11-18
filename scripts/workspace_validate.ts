@@ -184,6 +184,15 @@ function validateVacancyRecord(folder: string, filePath: string, issues: Validat
     }
   }
 
+  if (record.also_seen !== undefined) {
+    const shapeOk =
+      Array.isArray(record.also_seen) &&
+      record.also_seen.every((entry: unknown) => isRecord(entry) && typeof entry.url === "string" && entry.url !== "" && typeof entry.source === "string");
+    if (!shapeOk) {
+      issues.push(issue("warning", "vacancy_also_seen", filePath, "also_seen must be a list of { source, url } entries."));
+    }
+  }
+
   if (!fs.existsSync(path.join(folder, "posting.md"))) {
     // A record imported from an earlier tool never had its posting text captured -- can't be recovered.
     const imported = typeof record.imported_from === "string";

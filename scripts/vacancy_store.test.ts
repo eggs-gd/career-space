@@ -20,6 +20,9 @@ import * as path from "path";
 import * as yaml from "js-yaml";
 import {
   DATA_DIR,
+  addAlias,
+  addAliasesByContentId,
+  findVacancies,
   listVacancies,
   readVacancyContext,
   recordScoutOutcome,
@@ -314,4 +317,76 @@ test("re-assessing an existing DOU record as location_exception_candidate clears
   assert.equal((first.eligibility as { location?: { status: string } } | undefined)?.location?.status, "hard_location_block");
   const again = upsertVacancy({ ...base, eligibility: { location: { status: "location_exception_candidate" } } });
   assert.equal(again.eligibility, undefined);
+});
+
+const DJINNI = "https://djinni.co/jobs/841895-game-dev-tech-lead/";
+const DOU = "https://jobs.dou.ua/companies/digicode/vacancies/369035/?utm_source=jobsrss";
+
+test("a repost under another link does not overwrite the first link and source; it goes to also_seen", () => {
+  const root = tempVacanciesDir();
+  const first = upsertVacancy({ dataDir: root, company: "Digicode", title: "Game Dev Tech Lead", url: DJINNI, source: "djinni", postedAt: "2026-08-01", postingText: "x" });
+  const again = upsertVacancy({ dataDir: root, company: "Digicode", title: "Game Dev Tech Lead", url: DOU, source: "douua", postedAt: "2026-11-13" });
+  assert.equal(again.slug, first.slug);
+  assert.equal(again.url, DJINNI);
+  assert.equal(again.source, "djinni");
+  assert.equal(again.posted_at, "2026-08-01");
+  assert.deepEqual(again.also_seen, [{ source: "douua", url: DOU }]);
+  // the same link again adds nothing
+  const third = upsertVacancy({ dataDir: root, company: "Digicode", title: "Game Dev Tech Lead", url: DOU, source: "douua" });
+  assert.equal(third.also_seen.length, 1);
+});
+
+test("an upsert without a link keeps the stored one instead of blanking it", () => {
+  const root = tempVacanciesDir();
+  upsertVacancy({ dataDir: root, company: "Acme", title: "Head of Eng", url: DJINNI, source: "djinni", postingText: "x" });
+  const rec = upsertVacancy({ dataDir: root, company: "Acme", title: "Head of Eng", location: "Kyiv" });
+  assert.equal(rec.url, DJINNI);
+  assert.equal(rec.apply_url, DJINNI);
+});
+
+test("vacancy_resolve with an explicit url is a correction and replaces the link", () => {
+  const root = tempVacanciesDir();
+  const rec = upsertVacancy({ dataDir: root, company: "Acme", title: "Head of Eng", url: "https://example.test/wrong", source: "manual", postingText: "x" });
+  const fixed = resolveVacancy({ dataDir: root, slug: String(rec.slug), url: DJINNI });
+  assert.equal(fixed.context.record.url, DJINNI);
+  assert.equal(fixed.context.record.also_seen, undefined);
+});
+
+test("findVacancies matches a Djinni link to a record by its own link, an alias, or company+title", () => {
+  const root = tempVacanciesDir();
+  const rec = upsertVacancy({ dataDir: root, company: "Digicode", title: "Game Dev Tech Lead", url: DOU, source: "douua", postingText: "x" });
+  const other = upsertVacancy({ dataDir: root, company: "Digicode", title: "Backend Lead", url: "https://jobs.dou.ua/companies/digicode/vacancies/1/", source: "douua", postingText: "y" });
+  // nothing links Djinni to the record yet, so only company+title finds it
+  assert.deepEqual(findVacancies({ url: DJINNI }, { dataDir: root }), []);
+  const byName = findVacancies({ url: DJINNI, company: "Digicode", title: "Game Dev Tech Lead" }, { dataDir: root });
+  assert.deepEqual(byName.map((m) => [m.slug, m.matched_by]), [[rec.slug, "company_title"]]);
+  assert.equal(addAlias(String(rec.slug), { source: "djinni", url: DJINNI }, { dataDir: root }), true);
+  assert.equal(addAlias(String(rec.slug), { source: "djinni", url: DJINNI + "?x=1" }, { dataDir: root }), false);
+  // after the alias, the Djinni id alone is enough, with no company+title
+  const byAlias = findVacancies({ url: "https://djinni.co/jobs/841895/" }, { dataDir: root });
+  assert.deepEqual(byAlias.map((m) => [m.slug, m.matched_by]), [[rec.slug, "also_seen"]]);
+  const byOwn = findVacancies({ url: DOU.replace("?utm_source=jobsrss", "") }, { dataDir: root });
+  assert.deepEqual(byOwn.map((m) => [m.slug, m.matched_by]), [[rec.slug, "url"]]);
+  assert.notEqual(rec.slug, other.slug);
+});
+
+test("addAliasesByContentId: one link per channel, in one pass, unknown content ids ignored", () => {
+  const root = tempVacanciesDir();
+  const rec = upsertVacancy({ dataDir: root, company: "Acme", title: "CTO", url: DOU, source: "douua", postingText: "x" });
+  const scope = { dataDir: root };
+  const cid = String(rec.content_id);
+  const added = addAliasesByContentId(
+    [
+      { contentId: cid, alias: { source: "djinni", url: DJINNI } },
+      { contentId: cid, alias: { source: "djinni", url: "https://djinni.co/jobs/9-other-country/" } }, // same channel: skipped
+      { contentId: cid, alias: { source: "douua", url: "https://jobs.dou.ua/companies/acme/vacancies/2/" } }, // the record's own channel
+      { contentId: "0000000000000000", alias: { source: "djinni", url: DJINNI } },
+    ],
+    scope
+  );
+  assert.equal(added, 1);
+  const stored = readVacancyContext(String(rec.slug), scope).record;
+  assert.deepEqual(stored.also_seen, [{ source: "djinni", url: DJINNI }]);
+  assert.equal(stored.url, DOU);
+  assert.equal(stored.updated_at, rec.updated_at, "bookkeeping must not bump updated_at");
 });

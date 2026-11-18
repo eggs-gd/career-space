@@ -200,3 +200,18 @@ test("validateWorkspace only warns about a missing posting.md on an imported rec
   assert.equal(imported.ok, true);
   assert.deepEqual(imported.issues.map((i) => [i.severity, i.code]), [["warning", "vacancy_missing_posting"]]);
 });
+
+test("validateWorkspace warns on a malformed also_seen and accepts a well-formed one", () => {
+  const dataDir = tempDataDir();
+  const slug = writeValidVacancy(dataDir);
+  const recordPath = path.join(dataDir, "vacancies", slug, "record.yaml");
+  const record = yaml.load(fs.readFileSync(recordPath, "utf-8")) as Record<string, unknown>;
+
+  record.also_seen = [{ source: "djinni", url: "https://djinni.co/jobs/1-a/" }];
+  fs.writeFileSync(recordPath, yaml.dump(record), "utf-8");
+  assert.equal(validateWorkspace({ dataDir }).issues.some((item) => item.code === "vacancy_also_seen"), false);
+
+  record.also_seen = ["https://djinni.co/jobs/1-a/"];
+  fs.writeFileSync(recordPath, yaml.dump(record), "utf-8");
+  assert.equal(validateWorkspace({ dataDir }).issues.some((item) => item.code === "vacancy_also_seen"), true);
+});

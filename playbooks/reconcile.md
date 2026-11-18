@@ -36,8 +36,18 @@ case you're in before doing anything:
   like Y". Treat that text as the observations: skip the gathering in Step 2, go straight to Step
   3 (match and judge) against it. It's second-hand, so lean toward "needs confirmation" for
   anything not spelled out.
-- **Nothing at all** — no email capability, no pasted summary. Say reconciliation needs an email
-  connector/plugin in their host (or a pasted summary), and stop. Not a failure, just unavailable.
+- **Nothing at all** — no email capability, no pasted summary, and no usable Djinni connector (see
+  below). Say reconciliation needs an email connector/plugin in their host (or a pasted summary),
+  and stop. Not a failure, just unavailable.
+
+Djinni is a separate evidence source and does not depend on any of the above: a usable Djinni
+connector is enough to reconcile on its own. With no email capability, or one that isn't
+authorized, still run Djinni (section 1 of `playbooks/djinni.md`), skip the mailbox steps, and say
+which source was missing.
+
+**Djinni conversations** are a second evidence source, independent of the mailbox: if Djinni's
+connector is connected, read the threads through `playbooks/djinni.md` section 1 and judge them
+with the same rules below. Recruiters often answer only there.
 
 Calendar is always a bonus, never required. If the candidate specifically wants to wire Google's
 own remote MCP servers (`gmailmcp.googleapis.com` / `calendarmcp.googleapis.com`), that's a
@@ -49,7 +59,9 @@ cover it; it never goes in this repo's committed files.
 `vacancy_list` (MCP tool, or `node scripts/dist/vacancy_store.js list`). Reconcile the ones still
 in motion — `tracked`, `applied`, `screen`, `interview` (and `new` if the candidate says they
 applied outside the system). Skip terminal ones (`rejected`, `offer`, `skipped`) unless the
-candidate asks. Each record already gives you `slug`, `company`, `title`, `status`, `url`.
+candidate asks. Each record already gives you `slug`, `company`, `title`, `status`, `url`. A record can carry other
+links for the same role in `also_seen` (the role on another board, a Djinni job); `vacancy_find`
+matches a link or a company+title across all of them.
 
 ## Step 2 — gather evidence, bounded
 
