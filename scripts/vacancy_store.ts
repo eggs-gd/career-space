@@ -17,6 +17,7 @@ import * as postingIds from "./posting_ids";
 import { normalizeSource } from "./source_channel";
 import { REPO_ROOT } from "./repo_paths";
 import { Assessment, evaluate, persistFitment } from "./score_fit";
+import { compareText, trimChar } from "./text_utils";
 
 export const DATA_DIR = path.join(REPO_ROOT, "data", "vacancies");
 
@@ -59,10 +60,7 @@ function now(): string {
 }
 
 function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return trimChar(text.toLowerCase().replace(/[^a-z0-9]+/g, "-"), "-");
 }
 
 /** Deterministic, filesystem-safe vacancy slug -- company + title for readability, an
@@ -904,7 +902,7 @@ export function listVacancies(status?: string, opts: { includeArchived?: boolean
   const scope: VacancyStoreScope = { dataDir: opts.dataDir };
   if (!fs.existsSync(dataDir(scope))) return [];
   const summaries: VacancySummary[] = [];
-  for (const rpath of listRecordPaths(scope).sort()) {
+  for (const rpath of listRecordPaths(scope).sort(compareText)) {
     const record = readYamlRecord(rpath);
     if (status !== undefined && record.status !== status) continue;
     if (!includeArchived && record.archived) continue;
@@ -914,7 +912,7 @@ export function listVacancies(status?: string, opts: { includeArchived?: boolean
       .readdirSync(dir, { withFileTypes: true })
       .filter((e) => e.isFile())
       .map((e) => e.name)
-      .sort();
+      .sort(compareText);
     summaries.push({
       slug: record.slug ?? path.basename(dir),
       status: record.status ?? "new",

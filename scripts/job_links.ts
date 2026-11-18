@@ -5,6 +5,8 @@
  * second sighting to a vacancy record goes through this key, never through string equality.
  */
 
+import { compareText, trimEndChar } from "./text_utils";
+
 /** `djinni:<id>`, `dou:<id>`, `linkedin:<id>`, otherwise `host/path` plus the query parameters that
  * may identify the job (tracking parameters, the hash, `www.` and a trailing slash are dropped). Empty string for an empty input. */
 export function jobKey(rawUrl: string): string {
@@ -32,8 +34,8 @@ export function jobKey(rawUrl: string): string {
   const kept = [...url.searchParams.entries()]
     .filter(([name]) => !isTrackingParam(name))
     .map(([name, value]) => `${name.toLowerCase()}=${value}`)
-    .sort();
-  return `${host}${url.pathname.replace(/\/+$/, "")}${kept.length > 0 ? `?${kept.join("&")}` : ""}`.toLowerCase();
+    .sort(compareText);
+  return `${host}${trimEndChar(url.pathname, "/")}${kept.length > 0 ? `?${kept.join("&")}` : ""}`.toLowerCase();
 }
 
 const TRACKING_PARAMS = new Set([

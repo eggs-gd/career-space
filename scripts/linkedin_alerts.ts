@@ -207,6 +207,7 @@ function loadKnown(): (jobId: string) => boolean {
   return (jobId) => {
     if (recorded.has(jobId)) return true;
     const bare = `linkedin.com/jobs/view/${jobId}`;
+    // NOSONAR S5332: not a request -- earlier records hashed an http:// link, so that form is looked up too
     return ["https://www.", "https://", "http://www."].some((prefix) =>
       ["", "/"].some((tail) =>
         ["linkedin", "manual"].some((source) => seenPostingIds.has(postingId(source, `${prefix}${bare}${tail}`)))

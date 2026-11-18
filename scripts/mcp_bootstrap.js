@@ -83,7 +83,7 @@ function main() {
     }
   }
 
-  const child = spawn('node', [SERVER_ENTRY], { stdio: 'inherit', cwd: REPO_ROOT });
+  const child = spawn(process.execPath, [SERVER_ENTRY], { stdio: 'inherit', cwd: REPO_ROOT });
   child.on('error', (err) => {
     console.error(`career-space: failed to launch the server: ${err.message}`);
     process.exit(1);

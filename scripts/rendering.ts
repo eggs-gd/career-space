@@ -17,6 +17,7 @@ import { formatCvMarkdown } from "./markdown_normalize";
 import { opportunityDir } from "./opportunity_dirs";
 import { vacancyDir as defaultVacancyDir } from "./vacancy_store";
 import { matchesLocalKeywords } from "./scout_prefilter";
+import { oneLine, trimChar } from "./text_utils";
 
 const TEMPLATE_DIR = path.join(__dirname, "..", "templates");
 const CONFIG_PATH = path.join(REPO_ROOT, "data", "config.yaml");
@@ -48,7 +49,7 @@ function escapeHtml(value: string): string {
  * trailing underscore. Used to build recruiter-facing output filenames -- never applied to
  * anything that ends up as page content, only to the literal filename. */
 function filenamePart(text: string): string {
-  return text.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return trimChar(text.replace(/[^A-Za-z0-9]+/g, "_"), "_");
 }
 
 /** `shared.full_name` from `data/config.yaml`. Falls back to a generic label rather than
@@ -336,7 +337,7 @@ export function renderBoardMd(vacancies: Rec[]): string {
     return String(a.company ?? "").localeCompare(String(b.company ?? ""));
   });
 
-  const cell = (v: unknown): string => String(v ?? "").replace(/\s*\n\s*/g, " ").replace(/\|/g, "\\|").trim();
+  const cell = (v: unknown): string => oneLine(String(v ?? "")).replace(/\|/g, "\\|");
 
   const lines = [
     "# Vacancy board",
@@ -563,7 +564,7 @@ export function renderEngagementsMd(engagements: Rec[]): string {
     if (fa !== fb) return fa - fb;
     return String(a.client ?? "").localeCompare(String(b.client ?? ""));
   });
-  const cell = (v: unknown): string => String(v ?? "").replace(/\s*\n\s*/g, " ").replace(/\|/g, "\\|").trim();
+  const cell = (v: unknown): string => oneLine(String(v ?? "")).replace(/\|/g, "\\|");
   const lines = [
     "# Engagements board",
     "",
