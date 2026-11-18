@@ -4,9 +4,9 @@
  * the same modules used by CLI fallbacks.
  */
 
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { z } from "zod";
 // If type-checking this file becomes unexpectedly slow, check SDK/zod compatibility first.
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";

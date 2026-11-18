@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { roundHalfToEven, computeScore, evaluate, render, persistFitment } from "./score_fit";
 
 test("roundHalfToEven uses banker's rounding at exact .5 boundaries, unlike Math.round", () => {

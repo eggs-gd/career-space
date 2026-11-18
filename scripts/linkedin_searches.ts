@@ -14,9 +14,9 @@
  * Usage: node scripts/dist/linkedin_searches.js [--sources data/sources.yaml] [--output PATH]
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { parseArgs } from "util";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parseArgs } from "node:util";
 import { ScoutConfig, ScoutConfigError, loadScoutConfig, TrackConfig } from "./scout_domain";
 import { REPO_ROOT } from "./repo_paths";
 
@@ -39,8 +39,8 @@ const SHORT_TITLE_LIMIT = 5;
  * a reference implementation to check this against. */
 function rfc3986Quote(text: string): string {
   return encodeURIComponent(text)
-    .replace(/%2F/g, "/")
-    .replace(/[!*'()]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
+    .replaceAll(/%2F/g, "/")
+    .replace(/[!*'()]/g, (c) => "%" + (c.codePointAt(0) ?? 0).toString(16).toUpperCase());
 }
 
 function urlencode(params: Record<string, string>): string {
@@ -99,15 +99,18 @@ export function buildMarkdown(config: ScoutConfig): string {
     const titlesGrp = orGroup(titles);
     const shortGrp = orGroup(shortTitles);
 
-    lines.push(`## ${track.label}`);
-    lines.push("");
-    lines.push(`**Titles:** \`${titlesGrp}\``);
-    lines.push(`- **Jobs board** (remote, past week): ${jobsUrl(titlesGrp)}`);
+    lines.push(
+      `## ${track.label}`,
+      "",
+      `**Titles:** \`${titlesGrp}\``,
+      `- **Jobs board** (remote, past week): ${jobsUrl(titlesGrp)}`
+    );
     for (const word of INTENT_WORDS) {
       const grp = word === "hiring" ? titlesGrp : shortGrp;
       const label = word.replace(/^"|"$/g, ""); // word itself carries the quotes the query
       // needs; the label shouldn't double them up ("intent ""looking for""" reads badly)
-      lines.push(`- Feed posts — intent "${label}": ${contentUrl(`${grp} ${word}`)}`);
+      const feedUrl = contentUrl(`${grp} ${word}`);
+      lines.push(`- Feed posts — intent "${label}": ${feedUrl}`);
     }
     // Omitted, not falling back to `titles`, when `hiringTitles` isn't configured -- see
     // `peopleUrl`'s own docstring for why that fallback was the bug in the first place.
@@ -121,8 +124,7 @@ export function buildMarkdown(config: ScoutConfig): string {
   }
 
   if (!anyTrack) {
-    lines.push("_No track in `data/sources.yaml` has any titles configured -- nothing to build._");
-    lines.push("");
+    lines.push("_No track in `data/sources.yaml` has any titles configured -- nothing to build._", "");
   }
 
   lines.push("---");
@@ -132,9 +134,9 @@ export function buildMarkdown(config: ScoutConfig): string {
         "track in `data/sources.yaml` (who actually hires for this role -- e.g. an Engineering " +
         "Manager track's hiring titles are VP Engineering/Director of Engineering/CTO, never " +
         '"Engineering Manager" itself) and regenerate. Deliberately not falling back to the ' +
-        "track's own job-search titles for this -- that would search for peers, not hirers._"
+        "track's own job-search titles for this -- that would search for peers, not hirers._",
+      ""
     );
-    lines.push("");
   }
   lines.push(
     '_Tip: LinkedIn search supports OR and "quotes" -- edit a link\'s `keywords` param by ' +

@@ -19,9 +19,9 @@
  * so the HTML's links to `vacancies/<slug>/<file>` resolve without any path juggling.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { parseArgs } from "util";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parseArgs } from "node:util";
 import * as rendering from "./rendering";
 import * as vacancyStore from "./vacancy_store";
 import { loadScoutConfig } from "./scout_domain";

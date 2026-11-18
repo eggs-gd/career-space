@@ -9,9 +9,9 @@
  * [--prefilter light|full|off] [--out-file result.json]`. Prefer the `linkedin_alert_intake` MCP tool.
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { parseArgs } from "util";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parseArgs } from "node:util";
 import * as vacancyStore from "./vacancy_store";
 import { Posting, ScoutConfig, loadScoutConfig } from "./scout_domain";
 import { collapseDuplicates, filterPostings } from "./scout_prefilter";
@@ -176,6 +176,10 @@ export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeR
   const cap = config?.maxJudgmentsPerRun ?? DEFAULT_CAP;
   const returned = deduped.slice(0, cap).map((p) => byUrl.get(p.url)!);
 
+  let prefilterLabel: string = mode;
+  if (mode === "off") prefilterLabel = "off (asked)";
+  else if (config === null) prefilterLabel = "off (no sources.yaml)";
+
   return {
     jobs_to_read: returned,
     emails_parsed: alerts.length,
@@ -189,7 +193,7 @@ export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeR
     returned: returned.length,
     capped: deduped.length - returned.length,
     max_judgments: cap,
-    prefilter: mode === "off" ? "off (asked)" : config === null ? "off (no sources.yaml)" : mode,
+    prefilter: prefilterLabel,
   };
 }
 
@@ -207,8 +211,8 @@ function loadKnown(): (jobId: string) => boolean {
   return (jobId) => {
     if (recorded.has(jobId)) return true;
     const bare = `linkedin.com/jobs/view/${jobId}`;
-    // NOSONAR S5332: not a request -- earlier records hashed an http:// link, so that form is looked up too
-    return ["https://www.", "https://", "http://www."].some((prefix) =>
+    // Not a request: earlier records hashed an http:// link, so that form is looked up too.
+    return ["https://www.", "https://", "http://www."].some((prefix) => // NOSONAR S5332
       ["", "/"].some((tail) =>
         ["linkedin", "manual"].some((source) => seenPostingIds.has(postingId(source, `${prefix}${bare}${tail}`)))
       )

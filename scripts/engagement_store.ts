@@ -18,10 +18,10 @@
  *   <upsert|set-status|set-archived|relocate-archived|attach-artifact|list>  ...same flags as vacancy_store.js...
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as yaml from "js-yaml";
-import { parseArgs } from "util";
+import { parseArgs } from "node:util";
 import { REPO_ROOT } from "./repo_paths";
 import { listOpportunityDirs, opportunityDir, relocateArchived } from "./opportunity_dirs";
 import * as postingIds from "./posting_ids";
@@ -96,7 +96,7 @@ export interface UpsertEngagementOptions {
  * posting lands on the same folder. Client may be empty on a marketplace posting; the title then
  * carries the slug alone. */
 export function upsertEngagement(opts: UpsertEngagementOptions): Rec {
-  if (!opts.title || !opts.title.trim()) {
+  if (!opts.title?.trim()) {
     throw new VacancyStoreError("upsertEngagement requires a title");
   }
   if (opts.status !== undefined && !isValidStatus(opts.status)) {

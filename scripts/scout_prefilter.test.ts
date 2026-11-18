@@ -8,7 +8,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { filterPostings } from "./scout_prefilter";
-import { Posting, ScoutConfig } from "./scout_domain";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { Posting, ScoutConfig, loadScoutConfig } from "./scout_domain";
 
 function configWithLocalKeywords(localKeywords: string[]): ScoutConfig {
   return new ScoutConfig({
@@ -86,4 +89,14 @@ test("an empty or blank track title matches nothing and does not hang the prefil
   });
   const titles = ["Engineering Manager", "Pastry Chef"].map((title) => posting({ title, remote: true }));
   assert.deepEqual(filterPostings(titles, config).map((p) => p.title), ["Engineering Manager"]);
+});
+
+test("a track's label and kind come from the yaml scalar, or fall back to the key and 'primary'", () => {
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "sources-")), "sources.yaml");
+  fs.writeFileSync(file, "tracks:\n  numbered:\n    label: 5\n    kind: fallback\n    titles: [cto]\n  bare:\n    label: {nested: true}\n    titles: [head of engineering]\n", "utf-8");
+  const tracks = loadScoutConfig(file).tracks;
+  assert.equal(tracks.get("numbered")?.label, "5");
+  assert.equal(tracks.get("numbered")?.kind, "fallback");
+  assert.equal(tracks.get("bare")?.label, "bare");
+  assert.equal(tracks.get("bare")?.kind, "primary");
 });

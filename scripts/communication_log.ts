@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import * as fs from "fs";
-import * as path from "path";
-import { parseArgs } from "util";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parseArgs } from "node:util";
 import { opportunityDir } from "./opportunity_dirs";
 import { REPO_ROOT } from "./repo_paths";
 import { VacancyStoreError } from "./vacancy_store";
@@ -43,8 +43,8 @@ function normalizeDate(input?: string): string {
 
 function quoteBlock(text: string): string {
   return text
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
+    .replaceAll(/\r\n/g, "\n")
+    .replaceAll(/\r/g, "\n")
     .split("\n")
     .map((line) => (line ? `> ${line}` : ">"))
     .join("\n");
@@ -65,7 +65,7 @@ function replaceSummary(document: string, summary?: string): string {
   const headEnd = firstEvent === -1 ? document.length : firstEvent;
   const head = document.slice(0, headEnd);
   const rest = firstEvent === -1 ? "" : document.slice(firstEvent);
-  const replaced = head.match(/^# Communication\n\nSummary:\n[\s\S]*$/)
+  const replaced = /^# Communication\n\nSummary:\n[\s\S]*$/.exec(head)
     ? `# Communication\n\nSummary:\n${clean}\n`
     : `# Communication\n\nSummary:\n${clean}\n\n${head.trim()}\n`;
   return `${replaced}${rest}`;

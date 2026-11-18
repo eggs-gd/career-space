@@ -11,9 +11,9 @@
  * Usage: node scripts/dist/render_engagement.js [--output data/engagements.html] [--include-archived]
  */
 
-import * as fs from "fs";
-import * as path from "path";
-import { parseArgs } from "util";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parseArgs } from "node:util";
 import * as rendering from "./rendering";
 import { listEngagements } from "./engagement_store";
 import { REPO_ROOT } from "./repo_paths";

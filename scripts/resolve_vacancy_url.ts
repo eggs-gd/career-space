@@ -15,8 +15,8 @@
  * JSON object to stdout. Prefer the `resolve_vacancy_url` MCP tool when the server is connected.
  */
 
-import * as path from "path";
-import { parseArgs } from "util";
+import * as path from "node:path";
+import { parseArgs } from "node:util";
 import * as vacancyStore from "./vacancy_store";
 import { loadScoutConfig } from "./scout_domain";
 import { classifyTrackMatch, trackMatchLabel } from "./scout_prefilter";
