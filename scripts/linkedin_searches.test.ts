@@ -56,3 +56,8 @@ test("no People-search link when hiringTitles isn't configured -- omitted, not a
   assert.equal(peopleLine, undefined, "must not fall back to job-search titles for the People link");
   assert.ok(md.includes("hiring_titles:"), "should explain how to fix it, once, at the bottom");
 });
+
+test("a config without any track titles says there is nothing to build", () => {
+  const md = buildMarkdown(configWithTracks({ empty: { label: "Empty", kind: "primary", titles: [], hiringTitles: [], uaCategories: [] } }));
+  assert.match(md, /No track in `data\/sources.yaml` has any titles configured/);
+});

@@ -43,8 +43,8 @@ function normalizeDate(input?: string): string {
 
 function quoteBlock(text: string): string {
   return text
-    .replaceAll(/\r\n/g, "\n")
-    .replaceAll(/\r/g, "\n")
+    .replaceAll("\r\n", "\n")
+    .replaceAll("\r", "\n")
     .split("\n")
     .map((line) => (line ? `> ${line}` : ">"))
     .join("\n");

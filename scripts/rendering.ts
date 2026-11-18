@@ -38,11 +38,11 @@ export function listResumeStyles(): string[] {
  * `select_autoescape`), never for a value the original marked `| safe`. */
 function escapeHtml(value: string): string {
   return value
-    .replaceAll(/&/g, "&amp;")
-    .replaceAll(/</g, "&lt;")
-    .replaceAll(/>/g, "&gt;")
-    .replaceAll(/'/g, "&#39;")
-    .replaceAll(/"/g, "&#34;");
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("'", "&#39;")
+    .replaceAll('"', "&#34;");
 }
 
 /** One markdown table cell: a single line, backslashes and pipes escaped. */
@@ -115,7 +115,7 @@ export function resumeOutputStem(markdownPath: string): string {
   } else {
     const stem = path.basename(markdownPath, path.extname(markdownPath));
     const withoutPrefix = stem.startsWith("universal-") ? stem.slice("universal-".length) : stem;
-    role = titleCase(withoutPrefix.replaceAll(/-/g, " ").replaceAll(/_/g, " "));
+    role = titleCase(withoutPrefix.replaceAll("-", " ").replaceAll("_", " "));
   }
   const parts = [candidateFullName(), "Resume"];
   if (role) parts.push(role);
@@ -325,7 +325,7 @@ function formatGeneratedAt(d: Date): string {
 function fitCategoryPill(category: unknown): string {
   const cat = typeof category === "string" ? category.trim() : "";
   if (!cat) return "";
-  return `<span class="fit-cat fit-cat-${escapeHtml(cat)}">${escapeHtml(cat.replaceAll(/_/g, " "))}</span>`;
+  return `<span class="fit-cat fit-cat-${escapeHtml(cat)}">${escapeHtml(cat.replaceAll("_", " "))}</span>`;
 }
 
 type Rec = Record<string, any>;
@@ -420,7 +420,7 @@ export function renderBoardHtml(
         let contentHtml: string;
         if (raw.trim()) {
           // Escape raw HTML in vacancy documents before markdown rendering.
-          const escaped = raw.replaceAll(/&/g, "&amp;").replaceAll(/</g, "&lt;");
+          const escaped = raw.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
           contentHtml = md.render(escaped);
         } else {
           contentHtml = "<p><em>Empty.</em></p>";
@@ -647,7 +647,7 @@ export function renderEngagementsHtml(engagements: Rec[], opts: { title?: string
               return "";
             }
             const contentHtml = raw.trim()
-              ? md.render(raw.replaceAll(/&/g, "&amp;").replaceAll(/</g, "&lt;"))
+              ? md.render(raw.replaceAll("&", "&amp;").replaceAll("<", "&lt;"))
               : "<p><em>Empty.</em></p>";
             return `<details class="file" name="panel-${escapeHtml(slug)}"><summary>${escapeHtml(
               BOARD_FILE_LABELS[fname] ?? fname

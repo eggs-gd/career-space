@@ -46,7 +46,7 @@ function isThematicBreak(line: string): boolean {
 /** Insert blank lines around headings/lists/blockquotes so renderers agree on structure --
  * a line-by-line state machine tracking fence/heading/list context as it goes. */
 export function normalizeMarkdownStructure(markdown: string): string {
-  const lines = markdown.replaceAll(/\r\n/g, "\n").split("\n");
+  const lines = markdown.replaceAll("\r\n", "\n").split("\n");
   const out: string[] = [];
   let inFence = false;
 
@@ -114,22 +114,22 @@ export function normalizeMarkdownStructure(markdown: string): string {
 /** Normalize punctuation that often comes from LLM output (smart quotes, dashes, nbsp...). */
 export function applyAsciiTypographyToText(text: string): string {
   let result = text;
-  result = result.replaceAll(/­/g, ""); // soft hyphen
-  result = result.replaceAll(/‑/g, "-"); // non-breaking hyphen
+  result = result.replaceAll("\u00ad", ""); // soft hyphen
+  result = result.replaceAll("\u2011", "-"); // non-breaking hyphen
   result = replaceDashes(result, " - "); // en dash / em dash -> always spaced hyphen
-  result = result.replaceAll(/−/g, "-"); // minus sign
-  result = result.replaceAll(/ /g, " "); // nbsp
-  result = result.replaceAll(/ /g, " "); // narrow nbsp
-  result = result.replaceAll(/…/g, "...");
-  result = result.replaceAll(/“/g, '"');
-  result = result.replaceAll(/”/g, '"');
-  result = result.replaceAll(/‘/g, "'");
-  result = result.replaceAll(/’/g, "'");
+  result = result.replaceAll("\u2212", "-"); // minus sign
+  result = result.replaceAll("\u00a0", " "); // nbsp
+  result = result.replaceAll("\u202f", " "); // narrow nbsp
+  result = result.replaceAll("…", "...");
+  result = result.replaceAll("“", '"');
+  result = result.replaceAll("”", '"');
+  result = result.replaceAll("‘", "'");
+  result = result.replaceAll("’", "'");
   return result;
 }
 
 export function normalizeAsciiTypographyOutsideFences(markdown: string): string {
-  const lines = markdown.replaceAll(/\r\n/g, "\n").split("\n");
+  const lines = markdown.replaceAll("\r\n", "\n").split("\n");
   const out: string[] = [];
   let inFence = false;
 

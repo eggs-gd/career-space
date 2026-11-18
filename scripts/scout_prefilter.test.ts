@@ -100,3 +100,19 @@ test("a track's label and kind come from the yaml scalar, or fall back to the ke
   assert.equal(tracks.get("bare")?.label, "bare");
   assert.equal(tracks.get("bare")?.kind, "primary");
 });
+
+test("matchingTrack prefers a primary track over an earlier fallback track, and falls back when only that matches", () => {
+  const config = new ScoutConfig({
+    tracks: new Map([
+      ["fb", { label: "Fallback", kind: "fallback", titles: ["developer"], hiringTitles: [], uaCategories: [] }],
+      ["main", { label: "Main", kind: "primary", titles: ["tech lead"], hiringTitles: [], uaCategories: [] }],
+    ]),
+    titleExclude: [],
+    hardExclude: [],
+    companies: [],
+    feeds: [],
+  });
+  assert.equal(config.matchingTrack("senior tech lead")?.label, "Main");
+  assert.equal(config.matchingTrack("senior developer")?.label, "Fallback");
+  assert.equal(config.matchingTrack("barista"), null);
+});

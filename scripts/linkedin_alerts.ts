@@ -130,23 +130,7 @@ export interface TriageOptions {
 /** Pure core: merges parsed alerts, drops known jobs, applies the scout's prefilter to what the
  * alert shows (no description yet), collapses same-role repeats, caps at `maxJudgmentsPerRun`. */
 export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeResult {
-  const unique = new Map<string, IntakeJob>();
-  let listed = 0;
-  let unparsed = 0;
-  for (const alert of alerts) {
-    listed += alert.jobs.length;
-    const parsedIds = new Set(alert.jobs.map((j) => j.job_id));
-    unparsed += alert.listed_ids.filter((id) => !parsedIds.has(id)).length;
-    for (const job of alert.jobs) {
-      const merged = unique.get(job.job_id);
-      if (merged) {
-        merged.emails += 1;
-        if (alert.alert_name && !merged.alerts.includes(alert.alert_name)) merged.alerts.push(alert.alert_name);
-      } else {
-        unique.set(job.job_id, { ...job, alerts: alert.alert_name ? [alert.alert_name] : [], emails: 1 });
-      }
-    }
-  }
+  const { unique, listed, unparsed } = mergeAlerts(alerts);
 
   const isKnown = opts.isKnown ?? (() => false);
   const fresh = [...unique.values()].filter((job) => !isKnown(job.job_id));
@@ -176,10 +160,6 @@ export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeR
   const cap = config?.maxJudgmentsPerRun ?? DEFAULT_CAP;
   const returned = deduped.slice(0, cap).map((p) => byUrl.get(p.url)!);
 
-  let prefilterLabel: string = mode;
-  if (mode === "off") prefilterLabel = "off (asked)";
-  else if (config === null) prefilterLabel = "off (no sources.yaml)";
-
   return {
     jobs_to_read: returned,
     emails_parsed: alerts.length,
@@ -193,8 +173,37 @@ export function triage(alerts: ParsedAlert[], opts: TriageOptions = {}): IntakeR
     returned: returned.length,
     capped: deduped.length - returned.length,
     max_judgments: cap,
-    prefilter: prefilterLabel,
+    prefilter: prefilterLabel(mode, config),
   };
+}
+
+function prefilterLabel(mode: PrefilterMode, config: ScoutConfig | null): string {
+  if (mode === "off") return "off (asked)";
+  if (config === null) return "off (no sources.yaml)";
+  return mode;
+}
+
+/** One entry per job id across all alert emails; counts the emails that listed it and the alert
+ * names that surfaced it, plus how many ids the emails list that no card produced. */
+function mergeAlerts(alerts: ParsedAlert[]): { unique: Map<string, IntakeJob>; listed: number; unparsed: number } {
+  const unique = new Map<string, IntakeJob>();
+  let listed = 0;
+  let unparsed = 0;
+  for (const alert of alerts) {
+    listed += alert.jobs.length;
+    const parsedIds = new Set(alert.jobs.map((j) => j.job_id));
+    unparsed += alert.listed_ids.filter((id) => !parsedIds.has(id)).length;
+    for (const job of alert.jobs) {
+      const merged = unique.get(job.job_id);
+      if (merged) {
+        merged.emails += 1;
+        if (alert.alert_name && !merged.alerts.includes(alert.alert_name)) merged.alerts.push(alert.alert_name);
+      } else {
+        unique.set(job.job_id, { ...job, alerts: alert.alert_name ? [alert.alert_name] : [], emails: 1 });
+      }
+    }
+  }
+  return { unique, listed, unparsed };
 }
 
 /** Known = already in the seen ledger under any URL spelling a past flow used, or already a

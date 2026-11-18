@@ -39,7 +39,7 @@ const SHORT_TITLE_LIMIT = 5;
  * a reference implementation to check this against. */
 function rfc3986Quote(text: string): string {
   return encodeURIComponent(text)
-    .replaceAll(/%2F/g, "/")
+    .replaceAll("%2F", "/")
     .replace(/[!*'()]/g, (c) => "%" + (c.codePointAt(0) ?? 0).toString(16).toUpperCase());
 }
 
