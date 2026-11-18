@@ -67,3 +67,7 @@ List each section, and separately any gaps (a positioning dimension with no comm
 value, evidence too thin for a claimed differentiator, a section skipped because nothing in the
 Master CV supported it). Ask before overwriting `data/surfaces/<name>/output.md` — the candidate
 reviews before anything is treated as ready to paste into the real surface.
+
+For Djinni with its connector connected, `playbooks/djinni.md` section 3 reads the live profile
+before Step 1 (it is the existing document) and, after the candidate approves the text, shows the
+field-by-field difference and pushes it with their confirmation, instead of a manual paste.

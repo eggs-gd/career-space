@@ -12,6 +12,7 @@ import * as yaml from "js-yaml";
 import { parseArgs } from "util";
 import { Eligibility, eligibilityForSource, isLocationEligibilityStatus, normalizeEligibility } from "./eligibility";
 import { listOpportunityDirs, moveToHome, opportunityDir, relocateArchived } from "./opportunity_dirs";
+import { jobKey } from "./job_links";
 import * as postingIds from "./posting_ids";
 import { normalizeSource } from "./source_channel";
 import { REPO_ROOT } from "./repo_paths";
@@ -211,6 +212,123 @@ function listRecordPaths(scope: VacancyStoreScope = {}): string[] {
     .filter((rpath) => fs.existsSync(rpath));
 }
 
+/** A second place the same vacancy was seen or talked about (another board, a Djinni thread). The
+ * record's own `url`/`source` stay the first sighting; this list only adds. */
+export interface AlsoSeen {
+  source: string;
+  url: string;
+}
+
+const ALSO_SEEN_CAP = 10;
+
+function recordJobKeys(record: Rec): Set<string> {
+  const keys = new Set<string>();
+  for (const value of [record.url, record.apply_url]) {
+    const key = jobKey(typeof value === "string" ? value : "");
+    if (key) keys.add(key);
+  }
+  for (const entry of Array.isArray(record.also_seen) ? record.also_seen : []) {
+    const key = jobKey(typeof entry?.url === "string" ? entry.url : "");
+    if (key) keys.add(key);
+  }
+  return keys;
+}
+
+/** Adds `alias` to `record.also_seen` in memory. False when the link is empty, already known for
+ * this record (as its own link or an earlier alias), or the list is full. */
+function pushAlias(record: Rec, alias: AlsoSeen): boolean {
+  const key = jobKey(alias.url);
+  if (!key || recordJobKeys(record).has(key)) return false;
+  const list: AlsoSeen[] = Array.isArray(record.also_seen) ? record.also_seen : [];
+  if (list.length >= ALSO_SEEN_CAP) return false;
+  list.push({ source: normalizeSource(alias.source).source || alias.source, url: alias.url.trim() });
+  record.also_seen = list;
+  return true;
+}
+
+/** Records another link for an existing vacancy. Never changes `url`, `source` or `updated_at`.
+ * Returns whether anything was added. */
+export function addAlias(slug: string, alias: AlsoSeen, scope: VacancyStoreScope = {}): boolean {
+  const rpath = recordPath(slug, scope);
+  if (!fs.existsSync(rpath)) throw new VacancyStoreError(`No vacancy record for slug ${JSON.stringify(slug)} at ${rpath}`);
+  const record = readYamlRecord(rpath);
+  if (!pushAlias(record, alias)) return false;
+  writeYamlRecord(rpath, record);
+  return true;
+}
+
+/** For the scout: roles it already judged, seen again. Each item is a content id plus the link and
+ * source of the new sighting. The link goes to `also_seen` of the vacancy carrying that content id,
+ * at most one link per channel (a channel that is already the record's `source`, or already in
+ * `also_seen`, is skipped, so a per-country repost cannot fill the list). One pass over the
+ * records, no matter how many items. Returns how many links were added; a content id no record
+ * has (judged and rejected) is ignored. */
+export function addAliasesByContentId(items: { contentId: string; alias: AlsoSeen }[], scope: VacancyStoreScope = {}): number {
+  if (items.length === 0) return 0;
+  const byContent = new Map<string, { rpath: string; record: Rec; dirty: boolean }>();
+  for (const rpath of listRecordPaths(scope)) {
+    const record = readYamlRecord(rpath);
+    if (typeof record.content_id === "string") byContent.set(record.content_id, { rpath, record, dirty: false });
+  }
+  let added = 0;
+  for (const { contentId, alias } of items) {
+    const hit = byContent.get(contentId);
+    if (!hit) continue;
+    const channel = normalizeSource(alias.source).source || alias.source;
+    const known = new Set<string>([String(hit.record.source ?? "")]);
+    for (const entry of Array.isArray(hit.record.also_seen) ? hit.record.also_seen : []) known.add(String(entry?.source ?? ""));
+    if (known.has(channel)) continue;
+    if (pushAlias(hit.record, alias)) {
+      hit.dirty = true;
+      added += 1;
+    }
+  }
+  for (const hit of byContent.values()) if (hit.dirty) writeYamlRecord(hit.rpath, hit.record);
+  return added;
+}
+
+export interface VacancyMatch {
+  slug: string;
+  matched_by: "url" | "also_seen" | "company_title";
+  status: string;
+  company: string;
+  title: string;
+}
+
+/** Finds vacancy records for a link and/or a company+title. A link is matched first, against the
+ * record's own links and then its `also_seen`, through `jobKey`; only when nothing matches is
+ * company+title tried. Archived records included. Returns every match of the first tier that has
+ * one, so an ambiguous result stays visible instead of being resolved silently. */
+export function findVacancies(
+  query: { url?: string; company?: string; title?: string },
+  scope: VacancyStoreScope = {}
+): VacancyMatch[] {
+  const rows = listRecordPaths(scope).map((rpath) => {
+    const record = readYamlRecord(rpath);
+    return { record, slug: String(record.slug ?? path.basename(path.dirname(rpath))) };
+  });
+  const toMatch = (row: (typeof rows)[number], matchedBy: VacancyMatch["matched_by"]): VacancyMatch => ({
+    slug: row.slug,
+    matched_by: matchedBy,
+    status: String(row.record.status ?? ""),
+    company: String(row.record.company ?? ""),
+    title: String(row.record.title ?? ""),
+  });
+  const key = jobKey(query.url ?? "");
+  if (key) {
+    const own = rows.filter((row) => [row.record.url, row.record.apply_url].some((u) => jobKey(String(u ?? "")) === key));
+    if (own.length > 0) return own.map((row) => toMatch(row, "url"));
+    const alias = rows.filter((row) => recordJobKeys(row.record).has(key));
+    if (alias.length > 0) return alias.map((row) => toMatch(row, "also_seen"));
+  }
+  if (query.company && query.title) {
+    const target = `${slugify(query.company)}\0${slugify(query.title)}`;
+    const named = rows.filter((row) => `${slugify(row.record.company ?? "")}\0${slugify(row.record.title ?? "")}` === target);
+    return named.map((row) => toMatch(row, "company_title"));
+  }
+  return [];
+}
+
 /** Find an existing vacancy by normalized company+title. Used only as an upsert fallback. */
 export function findByCompanyTitle(company: string, title: string, scope: VacancyStoreScope = {}): string | null {
   if (!fs.existsSync(dataDir(scope))) return null;
@@ -251,6 +369,10 @@ export interface UpsertVacancyOptions {
   fitReason?: string;
   eligibility?: Eligibility;
   markSeenOnCreate?: boolean;
+  /** Replace an existing record's `url`/`apply_url`/`source`/`posted_at` with the incoming ones.
+   * Off by default: a record keeps the link it was first seen under, and a different incoming link
+   * goes to `also_seen` instead of overwriting it. Only an explicit correction sets this. */
+  replaceUrl?: boolean;
 }
 
 export interface ScoutOutcomeCandidate {
@@ -439,21 +561,26 @@ export function upsertVacancy(opts: UpsertVacancyOptions): Rec {
     }
   }
 
-  Object.assign(record, {
-    company: opts.company,
-    title: opts.title,
-    url: opts.url ?? "",
-    apply_url: opts.applyUrl || opts.url || "",
-    updated_at: nowStr,
-  });
+  Object.assign(record, { company: opts.company, title: opts.title, updated_at: nowStr });
+  // A record keeps the link and channel it was first seen under. A different link arriving later
+  // (the same role on another board, a repost) is kept in `also_seen`, not written over the first
+  // one, and a missing link never blanks the stored one. `replaceUrl` is the explicit correction.
+  const keepFirst = !opts.replaceUrl && typeof record.url === "string" && record.url !== "";
+  if (keepFirst) {
+    if (opts.url) pushAlias(record, { source: opts.source ?? "", url: opts.url });
+    if (opts.applyUrl) pushAlias(record, { source: opts.source ?? "", url: opts.applyUrl });
+  } else {
+    record.url = opts.url ?? "";
+    record.apply_url = opts.applyUrl || opts.url || "";
+  }
   if (opts.location) record.location = opts.location;
   if (opts.remote !== undefined) record.remote = opts.remote;
-  if (opts.source) {
+  if (opts.source && (!keepFirst || !record.source)) {
     const { source, detail } = normalizeSource(opts.source);
     record.source = source;
     if (detail) record.source_detail = detail;
   }
-  if (opts.postedAt) record.posted_at = opts.postedAt;
+  if (opts.postedAt && (!keepFirst || !record.posted_at)) record.posted_at = opts.postedAt;
   if (opts.trackLabel) record.track_label = opts.trackLabel;
   if (opts.fitScore !== undefined || opts.fitCategory !== undefined || opts.fitReason !== undefined) {
     record.fit = { score: opts.fitScore ?? null, category: opts.fitCategory ?? null, reason: opts.fitReason ?? null };
@@ -668,6 +795,7 @@ export function resolveVacancy(opts: ResolveVacancyOptions): ResolveVacancyResul
         postingText: opts.postingText ?? "",
         status: opts.status,
         trackLabel: opts.trackLabel ?? existing.track_label ?? undefined,
+        replaceUrl: opts.url !== undefined || opts.applyUrl !== undefined || opts.source !== undefined,
         dataDir: opts.dataDir,
       });
       slug = String(record.slug);
@@ -925,6 +1053,13 @@ function cli(): void {
     result = attachArtifact(values.slug, values.kind, values.path);
   } else if (command === "list") {
     result = listVacancies(values.status, { includeArchived: values["include-archived"] });
+  } else if (command === "find") {
+    result = findVacancies({ url: values.url, company: values.company, title: values.title });
+  } else if (command === "add-alias") {
+    if (!values.slug || !values.source || !values.url) {
+      throw new VacancyStoreError("add-alias requires --slug, --source, --url");
+    }
+    result = { added: addAlias(values.slug, { source: values.source, url: values.url }) };
   } else if (command === "record-scout-outcomes") {
     if (!values.input) {
       throw new VacancyStoreError("record-scout-outcomes requires --input <json>");
@@ -972,7 +1107,7 @@ function cli(): void {
     if ((result as ResolveVacancyResult).changed) renderBoardsFromCli();
   } else {
     throw new VacancyStoreError(
-      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, relocate-archived, attach-artifact, list, record-scout-outcomes, resolve`
+      `Unknown command ${JSON.stringify(command)} -- expected one of: mark-seen, upsert, set-status, set-archived, relocate-archived, attach-artifact, list, find, add-alias, record-scout-outcomes, resolve`
     );
   }
 

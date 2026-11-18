@@ -70,6 +70,14 @@ trap and the rule -- not the story.
 - `record.source` is one canonical discovery channel (`djinni`, `linkedin`, `recruiter` = they reached out first, `manual`, ...),
   never free text: `upsertVacancy` runs it through `normalizeSource` and keeps the original wording in
   `source_detail`. Group on `source`, read `source_detail` for the story.
+- A record keeps the `url`/`source`/`posted_at` it was first seen under. `upsertVacancy` on an existing record
+  (the scout re-finding the role, a repost on another board) adds the other link to `also_seen` instead of
+  overwriting; only `vacancy_resolve` with an explicit url/source replaces (`replaceUrl`). Before this, a DOU
+  repost silently replaced an original Djinni link and an upsert without a url blanked it. Match a link to a
+  record with `vacancy_find` (`jobKey`: Djinni/DOU/LinkedIn compared by job id), never by string equality.
+- Djinni's connector: a thread leaves the `applications` bucket after ANY recruiter message, even an automatic
+  acknowledgement, so a board `applied` missing from `applications` is normal; read `inbox` too. Its `apply_to_job`
+  and the other write tools rely on the agent asking first, which nothing enforces: keep them off "always allow".
 - `record_scout_outcomes` candidate ids are both-or-neither (one alone throws). On the no-ids
   path `recordScoutOutcome` passes `undefined` through to `upsertVacancy` (not the computed pair)
   so the record gets `id_source: manual` and still merges onto an existing company+title record

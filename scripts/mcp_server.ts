@@ -529,6 +529,36 @@ server.registerTool(
 );
 
 server.registerTool(
+  "vacancy_find",
+  {
+    description:
+      "Find vacancy records for a link and/or company+title, archived ones included. The link is matched first against each record's own links and its also_seen list (a Djinni /jobs/<id> link, a DOU link, a LinkedIn link are compared by job id, not by text); company+title only when no link matches. Returns every match of the first tier that has one, so an ambiguous result stays visible. Reads only.",
+    inputSchema: {
+      url: z.string().optional(),
+      company: z.string().optional(),
+      title: z.string().optional(),
+    },
+  },
+  async ({ url, company, title }): Promise<CallToolResult> =>
+    respond(vacancyStore.findVacancies({ url, company, title }))
+);
+
+server.registerTool(
+  "vacancy_add_alias",
+  {
+    description:
+      "Remember another link for an existing vacancy (the same role on another board, a Djinni job its conversation lives under) in its also_seen list. Never changes the record's url, source or updated_at. Returns whether anything was added; a link the record already has is a no-op.",
+    inputSchema: {
+      slug: z.string(),
+      source: z.string(),
+      url: z.string(),
+    },
+  },
+  async ({ slug, source, url }): Promise<CallToolResult> =>
+    respond({ added: vacancyStore.addAlias(slug, { source, url }) })
+);
+
+server.registerTool(
   "render_board",
   {
     description:

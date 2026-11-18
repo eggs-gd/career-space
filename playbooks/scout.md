@@ -130,7 +130,9 @@ filtered before they see anything: `fetched_count` -> `survived_prefilter_count`
 `collapsed_count` same-role reposts) -> `considered_count` (genuinely new, not already in
 seen.jsonl) -> `returned_count` handed back now (`capped_count` held back for a later run, not
 lost -- worth a one-line mention if non-zero, so the candidate knows more is waiting rather than
-assuming this run found everything).
+assuming this run found everything). `aliased_count` is bookkeeping, not a result to report: roles
+already judged that turned up again under another link, which the scout saved on the vacancy's
+`also_seen` so a Djinni thread or an alert can later be matched to it.
 
 **Most or all configured feeds erroring (not one or two) is a different signal from a normal flaky
 feed -- don't report it as "the market/boards are down."** It usually means the current execution

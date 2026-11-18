@@ -2,7 +2,8 @@
 /**
  * Deterministic fetch -> prefilter -> dedup -> not-already-seen step of the scout. Produces a
  * short list of candidate postings worth the agent's own fitment judgment; does no judgment
- * itself and writes nothing -- `playbooks/scout.md` is what calls this, judges each candidate
+ * itself and writes nothing but one bookkeeping detail: a role it already judged, seen again under
+ * another link or on another board, gets that link added to the vacancy's `also_seen` -- `playbooks/scout.md` is what calls this, judges each candidate
  * the same way a pasted posting is judged (`playbooks/fitment.md` + `score_fit.ts`), and then
  * records the outcome via `vacancy_store`'s functions (`markSeen` always, `upsertVacancy` only
  * for a posting worth tracking).
@@ -69,6 +70,14 @@ export async function runScout(
   const collapsedCount = survivors.length - deduped.length;
 
   const [seenPostingIds, seenContentIds] = vacancyStore.readSeenIds();
+  // A role already judged, found again on another board or under another link (collapsed copies
+  // included): keep that link on the vacancy it became, so a Djinni thread, an alert or a later
+  // repost can still be matched to the record.
+  const aliasedCount = vacancyStore.addAliasesByContentId(
+    survivors
+      .filter((p) => seenContentIds.has(p.contentId()) && p.url)
+      .map((p) => ({ contentId: p.contentId(), alias: { source: p.source, url: p.url } }))
+  );
   const unseen = deduped.filter((p) => !seenPostingIds.has(p.postingId()) && !seenContentIds.has(p.contentId()));
 
   // Hard ceiling on how many candidates one call hands back -- see ScoutConfig.
@@ -98,6 +107,7 @@ export async function runScout(
     fetched_count: postings.length,
     survived_prefilter_count: survivors.length,
     collapsed_count: collapsedCount,
+    aliased_count: aliasedCount,
     considered_count: unseen.length,
     returned_count: toJudge.length,
     capped_count: cappedCount,
