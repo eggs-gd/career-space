@@ -27,7 +27,9 @@ scraping the logged-in site. Nothing here is required: every other playbook work
   confirmation.
 - `get_conversation`: leave `mark_as_read` off unless the candidate asks.
 - A thread's `job_id` is the number in `djinni.co/jobs/<id>-slug/`. `scripts/job_links.ts`'s
-  `jobKey` compares any Djinni link by that number; `vacancy_find` uses it.
+  `jobKey` compares any Djinni link by that number; `vacancy_find` uses it. The bare
+  `/jobs/<id>/` is for matching only: it is a 404 on Djinni, so never store it as a record's link.
+  Take the real link from `get_job` (`url`), never build it from the id.
 
 ## 1 — Conversations as reconcile evidence (read only)
 
@@ -80,8 +82,9 @@ For "find me jobs on Djinni" beyond the scout's tracks. This is the one-off hunt
    `apply_blockers`). `apply_blockers` come from Djinni's structured rules, not from reading the
    text: a non-empty list is an eligibility fact for the fitment, not something to argue with.
 4. Judge through `playbooks/fitment.md`. Add only the worthwhile ones as `new` vacancies with
-   `vacancy_upsert`: `source: djinni`, `url: https://djinni.co/jobs/<job_id>/`, the job
-   description as the posting text. Same output shape as any other vacancy: it lands on the board.
+   `vacancy_upsert`: `source: djinni`, `url` and `apply_url` exactly as `get_job` returned them (the
+   link with the slug, `/jobs/<job_id>-<slug>/`: Djinni answers 404 to the bare `/jobs/<job_id>/`, and
+   the board links to whatever is stored), the job description as the posting text. Same output shape as any other vacancy: it lands on the board.
 5. `vacancy_upsert` does not render the board: run `render_boards` once after the batch.
 6. Report the funnel: searched, already known, judged, added.
 
